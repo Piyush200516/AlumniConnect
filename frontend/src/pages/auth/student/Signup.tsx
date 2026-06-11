@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { studentSignupSchema, StudentSignup } from '../../../types/auth';
+import { studentSignupSchema } from '../../../types/auth';
+import type { StudentSignup as StudentSignupData } from '../../../types/auth';
 import { FormInput, PasswordField, LoadingSpinner } from '../../../components/auth';
 import { useAuth } from '../../../hooks/useAuth';
 import { motion } from 'framer-motion';
@@ -15,9 +16,9 @@ export const StudentSignup = () => {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<StudentSignup>({ resolver: zodResolver(studentSignupSchema) });
+  } = useForm<StudentSignupData>({ resolver: zodResolver(studentSignupSchema) });
 
-  const onSubmit = async (data: StudentSignup) => {
+  const onSubmit = async (data: StudentSignupData) => {
     setLoading(true);
     await signup('student', data, '/api/auth/student/signup', '/student/dashboard');
     setLoading(false);

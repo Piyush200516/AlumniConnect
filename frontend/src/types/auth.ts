@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Role } from './user';
 
 export const studentSignupSchema = z.object({
   fullName: z.string().min(2, 'Full Name is required'),
@@ -7,7 +8,7 @@ export const studentSignupSchema = z.object({
   branch: z.string().min(1, 'Branch required'),
   graduationYear: z
     .string()
-    .regex(/^(20|21)\d{2}$/, 'Enter a valid year'),
+    .regex(/^(20|21)\\d{2}$/, 'Enter a valid year'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -26,7 +27,7 @@ export const alumniSignupSchema = z.object({
   enrollmentNumber: z.string().min(1, 'Enrollment Number required'),
   passingYear: z
     .string()
-    .regex(/^(20|21)\d{2}$/, 'Enter a valid year'),
+    .regex(/^(20|21)\\d{2}$/, 'Enter a valid year'),
   company: z.string().min(1, 'Company required'),
   designation: z.string().min(1, 'Designation required'),
   linkedinUrl: z.string().url('Invalid LinkedIn URL'),
@@ -53,3 +54,9 @@ export type StudentLogin = z.infer<typeof studentLoginSchema>;
 export type AlumniSignup = z.infer<typeof alumniSignupSchema>;
 export type AlumniLogin = z.infer<typeof alumniLoginSchema>;
 export type CdcLogin = z.infer<typeof cdcLoginSchema>;
+
+export type User = {
+  role: Role;
+  token: string;
+};
+

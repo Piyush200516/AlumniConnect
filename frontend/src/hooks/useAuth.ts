@@ -2,8 +2,8 @@ import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { toastSuccess, toastError } from '../utils/toast';
-import { Role } from '../types/user';
-import { User } from '../types/auth';
+import type { Role } from '../types/user';
+import type { User } from '../types/auth';
 import { AuthContext } from '../components/layout/AuthProvider';
 
 export const useAuth = () => {

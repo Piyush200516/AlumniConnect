@@ -195,6 +195,186 @@ AlumniConnect
 
 ---
 
+# 🚀 Running AlumniConnect Locally
+
+## 1. Clone Repository
+
+```bash
+git clone <repository-url>
+cd alumniconnect
+```
+
+---
+
+## 2. Frontend Setup
+
+```bash
+cd frontend
+npm install
+```
+
+### Start Frontend Development Server
+
+```bash
+npm run dev
+```
+
+Frontend will run on:
+
+```txt
+http://localhost:5173
+```
+
+---
+
+## 3. Backend Setup
+
+Open a new terminal:
+
+```bash
+cd backend
+npm install
+```
+
+### Start Backend Development Server
+
+```bash
+npm run dev
+```
+
+Backend will run on:
+
+```txt
+http://localhost:5000
+```
+
+---
+
+## 4. Prisma Commands
+
+### Generate Prisma Client
+
+```bash
+npx prisma generate
+```
+
+### Run Database Migration
+
+```bash
+npx prisma migrate dev
+```
+
+### Open Prisma Studio
+
+```bash
+npx prisma studio
+```
+
+---
+
+## 5. Build Frontend
+
+```bash
+cd frontend
+npm run build
+```
+
+---
+
+## 6. Preview Production Build
+
+```bash
+npm run preview
+```
+
+---
+
+## 7. Environment Variables
+
+### Frontend (.env)
+
+```env
+VITE_API_BASE_URL=http://localhost:5000/api
+```
+
+### Backend (.env)
+
+```env
+DATABASE_URL=your_neon_database_url
+
+JWT_SECRET=your_jwt_secret
+
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+RESEND_API_KEY=your_resend_api_key
+```
+
+---
+
+## 8. Common Commands
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+### Check Prisma Status
+
+```bash
+npx prisma validate
+```
+
+### Reset Database
+
+```bash
+npx prisma migrate reset
+```
+
+### Format Prisma Schema
+
+```bash
+npx prisma format
+```
+
+---
+
+## 9. Development Workflow
+
+### Terminal 1
+
+```bash
+cd backend
+npm run dev
+```
+
+### Terminal 2
+
+```bash
+cd frontend
+npm run dev
+```
+
+### Terminal 3 (Optional)
+
+```bash
+cd backend
+npx prisma studio
+```
+
+Open:
+
+```txt
+Frontend: http://localhost:5173
+Backend: http://localhost:5000
+Prisma Studio: http://localhost:5555
+```
+ ___
+ 
+------
+
 ## 📈 Development Progress
 
 * [x] Project Setup

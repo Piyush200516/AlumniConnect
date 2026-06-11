@@ -1,10 +1,7 @@
-import { createContext, ReactNode, useContext, useState } from 'react';
-import { Role } from '../../types/user';
+import { createContext, useContext, useState } from 'react';
+import type { ReactNode } from 'react';
 
-export interface User {
-  role: Role;
-  token: string;
-}
+import type { User } from '../../types/auth';
 
 interface AuthContextProps {
   user: User | null;

@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { cdcLoginSchema, CdcLogin } from '../../../types/auth';
+import { cdcLoginSchema } from '../../../types/auth';
+import type { CdcLogin as CdcLoginData } from '../../../types/auth';
 import { FormInput, PasswordField, LoadingSpinner } from '../../../components/auth';
 import { useAuth } from '../../../hooks/useAuth';
 import { motion } from 'framer-motion';
@@ -16,9 +17,9 @@ export const CdcLogin = () => {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<CdcLogin>({ resolver: zodResolver(cdcLoginSchema) });
+  } = useForm<CdcLoginData>({ resolver: zodResolver(cdcLoginSchema) });
 
-  const onSubmit = async (data: CdcLogin) => {
+  const onSubmit = async (data: CdcLoginData) => {
     setLoading(true);
     await login('cdc', data, '/api/auth/cdc/login', '/cdc/dashboard');
     setLoading(false);

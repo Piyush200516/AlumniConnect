@@ -1,9 +1,8 @@
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { Role } from '../../types/user';
+import type { Role } from '../../types/user';
 import { RoleCard } from './RoleCard';
 
-export const RoleSelection = () => {
+const RoleSelection = () => {
   const cards = [
     {
       role: 'student' as Role,
@@ -46,3 +45,5 @@ export const RoleSelection = () => {
     </div>
   );
 };
+
+export default RoleSelection;

@@ -1,8 +1,9 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { studentLoginSchema, StudentLogin } from '../../types/auth';
-import { FormInput, PasswordField, LoadingSpinner } from '../../components/auth';
-import { useAuth } from '../../hooks/useAuth';
+import { studentLoginSchema } from '../../../types/auth';
+import type { StudentLogin as StudentLoginData } from '../../../types/auth';
+import { FormInput, PasswordField, LoadingSpinner } from '../../../components/auth';
+import { useAuth } from '../../../hooks/useAuth';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
@@ -15,9 +16,9 @@ export const StudentLogin = () => {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<StudentLogin>({ resolver: zodResolver(studentLoginSchema) });
+  } = useForm<StudentLoginData>({ resolver: zodResolver(studentLoginSchema) });
 
-  const onSubmit = async (data: StudentLogin) => {
+  const onSubmit = async (data: StudentLoginData) => {
     setLoading(true);
     await login('student', data, '/api/auth/student/login', '/student/dashboard');
     setLoading(false);

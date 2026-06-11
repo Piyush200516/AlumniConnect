@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import type { Path, RegisterOptions } from 'react-hook-form';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import { FieldError, FieldValues, UseFormRegister } from 'react-hook-form';
-
+import type { FieldError, FieldValues, UseFormRegister } from 'react-hook-form';
+import { motion } from 'framer-motion';
 interface PasswordFieldProps<T extends FieldValues> {
   label: string;
-  name: keyof T & string;
+  name: Path<T>;
   register: UseFormRegister<T>;
-  validation?: any;
+  validation?: RegisterOptions<T, Path<T>>;
   error?: FieldError;
 }
 

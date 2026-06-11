@@ -1,13 +1,14 @@
-import { FieldError, FieldValues, RegisterOptions, UseFormRegister } from 'react-hook-form';
+import type { FieldError, FieldValues, RegisterOptions, UseFormRegister } from 'react-hook-form';
+import type { Path } from 'react-hook-form';
 import { motion } from 'framer-motion';
 
 interface FormInputProps<T extends FieldValues> {
   label: string;
-  name: keyof T & string;
+  name: Path<T>;
   type?: string;
   placeholder?: string;
   register: UseFormRegister<T>;
-  validation?: RegisterOptions;
+  validation?: RegisterOptions<T, Path<T>>;
   error?: FieldError;
 }
 

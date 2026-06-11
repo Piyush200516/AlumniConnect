@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Role } from '../../types/user';
+import type { Role } from '../../types/user';
+
 
 interface RoleCardProps {
   role: Role;
@@ -15,6 +16,7 @@ export const RoleCard = ({ role, title, description, navigateTo }: RoleCardProps
 
   return (
     <motion.div
+      data-role={role}
       whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}
       whileTap={{ scale: 0.98 }}
       className="bg-white/10 backdrop-blur-lg rounded-xl p-6 text-center cursor-pointer transition-colors hover:bg-white/20"
