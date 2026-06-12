@@ -1,14 +1,12 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import { PrismaPgAdapter } from '@prisma/adapter-pg';
 import 'dotenv/config';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-
+// Export a named Prisma client instance and also as default
 export const prisma = new PrismaClient({
-  adapter,
+  adapter: new PrismaPgAdapter(),
   log: ['error', 'info', 'query', 'warn'],
 });
 
-export { PrismaClient };
+export default prisma;
+
