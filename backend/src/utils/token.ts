@@ -1,7 +1,7 @@
 // src/utils/token.ts
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
-import { Role } from '../prisma';
+import { Role } from '@prisma/client';
 
 const EMAIL_VERIFY_SECRET = process.env.EMAIL_VERIFY_SECRET ?? 'email-verify-secret';
 const PASSWORD_RESET_SECRET = process.env.PASSWORD_RESET_SECRET ?? 'password-reset-secret';

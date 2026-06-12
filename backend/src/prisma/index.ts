@@ -1,2 +1,2 @@
-export { PrismaClient } from '../../generated/prisma/client';
-export { Role, AccountStatus, MentorshipStatus, JobType, ApplicationStatus, NotificationType } from '../../generated/prisma/enums';
+export { PrismaClient } from '@prisma/client';
+export { Role, AccountStatus, MentorshipStatus, JobType, ApplicationStatus, NotificationType } from '@prisma/client';

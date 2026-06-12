@@ -1,5 +1,5 @@
 // src/types/express.d.ts
-import { Role } from '../../generated/prisma';
+import { Role } from '@prisma/client';
 import { Request } from 'express';
 
 declare module 'express-serve-static-core' {

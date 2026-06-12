@@ -1,16 +1,9 @@
-// src/middleware/auth.middleware.ts
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt';
-import { prisma } from '../config/prisma';
+import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/error';
-
-export interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
-}
+import { AuthenticatedRequest } from '../types/express';
+export { AuthenticatedRequest };
 
 /**
  * Authenticate user via JWT Bearer token.

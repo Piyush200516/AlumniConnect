@@ -17,13 +17,19 @@ export const useAuth = () => {
   };
 
   const login = async (role: Role, data: any, endpoint: string, redirectPath: string) => {
+    const payload = data;
+    console.log("Login Request", payload);
     try {
       const res = await api.post(endpoint, data);
+      const response = res;
+      console.log("API Response", response);
       const token = res.data.token;
       storeUser(role, token);
       toastSuccess('Login successful');
       navigate(redirectPath);
     } catch (err: any) {
+      const response = err.response;
+      console.log("API Response", response);
       toastError(err.response?.data?.message || 'Login failed');
     }
   };

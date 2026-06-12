@@ -16,7 +16,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
 } from '../validators/auth.validator';
-import { Role } from '../../prisma';
+import { Role } from '@prisma/client';
 
 class AuthService {
   /** Student signup */

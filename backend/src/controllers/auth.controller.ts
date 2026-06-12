@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import AuthService from '../services/auth.service';
 import { responseSuccess, responseError } from '../utils/response';
 import { AuthenticatedRequest } from '../types/express';
-import { Role } from '../../prisma';
+import { Role } from '@prisma/client';
 
 const authService = new AuthService();
 

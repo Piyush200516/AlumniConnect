@@ -21,7 +21,7 @@ export const CdcLogin = () => {
 
   const onSubmit = async (data: CdcLoginData) => {
     setLoading(true);
-    await login('cdc', data, '/api/auth/cdc/login', '/cdc/dashboard');
+    await login('cdc', data, '/auth/cdc/login', '/cdc/dashboard');
     setLoading(false);
   };
 

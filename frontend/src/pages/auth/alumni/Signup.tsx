@@ -20,7 +20,7 @@ export const AlumniSignup = () => {
 
   const onSubmit = async (data: AlumniSignupData) => {
     setLoading(true);
-    await signup('alumni', data, '/api/auth/alumni/signup', '/alumni/dashboard');
+    await signup('alumni', data, '/auth/alumni/signup', '/alumni/dashboard');
     setLoading(false);
   };
 

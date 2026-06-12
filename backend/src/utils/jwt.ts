@@ -1,8 +1,8 @@
 import * as jwt from 'jsonwebtoken';
-import { Role } from '../../prisma';
+import { Role } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'super-secret-change-me';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '7d';
+const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN ?? '7d') as any;
 
 export interface JwtPayloadData {
   userId: string;
@@ -21,7 +21,7 @@ export const generateRefreshToken = async (payload: JwtPayloadData): Promise<str
 
 export const verifyAccessToken = (token: string): JwtPayloadData => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
     return {
       userId: decoded.userId as string,
       email: decoded.email as string,

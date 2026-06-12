@@ -6,9 +6,11 @@ export const studentSignupSchema = z.object({
   email: z.string().email('Invalid email address'),
   enrollmentNumber: z.string().min(1, 'Enrollment Number required'),
   branch: z.string().min(1, 'Branch required'),
-  graduationYear: z
-    .string()
-    .regex(/^(20|21)\\d{2}$/, 'Enter a valid year'),
+  graduationYear: z.coerce
+    .number({ invalid_type_error: 'Enter a valid year' })
+    .int('Enter a valid year')
+    .gte(2025, 'Enter a valid year')
+    .lte(2029, 'Enter a valid year'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -25,9 +27,11 @@ export const alumniSignupSchema = z.object({
   fullName: z.string().min(2, 'Full Name is required'),
   email: z.string().email('Invalid email address'),
   enrollmentNumber: z.string().min(1, 'Enrollment Number required'),
-  passingYear: z
-    .string()
-    .regex(/^(20|21)\\d{2}$/, 'Enter a valid year'),
+  passingYear: z.coerce
+    .number({ invalid_type_error: 'Enter a valid year' })
+    .int('Enter a valid year')
+    .gte(2025, 'Enter a valid year')
+    .lte(2029, 'Enter a valid year'),
   company: z.string().min(1, 'Company required'),
   designation: z.string().min(1, 'Designation required'),
   linkedinUrl: z.string().url('Invalid LinkedIn URL'),

@@ -1,8 +1,4 @@
-// src/config/prisma.ts
-import { PrismaClient, Role } from '../prisma';
-
-const prisma = new PrismaClient({
-  log: ['error', 'info', 'query', 'warn'],
-});
+import { prisma } from '../lib/prisma';
+import { Role } from '@prisma/client';
 
 export { prisma, Role };

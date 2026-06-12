@@ -20,7 +20,7 @@ export const StudentSignup = () => {
 
   const onSubmit = async (data: StudentSignupData) => {
     setLoading(true);
-    await signup('student', data, '/api/auth/student/signup', '/student/dashboard');
+    await signup('student', data, '/auth/student/signup', '/student/dashboard');
     setLoading(false);
   };
 
