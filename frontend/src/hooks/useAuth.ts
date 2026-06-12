@@ -35,8 +35,11 @@ export const useAuth = () => {
   };
 
   const signup = async (role: Role, data: any, endpoint: string, redirectPath: string) => {
+    // Strip fields the backend doesn't expect
+    const { confirmPassword, ...payload } = data;
+    console.log('Signup Payload:', payload);
     try {
-      const res = await api.post(endpoint, data);
+      const res = await api.post(endpoint, payload);
       const token = res.data.token;
       storeUser(role, token);
       toastSuccess('Account created');

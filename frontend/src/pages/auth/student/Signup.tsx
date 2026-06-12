@@ -34,11 +34,12 @@ export const StudentSignup = () => {
       >
         <h2 className="text-2xl font-semibold text-white mb-6 text-center">Student Sign Up</h2>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <FormInput label="Full Name" name="fullName" placeholder="John Doe" register={register} error={errors.fullName} />
+          <FormInput label="Full Name" name="name" placeholder="John Doe" register={register} error={errors.name} />
           <FormInput label="College Email" name="email" type="email" placeholder="you@college.edu" register={register} error={errors.email} />
           <FormInput label="Enrollment Number" name="enrollmentNumber" placeholder="2023001" register={register} error={errors.enrollmentNumber} />
           <FormInput label="Branch" name="branch" placeholder="Computer Science" register={register} error={errors.branch} />
           <FormInput label="Graduation Year" name="graduationYear" placeholder="2026" register={register} error={errors.graduationYear} />
+          <FormInput label="Course" name="course" placeholder="B.Tech / M.Tech / MBA" register={register} error={errors.course} />
           <PasswordField label="Password" name="password" register={register} error={errors.password} />
           <PasswordField label="Confirm Password" name="confirmPassword" register={register} error={errors.confirmPassword} />
           <button

@@ -1,12 +1,19 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaPgAdapter } from '@prisma/adapter-pg';
-import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
 
-// Export a named Prisma client instance and also as default
-export const prisma = new PrismaClient({
-  adapter: new PrismaPgAdapter(),
-  log: ['error', 'info', 'query', 'warn'],
-});
+// Global singleton to avoid multiple instances in hot-reloading environments
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    adapter: new PrismaPg({
+      url: process.env.DATABASE_URL!,
+    }),
+  });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
 
 export default prisma;
-
