@@ -23,6 +23,7 @@ import { ApiError } from '../utils/error';
 class AuthService {
   /** Student signup */
   async studentSignup(payload: any) {
+    try {
       const data = studentSignupSchema.parse(payload);
       const existing = await prisma.user.findUnique({ where: { email: data.email } });
       if (existing) throw new ApiError(409, 'Email already in use');
@@ -51,7 +52,7 @@ class AuthService {
       const refreshToken = await generateRefreshToken({ userId: user.id, email: user.email, role: user.role });
       logger.info(`Student signup successful: ${user.email}`);
       return { accessToken, refreshToken, user: { id: user.id, email: user.email, role: user.role } };
-    } catch (err) {
+    } catch (err: any) {
       logger.error(`Student signup failed: ${err instanceof Error ? err.message : err}`);
       if (err instanceof ApiError) throw err;
       // Zod validation errors
@@ -60,6 +61,7 @@ class AuthService {
       }
       throw new ApiError(500, 'Internal server error');
     }
+  }
 
   /** Alumni signup */
   async alumniSignup(payload: any) {
@@ -93,17 +95,57 @@ class AuthService {
 
   /** Login (generic) */
   async login(payload: any, forcedRole?: Role) {
-    const data = loginSchema.parse(payload);
-    const user = await prisma.user.findUnique({ where: { email: data.email } });
-    if (!user) throw new Error('Invalid credentials');
-    if (forcedRole && user.role !== forcedRole) throw new Error('Invalid role for this endpoint');
-    if (!user.isEmailVerified) throw new Error('Email not verified');
-    if (user.status !== 'ACTIVE') throw new Error('Account not active');
-    const match = await bcrypt.compare(data.password, user.password);
-    if (!match) throw new Error('Invalid credentials');
+    const loginData = loginSchema.parse(payload);
+    
+    // Log DATABASE_URL status
+    logger.info(`Login service check: DATABASE_URL exists = ${!!process.env.DATABASE_URL}`);
+
+    // Log Prisma connection status
+    try {
+      await prisma.$connect();
+      logger.info("Database connection active and verified.");
+    } catch (connError) {
+      logger.error(`Database connection verification failed: ${connError instanceof Error ? connError.message : connError}`);
+    }
+
+    // Log User lookup
+    logger.info(`Attempting user lookup for email: ${loginData.email}`);
+    const user = await prisma.user.findUnique({ where: { email: loginData.email } });
+    if (!user) {
+      logger.warn(`User lookup failed: no user found with email: ${loginData.email}`);
+      throw new Error('Invalid credentials');
+    }
+    logger.info(`User lookup successful: found user with ID: ${user.id}, role: ${user.role}`);
+
+    if (forcedRole && user.role !== forcedRole) {
+      logger.warn(`Role verification failed. Expected: ${forcedRole}, got: ${user.role}`);
+      throw new Error('Invalid role for this endpoint');
+    }
+    if (!user.isEmailVerified) {
+      logger.warn(`Email verification check failed for user ID: ${user.id}`);
+      throw new Error('Email not verified');
+    }
+    if (user.status !== 'ACTIVE') {
+      logger.warn(`User status is not active: ${user.status} for user ID: ${user.id}`);
+      throw new Error('Account not active');
+    }
+
+    // Log Password comparison
+    logger.info(`Comparing password for user email: ${loginData.email}`);
+    const match = await bcrypt.compare(
+      loginData.password,
+      user.password
+    );
+    logger.info(`Password comparison completed. Result match: ${match}`);
+
+    if (!match) {
+      logger.warn(`Invalid credentials provided for user: ${loginData.email}`);
+      throw new Error('Invalid credentials');
+    }
 
     const accessToken = generateAccessToken({ userId: user.id, email: user.email, role: user.role });
     const refreshToken = await generateRefreshToken({ userId: user.id, email: user.email, role: user.role });
+    logger.info(`Login successful: user logged in with ID ${user.id}`);
     return { accessToken, refreshToken, user: { id: user.id, email: user.email, role: user.role } };
   }
 
