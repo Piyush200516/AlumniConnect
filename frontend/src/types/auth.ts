@@ -7,8 +7,7 @@ export const studentSignupSchema = z.object({
   enrollmentNumber: z.string().min(1, 'Enrollment Number required'),
   branch: z.string().min(1, 'Branch required'),
   course: z.string().min(1, 'Course is required'),
-  graduationYear: z.coerce
-    .number({ invalid_type_error: 'Enter a valid year' })
+  graduationYear: z.number({ message: 'Enter a valid year' })
     .int('Enter a valid year')
     .gte(2025, 'Enter a valid year')
     .lte(2029, 'Enter a valid year'),
@@ -28,8 +27,7 @@ export const alumniSignupSchema = z.object({
   fullName: z.string().min(2, 'Full Name is required'),
   email: z.string().email('Invalid email address'),
   enrollmentNumber: z.string().min(1, 'Enrollment Number required'),
-  passingYear: z.coerce
-    .number({ invalid_type_error: 'Enter a valid year' })
+  passingYear: z.number({ message: 'Enter a valid year' })
     .int('Enter a valid year')
     .gte(2025, 'Enter a valid year')
     .lte(2029, 'Enter a valid year'),

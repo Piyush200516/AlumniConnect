@@ -5,6 +5,8 @@ import { StudentSignup } from '../pages/auth/student/Signup';
 import { AlumniLogin } from '../pages/auth/alumni/Login';
 import { AlumniSignup } from '../pages/auth/alumni/Signup';
 import { CdcLogin } from '../pages/auth/cdc/Login';
+import { ProtectedRoute } from '../components/layout/ProtectedRoute';
+import StudentDashboard from '../pages/student/StudentDashboard';
 
 export const AuthRoutes = () => (
   <Routes>
@@ -15,5 +17,11 @@ export const AuthRoutes = () => (
     <Route path="/auth/alumni/login" element={<AlumniLogin />} />
     <Route path="/auth/alumni/signup" element={<AlumniSignup />} />
     <Route path="/auth/cdc/login" element={<CdcLogin />} />
+
+    {/* Protected Student Routes */}
+    <Route element={<ProtectedRoute allowedRoles={['student']} />}>
+      <Route path="/student/dashboard" element={<StudentDashboard />} />
+    </Route>
   </Routes>
 );
+
