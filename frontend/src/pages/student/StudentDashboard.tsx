@@ -18,6 +18,7 @@ import EventCard from '../../components/dashboard/EventCard';
 import JobCard from '../../components/dashboard/JobCard';
 import MentorCard from '../../components/dashboard/MentorCard';
 import AnnouncementCard from '../../components/dashboard/AnnouncementCard';
+import Profile from './Profile';
 
 // TypeScript Interfaces for Mock Data
 interface Job {
@@ -214,30 +215,32 @@ export default function StudentDashboard() {
         <main className="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-8">
           
           {/* Header Hero Section */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-3xl font-extrabold tracking-tight text-white">
-                  Welcome back, Piyush! 👋
-                </h1>
-                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-md">
-                  <Sparkles className="h-3 w-3" /> Pro Student
-                </span>
+          {activeMenu !== 'Profile' && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-3xl font-extrabold tracking-tight text-white">
+                    Welcome back, Piyush! 👋
+                  </h1>
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-md">
+                    <Sparkles className="h-3 w-3" /> Pro Student
+                  </span>
+                </div>
+                <p className="text-slate-400 text-sm font-medium">
+                  Here's what's happening in your alumni community.
+                </p>
               </div>
-              <p className="text-slate-400 text-sm font-medium">
-                Here's what's happening in your alumni community.
-              </p>
-            </div>
 
-            {/* Refresh / Action buttons */}
-            <button 
-              onClick={handleRefresh}
-              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-800 bg-slate-900/40 text-slate-400 hover:text-white hover:border-slate-700 hover:bg-slate-850 cursor-pointer transition-all duration-300 self-start sm:self-center"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-blue-400' : ''}`} />
-              Refresh Feed
-            </button>
-          </div>
+              {/* Refresh / Action buttons */}
+              <button 
+                onClick={handleRefresh}
+                className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-800 bg-slate-900/40 text-slate-400 hover:text-white hover:border-slate-700 hover:bg-slate-850 cursor-pointer transition-all duration-300 self-start sm:self-center"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-blue-400' : ''}`} />
+                Refresh Feed
+              </button>
+            </div>
+          )}
 
           <AnimatePresence mode="wait">
             {loading ? (
@@ -354,6 +357,16 @@ export default function StudentDashboard() {
                     </div>
                   </div>
                 </div>
+              </motion.div>
+            ) : activeMenu === 'Profile' ? (
+              <motion.div
+                key="profile"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+              >
+                <Profile />
               </motion.div>
             ) : (
               // FULLY LOADED DASHBOARD

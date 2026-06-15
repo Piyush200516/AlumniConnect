@@ -3,7 +3,9 @@ import express from "express";
 import cors from "cors";
 import { prisma } from "./lib/prisma";
 
+import path from "path";
 import authRoutes from "./routes/auth.routes";
+import studentRoutes from "./routes/student.routes";
 import { logger } from "./utils/logger";
 import { requestLogger } from "./middleware/requestLogger";
 import { errorHandler } from "./middleware/errorHandler";
@@ -17,6 +19,9 @@ app.use(express.json());
 // Request logging middleware
 app.use(requestLogger);
 
+// Static uploads serving fallback
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
 // Health endpoint
 app.get("/health", (_req, res) => res.status(200).json({ status: "OK" }));
 
@@ -24,8 +29,9 @@ app.get("/", (_req, res) => {
   res.send("AlumniConnect Backend Running");
 });
 
-// Register auth routes
+// Register routes
 app.use("/api/auth", authRoutes);
+app.use("/api/student", studentRoutes);
 
 // Global error handler
 app.use(errorHandler);

@@ -46,24 +46,24 @@ model User {
 
 /// Student profile — linked 1:1 with User (role = STUDENT)
 model StudentProfile {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  fullName        String
-  enrollmentNo    String   @unique
-  branch          String
-  course          String
-  graduationYear  Int
-  skills          String[] @default([])
-  bio             String?
-  /// Cloudinary URL
-  profileImageUrl String?
-  linkedinUrl     String?
-  githubUrl       String?
-  /// Cloudinary URL
-  resumeUrl       String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  fullName         String
+  enrollmentNumber String   @unique
+  branch           String
+  course           String
+  graduationYear   Int
+  skills           String[] @default([])
+  bio              String?
+  phone            String?
+  linkedinUrl      String?
+  githubUrl        String?
+  resumeUrl        String?
+  profileImage     String?
+  isVerified       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([branch])
   @@index([graduationYear])

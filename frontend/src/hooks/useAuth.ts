@@ -23,7 +23,7 @@ export const useAuth = () => {
       const res = await api.post(endpoint, data);
       const response = res;
       console.log("API Response", response);
-      const token = res.data.token;
+      const token = res.data.token || res.data.data?.token || res.data.data?.accessToken;
       storeUser(role, token);
       toastSuccess('Login successful');
       navigate(redirectPath);
@@ -40,7 +40,7 @@ export const useAuth = () => {
     console.log('Signup Payload:', payload);
     try {
       const res = await api.post(endpoint, payload);
-      const token = res.data.token;
+      const token = res.data.token || res.data.data?.token || res.data.data?.accessToken;
       storeUser(role, token);
       toastSuccess('Account created');
       navigate(redirectPath);
