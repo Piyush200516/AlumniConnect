@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Camera, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Camera, ShieldCheck, ShieldAlert, ShieldX } from 'lucide-react';
 
 interface ProfileHeaderProps {
   profile: {
@@ -9,6 +9,7 @@ interface ProfileHeaderProps {
     graduationYear: number;
     profileImage: string | null;
     isVerified: boolean;
+    verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
   };
   completionPercentage: number;
   onEditClick: () => void;
@@ -52,9 +53,13 @@ export default function ProfileHeader({ profile, completionPercentage, onEditCli
               {profile.fullName || 'Complete Your Profile'}
             </h1>
             <div className="flex justify-center md:justify-start">
-              {profile.isVerified ? (
+              {profile.verificationStatus === 'VERIFIED' ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Verified Student
+                  <ShieldCheck className="w-3.5 h-3.5" /> Verified
+                </span>
+              ) : profile.verificationStatus === 'REJECTED' ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-400 border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.1)]">
+                  <ShieldX className="w-3.5 h-3.5" /> Rejected
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-400 border border-amber-500/20">

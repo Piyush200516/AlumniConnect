@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Bell, Search, Menu, ChevronDown, User, Settings, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthContext } from '../layout/AuthProvider';
 
 interface NavbarProps {
   onMenuToggle: () => void;
@@ -10,6 +11,7 @@ interface NavbarProps {
 }
 
 export default function Navbar({ onMenuToggle, onLogout, onProfileClick, onSettingsClick }: NavbarProps) {
+  const { profile, loading } = useAuthContext();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -88,19 +90,35 @@ export default function Navbar({ onMenuToggle, onLogout, onProfileClick, onSetti
 
         {/* User Card & Dropdown */}
         <div className="relative">
-          <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/30 p-1.5 pr-3 text-left hover:bg-slate-850/60 hover:border-slate-700/80 transition-all duration-300"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-blue-500 to-indigo-600 text-white font-semibold shadow-md shadow-blue-500/10">
-              P
+          {loading || !profile ? (
+            <div className="flex items-center gap-3 rounded-xl border border-slate-900 bg-slate-900/10 p-1.5 pr-3 animate-pulse">
+              <div className="h-8 w-8 rounded-lg bg-slate-800 shrink-0" />
+              <div className="hidden md:block space-y-1">
+                <div className="h-3 w-20 bg-slate-800 rounded animate-pulse" />
+                <div className="h-2 w-10 bg-slate-800 rounded animate-pulse" />
+              </div>
             </div>
-            <div className="hidden md:block">
-              <p className="text-xs font-semibold text-white">Piyush Mishra</p>
-              <p className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">Student</p>
-            </div>
-            <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform duration-300 ${dropdownOpen ? 'rotate-180 text-white' : ''}`} />
-          </button>
+          ) : (
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/30 p-1.5 pr-3 text-left hover:bg-slate-850/60 hover:border-slate-700/80 transition-all duration-300"
+            >
+              {profile.profileImage ? (
+                <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-850 shrink-0">
+                  <img src={profile.profileImage} alt={profile.fullName} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-blue-500 to-indigo-600 text-white font-semibold shadow-md shadow-blue-500/10 shrink-0">
+                  {profile.fullName ? profile.fullName.charAt(0).toUpperCase() : 'S'}
+                </div>
+              )}
+              <div className="hidden md:block">
+                <p className="text-xs font-semibold text-white">{profile.fullName}</p>
+                <p className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">Student</p>
+              </div>
+              <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform duration-300 ${dropdownOpen ? 'rotate-180 text-white' : ''}`} />
+            </button>
+          )}
 
           {/* User Dropdown */}
           <AnimatePresence>

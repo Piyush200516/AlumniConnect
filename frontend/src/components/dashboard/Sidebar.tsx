@@ -15,6 +15,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuthContext } from '../layout/AuthProvider';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose, activeItem = 'Dashboard', onSelect }: SidebarProps) {
+  const { profile, loading, completionPercentage } = useAuthContext();
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard },
     { name: 'Profile', icon: User },
@@ -127,33 +129,69 @@ export default function Sidebar({ isOpen, onClose, activeItem = 'Dashboard', onS
 
         {/* Profile Details & Completeness */}
         <div className="mt-auto pt-6 border-t border-slate-800/80">
-          <div className="flex items-center gap-3.5 mb-4 p-2 rounded-xl bg-slate-900/40 border border-slate-900">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white font-bold text-lg shadow-md shadow-blue-500/10">
-              P
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-white text-sm truncate">Piyush Mishra</span>
-                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400 border border-emerald-500/20">
-                  Verified
-                </span>
+          {loading || !profile ? (
+            <div className="animate-pulse space-y-4">
+              <div className="flex items-center gap-3.5 p-2 bg-slate-900/40 border border-slate-900 rounded-xl">
+                <div className="h-11 w-11 rounded-xl bg-slate-800 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-24 bg-slate-800 rounded animate-pulse" />
+                  <div className="h-3 w-16 bg-slate-800 rounded animate-pulse" />
+                </div>
               </div>
-              <p className="text-xs text-slate-400 truncate mt-0.5">CSEIT • 2027</p>
+              <div className="px-2 space-y-2">
+                <div className="h-3.5 w-28 bg-slate-800 rounded animate-pulse" />
+                <div className="h-2 w-full bg-slate-800 rounded animate-pulse" />
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3.5 mb-4 p-2 rounded-xl bg-slate-900/40 border border-slate-900">
+                {profile.profileImage ? (
+                  <div className="w-11 h-11 rounded-xl overflow-hidden border border-slate-800 shrink-0">
+                    <img src={profile.profileImage} alt={profile.fullName} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white font-bold text-lg shadow-md shadow-blue-500/10 shrink-0">
+                    {profile.fullName ? profile.fullName.charAt(0).toUpperCase() : 'S'}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1 justify-between">
+                    <span className="font-semibold text-white text-sm truncate">{profile.fullName}</span>
+                    {profile.verificationStatus === 'VERIFIED' ? (
+                      <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400 border border-emerald-500/20 shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+                        Verified
+                      </span>
+                    ) : profile.verificationStatus === 'REJECTED' ? (
+                      <span className="inline-flex items-center rounded-full bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-rose-400 border border-rose-500/20 shrink-0">
+                        Rejected
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-amber-400 border border-amber-500/20 shrink-0">
+                        Under Verification
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 truncate mt-0.5">
+                    {profile.branch} • {profile.graduationYear}
+                  </p>
+                </div>
+              </div>
 
-          <div className="px-2">
-            <div className="flex items-center justify-between text-xs font-medium text-slate-400 mb-2">
-              <span>Profile Completeness</span>
-              <span className="text-blue-400 font-semibold">80%</span>
-            </div>
-            <div className="h-2 w-full bg-slate-850 rounded-full overflow-hidden border border-slate-800">
-              <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] rounded-full transition-all duration-1000 ease-out" 
-                style={{ width: '80%' }}
-              />
-            </div>
-          </div>
+              <div className="px-2">
+                <div className="flex items-center justify-between text-xs font-medium text-slate-400 mb-2">
+                  <span>Profile Completeness</span>
+                  <span className="text-blue-400 font-semibold">{completionPercentage}%</span>
+                </div>
+                <div className="h-2 w-full bg-slate-850 rounded-full overflow-hidden border border-slate-800">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] rounded-full transition-all duration-1000 ease-out" 
+                    style={{ width: `${completionPercentage}%` }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </aside>
     </>

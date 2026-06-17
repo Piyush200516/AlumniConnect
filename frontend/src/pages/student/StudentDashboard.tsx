@@ -19,6 +19,8 @@ import JobCard from '../../components/dashboard/JobCard';
 import MentorCard from '../../components/dashboard/MentorCard';
 import AnnouncementCard from '../../components/dashboard/AnnouncementCard';
 import Profile from './Profile';
+import SettingsView from '../../components/dashboard/SettingsView';
+import { useAuthContext } from '../../components/layout/AuthProvider';
 
 // TypeScript Interfaces for Mock Data
 interface Job {
@@ -59,6 +61,7 @@ interface Announcement {
 }
 
 export default function StudentDashboard() {
+  const { profile, loading: authLoading, logout, refreshProfile } = useAuthContext();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState('Dashboard');
   const [loading, setLoading] = useState(true);
@@ -167,22 +170,26 @@ export default function StudentDashboard() {
     },
   ];
 
-  // Simulating skeleton loaders on mount
+  // Sync loading state with authLoading and profile availability
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1200);
+    if (authLoading || !profile) {
+      setLoading(true);
+      return;
+    }
+    const timer = setTimeout(() => setLoading(false), 800);
     return () => clearTimeout(timer);
-  }, []);
-
-  const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 800);
-  };
-
-  const handleLogout = () => {
-    console.log('Logging out student...');
-    localStorage.removeItem('token');
-    window.location.href = '/auth';
-  };
+  }, [authLoading, profile]);
+ 
+   const handleRefresh = async () => {
+     setLoading(true);
+     await refreshProfile();
+     setTimeout(() => setLoading(false), 600);
+   };
+ 
+   const handleLogout = () => {
+     console.log('Logging out student...');
+     logout();
+   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#060a12] via-[#09101f] to-[#04070e] text-slate-100 antialiased font-sans">
@@ -215,12 +222,12 @@ export default function StudentDashboard() {
         <main className="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-8">
           
           {/* Header Hero Section */}
-          {activeMenu !== 'Profile' && (
+          {activeMenu !== 'Profile' && activeMenu !== 'Settings' && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h1 className="text-3xl font-extrabold tracking-tight text-white">
-                    Welcome back, Piyush! 👋
+                    Welcome back, {profile?.fullName || 'Student'}! 👋
                   </h1>
                   <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-md">
                     <Sparkles className="h-3 w-3" /> Pro Student
@@ -367,6 +374,16 @@ export default function StudentDashboard() {
                 transition={{ duration: 0.35, ease: 'easeOut' }}
               >
                 <Profile />
+              </motion.div>
+            ) : activeMenu === 'Settings' ? (
+              <motion.div
+                key="settings"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+              >
+                <SettingsView />
               </motion.div>
             ) : (
               // FULLY LOADED DASHBOARD

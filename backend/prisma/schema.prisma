@@ -60,7 +60,8 @@ model StudentProfile {
   githubUrl        String?
   resumeUrl        String?
   profileImage     String?
-  isVerified       Boolean  @default(false)
+  isVerified         Boolean            @default(false)
+  verificationStatus VerificationStatus @default(PENDING)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -384,3 +385,11 @@ enum NotificationType {
   NEW_MESSAGE
   SYSTEM
 }
+
+/// Verification status for students
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+

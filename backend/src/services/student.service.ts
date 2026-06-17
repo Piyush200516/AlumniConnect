@@ -86,6 +86,7 @@ export class StudentService {
       resumeUrl: profile.resumeUrl,
       profileImage: profile.profileImage,
       isVerified: profile.isVerified,
+      verificationStatus: profile.verificationStatus,
     };
   }
 
@@ -154,6 +155,7 @@ export class StudentService {
       resumeUrl: updatedProfile.resumeUrl,
       profileImage: updatedProfile.profileImage,
       isVerified: updatedProfile.isVerified,
+      verificationStatus: updatedProfile.verificationStatus,
     };
   }
 }

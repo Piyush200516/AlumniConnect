@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Plus, Loader2 } from 'lucide-react';
+import { X, Upload, Loader2 } from 'lucide-react';
 
 interface EditProfileDialogProps {
   isOpen: boolean;

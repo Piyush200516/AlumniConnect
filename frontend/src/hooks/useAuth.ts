@@ -11,9 +11,10 @@ export const useAuth = () => {
   const navigate = useNavigate();
 
   const storeUser = (role: Role, token: string) => {
+    localStorage.clear();
+    sessionStorage.clear();
     const user: User = { role, token };
     setUser(user);
-    localStorage.setItem('token', token);
   };
 
   const login = async (role: Role, data: any, endpoint: string, redirectPath: string) => {
