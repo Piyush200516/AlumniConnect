@@ -33,12 +33,19 @@ model User {
   eventCertificates          EventCertificate[]  @relation("StudentCertificates")
   jobApplications            JobApplication[]
   postedJobs                 Job[]
+  savedJobs                  SavedJob[]
   likes                      Like[]
   receivedMentorshipRequests MentorshipRequest[] @relation("MentorshipAlumni")
   sentMentorshipRequests     MentorshipRequest[] @relation("MentorshipStudent")
   sentMessages               Message[]
   notifications              Notification[]
   posts                      Post[]
+  connectionsSent            Connection[]        @relation("ConnectionSender")
+  connectionsReceived        Connection[]        @relation("ConnectionReceiver")
+  followers                  User[]              @relation("UserFollows")
+  following                  User[]              @relation("UserFollows")
+  savedAlumni                SavedAlumni[]       @relation("UserSavedAlumni")
+  savedByUsers               SavedAlumni[]       @relation("AlumniSavedBy")
 
   @@index([role])
   @@index([status])
@@ -80,6 +87,8 @@ model AlumniProfile {
   userId          String   @unique
   fullName        String
   passingYear     Int
+  branch          String?
+  course          String?
   currentCompany  String?
   designation     String?
   industry        String?
@@ -91,13 +100,19 @@ model AlumniProfile {
   profileImageUrl String?
   linkedinUrl     String?
   location        String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId       String?
+  company         Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  workExperiences WorkExperience[]
+  education       Education[]
+  skillsList      Skill[]          @relation("AlumniSkills")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([passingYear])
   @@index([industry])
   @@index([currentCompany])
+  @@index([companyId])
   @@map("alumni_profiles")
 }
 
@@ -195,6 +210,7 @@ model Job {
   title          String
   description    String
   company        String
+  companyLogo    String?
   location       String?
   salary         String?
   jobType        JobType          @default(FULL_TIME)
@@ -203,8 +219,21 @@ model Job {
   isActive       Boolean          @default(true)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
-  applications   JobApplication[]
-  postedBy       User             @relation(fields: [postedById], references: [id], onDelete: Cascade)
+  
+  // Detailed fields
+  responsibilities String?
+  eligibility      String?
+  benefits         String?
+  selectionProcess String?
+  applicationLink  String?
+  
+  // CDC verification fields
+  approvalStatus   JobApprovalStatus @default(PENDING)
+  remarks          String?
+  
+  applications     JobApplication[]
+  postedBy         User              @relation(fields: [postedById], references: [id], onDelete: Cascade)
+  savedBy          SavedJob[]
 
   @@index([postedById])
   @@index([jobType])
@@ -580,5 +609,118 @@ model EventCertificate {
   @@index([eventId])
   @@index([createdAt])
   @@map("event_certificates")
+}
+
+model SavedJob {
+  id        String   @id @default(uuid())
+  userId    String
+  jobId     String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@map("saved_jobs")
+}
+
+enum JobApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Company {
+  id              String           @id @default(uuid())
+  name            String           @unique
+  logoUrl         String?
+  location        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  alumniProfiles  AlumniProfile[]
+  workExperiences WorkExperience[]
+
+  @@map("companies")
+}
+
+model WorkExperience {
+  id              String        @id @default(uuid())
+  alumniProfileId String
+  alumniProfile   AlumniProfile @relation(fields: [alumniProfileId], references: [id], onDelete: Cascade)
+  companyName     String
+  companyId       String?
+  company         Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  role            String
+  startDate       DateTime
+  endDate         DateTime?
+  description     String?
+  location        String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([alumniProfileId])
+  @@index([companyId])
+  @@map("work_experiences")
+}
+
+model Education {
+  id              String        @id @default(uuid())
+  alumniProfileId String
+  alumniProfile   AlumniProfile @relation(fields: [alumniProfileId], references: [id], onDelete: Cascade)
+  institution     String
+  degree          String
+  fieldOfStudy    String?
+  startDate       DateTime
+  endDate         DateTime?
+  description     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([alumniProfileId])
+  @@map("educations")
+}
+
+model Skill {
+  id             String          @id @default(uuid())
+  name           String          @unique
+  alumniProfiles AlumniProfile[] @relation("AlumniSkills")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("skills")
+}
+
+model Connection {
+  id         String           @id @default(uuid())
+  senderId   String
+  receiverId String
+  status     ConnectionStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  sender     User             @relation("ConnectionSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User             @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+  @@map("connections")
+}
+
+model SavedAlumni {
+  id        String   @id @default(uuid())
+  userId    String
+  alumniId  String
+  createdAt DateTime @default(now())
+  user      User     @relation("UserSavedAlumni", fields: [userId], references: [id], onDelete: Cascade)
+  alumni    User     @relation("AlumniSavedBy", fields: [alumniId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, alumniId])
+  @@map("saved_alumni")
 }
 

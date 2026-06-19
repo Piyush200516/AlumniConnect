@@ -10,7 +10,8 @@ import {
   Info,
   Calendar,
   Plus,
-  Download
+  Download,
+  Briefcase
 } from 'lucide-react';
 import { useAuthContext } from '../../components/layout/AuthProvider';
 import api from '../../services/api';
@@ -130,7 +131,7 @@ export default function CdcDashboard() {
   const { logout } = useAuthContext();
   
   // Dashboard navigation tab
-  const [dashboardTab, setDashboardTab] = useState<'applications' | 'events'>('applications');
+  const [dashboardTab, setDashboardTab] = useState<'applications' | 'events' | 'jobs'>('applications');
   
   // Tab 1: Student Applications States
   const [applications, setApplications] = useState<Application[]>([]);
@@ -152,6 +153,13 @@ export default function CdcDashboard() {
   const [eventRegistrations, setEventRegistrations] = useState<Registrant[]>([]);
   const [viewingEventRegistrants, setViewingEventRegistrants] = useState<Event | null>(null);
   const [registrantsLoading, setRegistrantsLoading] = useState(false);
+
+  // Tab 3: Jobs Moderation States
+  const [adminJobs, setAdminJobs] = useState<any[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [selectedJob, setSelectedJob] = useState<any | null>(null);
+  const [jobRemarks, setJobRemarks] = useState('');
+  const [jobActionLoading, setJobActionLoading] = useState(false);
 
   // CDC Event creation form data
   const [formData, setFormData] = useState({
@@ -193,10 +201,44 @@ export default function CdcDashboard() {
   useEffect(() => {
     if (dashboardTab === 'applications') {
       fetchApplications();
-    } else {
+    } else if (dashboardTab === 'events') {
       fetchAdminEvents();
+    } else {
+      fetchAdminJobs();
     }
   }, [dashboardTab]);
+
+  const fetchAdminJobs = async () => {
+    setJobsLoading(true);
+    try {
+      const res = await api.get('/jobs');
+      setAdminJobs(res.data.data || []);
+    } catch (err: any) {
+      console.error(err);
+      toastError('Failed to load jobs list for review');
+    } finally {
+      setJobsLoading(false);
+    }
+  };
+
+  const handleJobApproval = async (jobId: string, approvalStatus: 'APPROVED' | 'REJECTED') => {
+    setJobActionLoading(true);
+    try {
+      await api.post(`/jobs/${jobId}/${approvalStatus.toLowerCase()}`, {
+        approvalStatus,
+        remarks: jobRemarks
+      });
+      toastSuccess(`Job posting has been ${approvalStatus.toLowerCase()}`);
+      await fetchAdminJobs();
+      setSelectedJob(null);
+      setJobRemarks('');
+    } catch (err: any) {
+      console.error(err);
+      toastError(err.response?.data?.message || 'Failed to update job posting review status');
+    } finally {
+      setJobActionLoading(false);
+    }
+  };
 
   const fetchApplications = async () => {
     setAppsLoading(true);
@@ -404,6 +446,16 @@ export default function CdcDashboard() {
             >
               Events Console
             </button>
+            <button 
+              onClick={() => setDashboardTab('jobs')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${
+                dashboardTab === 'jobs' 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+                  : 'bg-slate-900 border border-slate-850 text-slate-300 hover:bg-slate-850'
+              }`}
+            >
+              Jobs Moderation
+            </button>
           </div>
         </div>
 
@@ -508,7 +560,7 @@ export default function CdcDashboard() {
               </div>
             )}
           </div>
-        ) : (
+        ) : dashboardTab === 'events' ? (
           /* Tab 2: Events Console */
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -545,7 +597,7 @@ export default function CdcDashboard() {
                       <tr key={event.id} className="hover:bg-slate-900/10">
                         <td className="px-6 py-4">
                           <p className="font-bold text-white text-sm">{event.title}</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">{event.category} • {event.mode} • {event.venue}</p>
+                          <p className="text-[10px] text-slate-550 mt-0.5">{event.category} • {event.mode} • {event.venue}</p>
                         </td>
                         <td className="px-6 py-4 text-slate-200">{event.speakerName}</td>
                         <td className="px-6 py-4 text-slate-400">
@@ -573,6 +625,71 @@ export default function CdcDashboard() {
                               Verify
                             </button>
                           )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Tab 3: Jobs Moderation Console */
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Moderate Alumni Job Postings</h3>
+            </div>
+
+            {jobsLoading ? (
+              <div className="flex h-32 flex-col items-center justify-center gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                <p className="text-slate-500 text-xs">Loading Job Postings...</p>
+              </div>
+            ) : adminJobs.length === 0 ? (
+              <p className="text-xs text-slate-500 italic py-8 text-center border border-dashed border-slate-900/40 rounded-3xl">No jobs posted yet.</p>
+            ) : (
+              <div className="border border-slate-900 bg-slate-950/40 rounded-2xl overflow-hidden shadow-xl">
+                <table className="w-full text-left text-xs text-slate-350">
+                  <thead className="bg-slate-950 border-b border-slate-900 text-slate-500 font-bold uppercase tracking-wider">
+                    <tr>
+                      <th className="px-6 py-4">Job Details</th>
+                      <th className="px-6 py-4">Required Skills</th>
+                      <th className="px-6 py-4">Creator Alumni</th>
+                      <th className="px-6 py-4">Approval Status</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900/40 font-medium">
+                    {adminJobs.map(job => (
+                      <tr key={job.id} className="hover:bg-slate-900/10">
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-white text-sm">{job.title}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">{job.company} • {job.jobType} • {job.location || 'N/A'}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-1">
+                            {job.skillsRequired.slice(0, 3).map((s: string, idx: number) => (
+                              <span key={idx} className="bg-slate-900 px-1.5 py-0.5 rounded text-[10px] text-slate-405 font-semibold">{s}</span>
+                            ))}
+                            {job.skillsRequired.length > 3 && <span className="text-[9px] text-slate-550">+{job.skillsRequired.length - 3}</span>}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-slate-400">
+                          {job.postedBy?.alumniProfile?.fullName || 'CDC Admin'}
+                          <span className="block text-[10px] text-slate-550">{job.postedBy?.email}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {job.approvalStatus === 'APPROVED' && <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded text-[10px] font-bold">Approved</span>}
+                          {job.approvalStatus === 'PENDING' && <span className="bg-amber-500/10 text-amber-400 border border-amber-500/25 px-2 py-0.5 rounded text-[10px] font-bold">Pending Review</span>}
+                          {job.approvalStatus === 'REJECTED' && <span className="bg-rose-500/10 text-rose-455 border border-rose-500/25 px-2 py-0.5 rounded text-[10px] font-bold">Rejected</span>}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button 
+                            onClick={() => { setJobRemarks(job.remarks || ''); setSelectedJob(job); }}
+                            className="px-3 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 rounded-xl text-[11px] font-bold text-blue-400 hover:text-white cursor-pointer"
+                          >
+                            Review
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -987,6 +1104,77 @@ export default function CdcDashboard() {
                 className="px-4 py-2 border border-slate-850 hover:bg-slate-900 rounded-xl text-xs font-semibold cursor-pointer"
               >
                 Close
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* CDC JOB APPROVAL / MODERATION MODAL */}
+      {selectedJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setSelectedJob(null)}></div>
+          <div className="relative w-full max-w-lg rounded-2xl border border-slate-850 bg-slate-950 p-6 shadow-2xl text-slate-200 z-10 space-y-6">
+            
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 items-center justify-center rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-400 flex shrink-0">
+                <Briefcase className="h-5 w-5" />
+              </div>
+              <div className="space-y-1 flex-1">
+                <h3 className="text-md font-bold text-white">Moderate Alumni Job Posting</h3>
+                <p className="text-xs text-slate-400">Review request and set approval verdict.</p>
+              </div>
+              <button onClick={() => setSelectedJob(null)} className="text-slate-400 hover:text-white cursor-pointer">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="bg-slate-900/50 p-4 border border-slate-900 rounded-xl space-y-1 text-xs max-h-[30vh] overflow-y-auto custom-scrollbar">
+              <p className="font-bold text-white text-sm">{selectedJob.title}</p>
+              <p className="text-slate-400 font-semibold">{selectedJob.company} • {selectedJob.jobType}</p>
+              <p className="text-slate-500">Location: {selectedJob.location || 'N/A'} | Salary: {selectedJob.salary || 'N/A'}</p>
+              <p className="text-slate-405 leading-relaxed mt-2.5 whitespace-pre-wrap">{selectedJob.description}</p>
+              
+              {selectedJob.responsibilities && (
+                <div className="mt-3.5 border-t border-slate-900/60 pt-2.5">
+                  <p className="font-bold text-white">Responsibilities:</p>
+                  <p className="text-slate-405 mt-1 whitespace-pre-wrap">{selectedJob.responsibilities}</p>
+                </div>
+              )}
+              {selectedJob.eligibility && (
+                <div className="mt-2.5">
+                  <p className="font-bold text-white">Eligibility Criteria:</p>
+                  <p className="text-slate-405 mt-1 whitespace-pre-wrap">{selectedJob.eligibility}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">CDC Remarks</label>
+              <input 
+                type="text" 
+                placeholder="Enter approval/rejection remarks..."
+                value={jobRemarks}
+                onChange={(e) => setJobRemarks(e.target.value)}
+                className="w-full px-4 py-2 bg-slate-900/50 border border-slate-900 rounded-xl text-xs placeholder-slate-700 focus:outline-none focus:border-blue-500 text-slate-200"
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <button 
+                onClick={() => handleJobApproval(selectedJob.id, 'REJECTED')}
+                disabled={jobActionLoading}
+                className="px-4 py-2 bg-rose-950/20 border border-rose-900/30 hover:bg-rose-900 text-rose-400 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Reject Posting
+              </button>
+              <button 
+                onClick={() => handleJobApproval(selectedJob.id, 'APPROVED')}
+                disabled={jobActionLoading}
+                className="px-4 py-2 bg-emerald-950/20 border border-emerald-900/30 hover:bg-emerald-600 text-emerald-450 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Approve & Publish
               </button>
             </div>
 

@@ -10,7 +10,10 @@ import {
   LogOut,
   GraduationCap,
   Sparkles,
-  Download
+  Download,
+  Briefcase,
+  DollarSign,
+  ExternalLink
 } from 'lucide-react';
 import { useAuthContext } from '../../components/layout/AuthProvider';
 import api from '../../services/api';
@@ -62,7 +65,7 @@ export default function AlumniDashboard() {
   const profile = authProfile as any;
   
   // Dashboard view selection
-  const [activeTab, setActiveTab] = useState<'events' | 'create'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'create' | 'jobs' | 'create_job'>('events');
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -76,27 +79,29 @@ export default function AlumniDashboard() {
   const [attendanceCode, setAttendanceCode] = useState('');
   const [attendanceLoading, setAttendanceLoading] = useState(false);
 
-  // Event form creation data
-  const [formData, setFormData] = useState({
+  // Job opportunities states
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<any | null>(null);
+  const [applicants, setApplicants] = useState<any[]>([]);
+  const [applicantsLoading, setApplicantsLoading] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+
+  const [jobFormData, setJobFormData] = useState({
     title: '',
-    category: 'Alumni Talk',
+    company: profile?.currentCompany || '',
+    companyLogo: '',
+    location: profile?.location || '',
+    salary: '',
+    jobType: 'FULL_TIME',
+    skillsRequired: '', // comma separated input
+    deadline: '',
     description: '',
-    mode: 'ONLINE',
-    eventDate: '',
-    eventTime: '',
-    duration: '',
-    venue: '',
-    googleMapsLocation: '',
-    totalSeats: 100,
-    registrationDeadline: '',
-    agenda: '',
-    keyBenefits: '', // comma separated input
-    eligibilityCriteria: '',
-    requiredDocuments: 'College ID Card', // comma separated input
-    speakerName: profile?.fullName || '',
-    speakerDesignation: '',
-    speakerCompany: '',
-    status: 'PUBLISHED'
+    responsibilities: '',
+    eligibility: '',
+    benefits: '',
+    selectionProcess: '',
+    applicationLink: ''
   });
 
   const categories = [
@@ -116,6 +121,7 @@ export default function AlumniDashboard() {
 
   useEffect(() => {
     fetchMyEvents();
+    fetchMyJobs();
   }, []);
 
   const fetchMyEvents = async () => {
@@ -262,6 +268,124 @@ export default function AlumniDashboard() {
     document.body.removeChild(link);
   };
 
+  const fetchMyJobs = async () => {
+    setJobsLoading(true);
+    try {
+      const res = await api.get('/jobs');
+      setJobs(res.data.data || []);
+    } catch (err: any) {
+      console.error(err);
+      toastError('Failed to fetch posted jobs');
+    } finally {
+      setJobsLoading(false);
+    }
+  };
+
+  const handleCreateJob = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setJobsLoading(true);
+    try {
+      const payload = {
+        ...jobFormData,
+        skillsRequired: jobFormData.skillsRequired.split(',').map(s => s.trim()).filter(Boolean),
+        deadline: jobFormData.deadline ? new Date(jobFormData.deadline) : null
+      };
+
+      await api.post('/jobs/create', payload);
+      toastSuccess('Job posting created successfully and submitted for CDC approval!');
+      
+      // Reset form
+      setJobFormData({
+        title: '',
+        company: profile?.currentCompany || '',
+        companyLogo: '',
+        location: profile?.location || '',
+        salary: '',
+        jobType: 'FULL_TIME',
+        skillsRequired: '',
+        deadline: '',
+        description: '',
+        responsibilities: '',
+        eligibility: '',
+        benefits: '',
+        selectionProcess: '',
+        applicationLink: ''
+      });
+
+      setActiveTab('jobs');
+      fetchMyJobs();
+    } catch (err: any) {
+      console.error(err);
+      toastError(err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Failed to create job posting');
+    } finally {
+      setJobsLoading(false);
+    }
+  };
+
+  const loadApplicants = async (job: any) => {
+    setSelectedJob(job);
+    setApplicantsLoading(true);
+    try {
+      const res = await api.get(`/jobs/${job.id}/applications`);
+      setApplicants(res.data.data || []);
+    } catch (err) {
+      console.error(err);
+      toastError('Failed to fetch job applicants');
+    } finally {
+      setApplicantsLoading(false);
+    }
+  };
+
+  const handleUpdateApplicantStatus = async (appId: string, status: string) => {
+    setUpdatingStatusId(appId);
+    try {
+      await api.put(`/jobs/applications/${appId}/status`, { status });
+      toastSuccess(`Candidate status updated to ${status}`);
+      if (selectedJob) {
+        loadApplicants(selectedJob);
+      }
+    } catch (err: any) {
+      console.error(err);
+      toastError(err.response?.data?.message || 'Failed to update candidate status');
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
+
+  const handleToggleJobActive = async (jobId: string, currentActive: boolean) => {
+    try {
+      await api.put(`/jobs/${jobId}`, { isActive: !currentActive });
+      toastSuccess(`Job posting ${!currentActive ? 'activated' : 'paused'} successfully!`);
+      fetchMyJobs();
+    } catch (err: any) {
+      console.error(err);
+      toastError('Failed to toggle job status');
+    }
+  };
+
+  // Re-declared form state for event validation
+  const [formData, setFormData] = useState({
+    title: '',
+    category: 'Alumni Talk',
+    description: '',
+    mode: 'ONLINE',
+    eventDate: '',
+    eventTime: '',
+    duration: '',
+    venue: '',
+    googleMapsLocation: '',
+    totalSeats: 100,
+    registrationDeadline: '',
+    agenda: '',
+    keyBenefits: '', // comma separated input
+    eligibilityCriteria: '',
+    requiredDocuments: 'College ID Card', // comma separated input
+    speakerName: profile?.fullName || '',
+    speakerDesignation: '',
+    speakerCompany: '',
+    status: 'PUBLISHED'
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#060a12] via-[#09101f] to-[#04070e] text-slate-100 antialiased font-sans flex flex-col">
       
@@ -299,7 +423,7 @@ export default function AlumniDashboard() {
               Create events, track registrations, and coordinate student attendance.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button 
               onClick={() => setActiveTab('events')}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${
@@ -319,6 +443,26 @@ export default function AlumniDashboard() {
               }`}
             >
               Create New Event
+            </button>
+            <button 
+              onClick={() => setActiveTab('jobs')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${
+                activeTab === 'jobs' 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+                  : 'bg-slate-900 border border-slate-850 text-slate-300 hover:bg-slate-850'
+              }`}
+            >
+              My Job Postings
+            </button>
+            <button 
+              onClick={() => setActiveTab('create_job')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${
+                activeTab === 'create_job' 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+                  : 'bg-slate-900 border border-slate-850 text-slate-300 hover:bg-slate-850'
+              }`}
+            >
+              Post a Job
             </button>
           </div>
         </div>
@@ -385,7 +529,7 @@ export default function AlumniDashboard() {
               ))}
             </div>
           )
-        ) : (
+        ) : activeTab === 'create' ? (
           /* Create Event Form */
           <div className="rounded-2xl border border-slate-900 bg-slate-950/40 p-6 md:p-8 shadow-xl shadow-black/10 backdrop-blur-md">
             <h2 className="text-lg font-bold text-white mb-6 uppercase tracking-wider border-b border-slate-900 pb-2">Event Registration Form</h2>
@@ -602,6 +746,254 @@ export default function AlumniDashboard() {
               </div>
             </form>
           </div>
+        ) : activeTab === 'jobs' ? (
+          /* Jobs List view */
+          jobsLoading ? (
+            <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+              <p className="text-slate-400 text-xs font-semibold">Loading posted jobs...</p>
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="text-center p-16 border border-dashed border-slate-900/40 rounded-3xl">
+              <Briefcase className="h-10 w-10 text-slate-700 mx-auto mb-3" />
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">No job postings created</h3>
+              <p className="text-slate-500 text-xs mt-1">Submit your first job or internship opportunity to get started.</p>
+            </div>
+          ) : (
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {jobs.map((job) => (
+                <div key={job.id} className="rounded-2xl border border-slate-900 bg-slate-950/20 p-5 space-y-4 hover:border-slate-800 transition-all flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                      <span className="bg-slate-900 border border-slate-850 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase text-slate-400">
+                        {job.jobType === 'FULL_TIME' ? 'Full Time' : job.jobType === 'INTERNSHIP' ? 'Internship' : job.jobType}
+                      </span>
+                      
+                      {job.approvalStatus === 'APPROVED' && <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase">Approved</span>}
+                      {job.approvalStatus === 'PENDING' && <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase">Pending Review</span>}
+                      {job.approvalStatus === 'REJECTED' && <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase">Rejected</span>}
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-bold text-white text-base leading-snug truncate">{job.title}</h3>
+                      <p className="text-xs text-slate-405 mt-1 font-semibold">{job.company}</p>
+                      {job.location && (
+                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5 text-slate-600" /> {job.location}
+                        </p>
+                      )}
+                      {job.salary && (
+                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                          <DollarSign className="h-3.5 w-3.5 text-slate-655" /> {job.salary}
+                        </p>
+                      )}
+                    </div>
+
+                    {job.remarks && job.approvalStatus === 'REJECTED' && (
+                      <p className="text-[10px] text-rose-400 bg-rose-500/5 border border-rose-500/10 p-2.5 rounded-lg leading-normal">
+                        CDC Remarks: {job.remarks}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="border-t border-slate-900 pt-3 flex gap-2">
+                    <button 
+                      onClick={() => loadApplicants(job)}
+                      className="flex-1 py-2 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl text-xs font-bold text-slate-350 hover:text-white transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <Users className="h-3.5 w-3.5" /> Applicants
+                    </button>
+                    <button 
+                      onClick={() => handleToggleJobActive(job.id, job.isActive)}
+                      className={`px-3 py-2 border rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        job.isActive 
+                          ? 'bg-rose-950/20 border-rose-900/35 text-rose-400 hover:bg-rose-900 hover:text-white' 
+                          : 'bg-emerald-950/20 border-emerald-900/35 text-emerald-400 hover:bg-emerald-600 hover:text-white'
+                      }`}
+                    >
+                      {job.isActive ? 'Pause' : 'Activate'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : (
+          /* Post a Job Form */
+          <div className="rounded-2xl border border-slate-900 bg-slate-950/40 p-6 md:p-8 shadow-xl shadow-black/10 backdrop-blur-md">
+            <h2 className="text-lg font-bold text-white mb-6 uppercase tracking-wider border-b border-slate-900 pb-2">Post Job Opportunity</h2>
+            
+            <form onSubmit={handleCreateJob} className="space-y-6">
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Job Title *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Associate Frontend Developer"
+                    value={jobFormData.title}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm placeholder-slate-650 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Company Name *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. TechMart Solutions"
+                    value={jobFormData.company}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, company: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm placeholder-slate-655 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Company Logo URL (Optional)</label>
+                  <input 
+                    type="text" 
+                    placeholder="https://images.cloudinary.com/..."
+                    value={jobFormData.companyLogo}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, companyLogo: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm placeholder-slate-650 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Job Type *</label>
+                  <select
+                    value={jobFormData.jobType}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, jobType: e.target.value as any }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm text-slate-300 focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="FULL_TIME">Full Time</option>
+                    <option value="INTERNSHIP">Internship</option>
+                    <option value="PART_TIME">Part Time</option>
+                    <option value="CONTRACT">Contract</option>
+                    <option value="FREELANCE">Freelance</option>
+                    <option value="REMOTE">Remote</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Location *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Pune, Maharashtra / Remote"
+                    value={jobFormData.location}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, location: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm placeholder-slate-650 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Salary / Stipend Details *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. ₹20,000 / month or ₹6 - 8 LPA"
+                    value={jobFormData.salary}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, salary: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm placeholder-slate-650 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Application Deadline</label>
+                  <input 
+                    type="date"
+                    value={jobFormData.deadline}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, deadline: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm text-slate-350 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Required Skills (Comma-separated) *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. React, TypeScript, TailwindCSS"
+                    value={jobFormData.skillsRequired}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, skillsRequired: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm placeholder-slate-650 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Description *</label>
+                  <textarea 
+                    required
+                    rows={4}
+                    placeholder="Provide full description of the job criteria and roles..."
+                    value={jobFormData.description}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm placeholder-slate-650 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Key Responsibilities</label>
+                  <textarea 
+                    rows={3}
+                    placeholder="Outline key tasks and candidate duties..."
+                    value={jobFormData.responsibilities}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, responsibilities: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm placeholder-slate-650 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Eligibility Criteria</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Open to B.Tech CSIT branch 2026 Batch"
+                    value={jobFormData.eligibility}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, eligibility: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm placeholder-slate-650 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Benefits & Perks</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Health insurance, flexible WFH"
+                    value={jobFormData.benefits}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, benefits: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm placeholder-slate-650 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Selection Process Details</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. MCQ Test -> Technical Interview -> HR Round"
+                    value={jobFormData.selectionProcess}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, selectionProcess: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm placeholder-slate-655 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">External Application Link</label>
+                  <input 
+                    type="text" 
+                    placeholder="https://careers.company.com/..."
+                    value={jobFormData.applicationLink}
+                    onChange={(e) => setJobFormData(prev => ({ ...prev, applicationLink: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-800 rounded-xl text-sm placeholder-slate-650 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-900">
+                <button 
+                  type="submit" 
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 cursor-pointer"
+                >
+                  Post Opportunity
+                </button>
+              </div>
+            </form>
+          </div>
         )}
       </main>
 
@@ -800,6 +1192,123 @@ export default function AlumniDashboard() {
                 className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold cursor-pointer"
               >
                 Save Changes
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* VIEW APPLICANTS / CANDIDATES MODAL */}
+      {selectedJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setSelectedJob(null)}></div>
+          <div className="relative w-full max-w-4xl rounded-2xl border border-slate-800 bg-slate-950 p-6 md:p-8 shadow-2xl text-slate-200 z-10 max-h-[90vh] flex flex-col">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-900 pb-4 shrink-0">
+              <div>
+                <h3 className="text-lg font-bold text-white">Applicants: {selectedJob.title}</h3>
+                <p className="text-xs text-slate-400">{selectedJob.company} | Total Applications: {applicants.length}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedJob(null)}
+                className="w-8 h-8 rounded-lg border border-slate-900 hover:bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Applicants List Table */}
+            <div className="flex-1 overflow-y-auto pr-2 my-4 custom-scrollbar">
+              {applicantsLoading ? (
+                <div className="flex h-32 flex-col items-center justify-center gap-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                  <p className="text-slate-500 text-xs font-medium">Fetching candidate submissions...</p>
+                </div>
+              ) : applicants.length === 0 ? (
+                <p className="text-xs text-slate-500 italic py-8 text-center">No candidates have applied for this posting yet.</p>
+              ) : (
+                <div className="border border-slate-900 rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-xs text-slate-350">
+                    <thead className="bg-slate-950 border-b border-slate-900 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <tr>
+                        <th className="px-4 py-3">Student</th>
+                        <th className="px-4 py-3">Branch & Batch</th>
+                        <th className="px-4 py-3">Academic Summary</th>
+                        <th className="px-4 py-3">Resume</th>
+                        <th className="px-4 py-3">Status Pipeline</th>
+                        <th className="px-4 py-3 text-right">Applied At</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900/40 font-medium text-slate-300">
+                      {applicants.map((app) => (
+                        <tr key={app.id} className="hover:bg-slate-900/20">
+                          <td className="px-4 py-3 flex items-center gap-2.5">
+                            {app.applicant.studentProfile?.profileImage ? (
+                              <img src={app.applicant.studentProfile.profileImage} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-800" />
+                            ) : (
+                              <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center font-bold text-[10px] text-slate-455 border border-slate-800 shrink-0">
+                                {app.applicant.studentProfile?.fullName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-bold text-white">{app.applicant.studentProfile?.fullName || 'N/A'}</p>
+                              <p className="text-[10px] text-slate-550">{app.applicant.email}</p>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p>{app.applicant.studentProfile?.branch || 'N/A'}</p>
+                            <p className="text-[10px] text-slate-500 font-bold mt-0.5">Batch: {app.applicant.studentProfile?.graduationYear || 'N/A'}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="bg-blue-500/10 text-blue-400 border border-blue-500/25 px-2 py-0.5 rounded text-[10px] font-bold">
+                              CGPA: {app.applicant.studentApplication?.currentCGPA || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <a 
+                              href={app.resumeUrl} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="text-blue-400 hover:underline flex items-center gap-0.5 shrink-0"
+                            >
+                              Download Resume <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </td>
+                          <td className="px-4 py-3">
+                            <select
+                              value={app.status}
+                              disabled={updatingStatusId === app.id}
+                              onChange={(e) => handleUpdateApplicantStatus(app.id, e.target.value)}
+                              className="px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-[10px] font-bold text-slate-350 focus:outline-none focus:border-blue-500 cursor-pointer"
+                            >
+                              <option value="APPLIED">Applied</option>
+                              <option value="UNDER_REVIEW">Under Review</option>
+                              <option value="SHORTLISTED">Shortlisted</option>
+                              <option value="INTERVIEW">Interview</option>
+                              <option value="OFFERED">Offered</option>
+                              <option value="REJECTED">Rejected</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-3 text-right text-[10px] text-slate-550 font-semibold">
+                            {new Date(app.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-slate-900 pt-4 flex justify-end shrink-0">
+              <button 
+                onClick={() => setSelectedJob(null)}
+                className="px-4 py-2 border border-slate-855 hover:bg-slate-900 rounded-xl text-xs font-semibold cursor-pointer"
+              >
+                Close Dashboard
               </button>
             </div>
 

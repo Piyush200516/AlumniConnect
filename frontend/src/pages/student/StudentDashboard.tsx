@@ -26,6 +26,10 @@ const MyApplications = lazy(() => import('../../components/dashboard/MyApplicati
 const EventsPage = lazy(() => import('./EventsPage'));
 const EventDetails = lazy(() => import('./EventDetails'));
 const CertificateViewer = lazy(() => import('./CertificateViewer'));
+const JobsPage = lazy(() => import('./JobsPage'));
+const JobDetails = lazy(() => import('./JobDetails'));
+const AlumniDirectory = lazy(() => import('./AlumniDirectory'));
+const AlumniProfileView = lazy(() => import('./AlumniProfileView'));
 
 // Lazy-loaded Dashboard Widget Sections
 const EventsSection = lazy(() => import('../../components/dashboard/lazy/EventsSection'));
@@ -55,6 +59,8 @@ export default function StudentDashboard() {
   const [activeMenu, setActiveMenu] = useState('Dashboard');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedCertificateId, setSelectedCertificateId] = useState<string | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedAlumniId, setSelectedAlumniId] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -117,6 +123,24 @@ export default function StudentDashboard() {
     setActiveMenu('Events');
   }, []);
 
+  const handleSelectJob = useCallback((jobId: string) => {
+    setSelectedJobId(jobId);
+    setActiveMenu('JobDetails');
+  }, []);
+
+  const handleGoBackToJobs = useCallback(() => {
+    setActiveMenu('Job Opportunities');
+  }, []);
+
+  const handleSelectAlumni = useCallback((alumniId: string) => {
+    setSelectedAlumniId(alumniId);
+    setActiveMenu('AlumniProfileDetails');
+  }, []);
+
+  const handleGoBackToDirectory = useCallback(() => {
+    setActiveMenu('Alumni Directory');
+  }, []);
+
   // Sidebar / Navbar handlers
   const handleCloseSidebar = useCallback(() => setSidebarOpen(false), []);
   const handleSelectSidebarItem = useCallback((item: string) => {
@@ -162,7 +186,7 @@ export default function StudentDashboard() {
         <main className="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-8">
           
           {/* Header Hero Section */}
-          {activeMenu !== 'Profile' && activeMenu !== 'Settings' && activeMenu !== 'My Applications' && activeMenu !== 'Events' && activeMenu !== 'EventDetails' && activeMenu !== 'CertificateViewer' && activeMenu !== 'Messages' && (
+          {activeMenu !== 'Profile' && activeMenu !== 'Settings' && activeMenu !== 'My Applications' && activeMenu !== 'Events' && activeMenu !== 'EventDetails' && activeMenu !== 'CertificateViewer' && activeMenu !== 'Messages' && activeMenu !== 'Alumni Directory' && activeMenu !== 'AlumniProfileDetails' && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -233,6 +257,46 @@ export default function StudentDashboard() {
                     onSelectEvent={handleSelectEvent}
                     onViewCertificate={handleViewCertificate}
                   />
+                </motion.div>
+              ) : activeMenu === 'Job Opportunities' ? (
+                <motion.div
+                  key="jobs-page"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                >
+                  <JobsPage onSelectJob={handleSelectJob} />
+                </motion.div>
+              ) : activeMenu === 'Alumni Directory' ? (
+                <motion.div
+                  key="alumni-directory"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                >
+                  <AlumniDirectory onSelectAlumni={handleSelectAlumni} />
+                </motion.div>
+              ) : activeMenu === 'AlumniProfileDetails' && selectedAlumniId ? (
+                <motion.div
+                  key="alumni-profile-details"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                >
+                  <AlumniProfileView alumniId={selectedAlumniId} onGoBack={handleGoBackToDirectory} />
+                </motion.div>
+              ) : activeMenu === 'JobDetails' && selectedJobId ? (
+                <motion.div
+                  key="job-details"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                >
+                  <JobDetails jobId={selectedJobId} onGoBack={handleGoBackToJobs} />
                 </motion.div>
               ) : activeMenu === 'EventDetails' && selectedEventId ? (
                 <motion.div
