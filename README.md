@@ -1,60 +1,151 @@
 # AlumniConnect
 
-AlumniConnect is a role-based college networking platform that connects students, alumni, and the Career Development Cell (CDC) for mentorship, job opportunities, events, and real-time communication.
+> A role-based college networking platform for students, alumni, and the Career Development Cell (CDC).
+
+![Status](https://img.shields.io/badge/Status-Under%20Development-orange)
+![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20TypeScript-blue)
+![Backend](https://img.shields.io/badge/Backend-Express%20%2B%20Prisma-green)
+![Database](https://img.shields.io/badge/Database-Neon%20PostgreSQL-blueviolet)
+![Realtime](https://img.shields.io/badge/Realtime-Socket.IO-important)
 
 ## Overview
 
-The project is split into a React frontend and an Express + Prisma backend.
+AlumniConnect brings students, alumni, and CDC together in one workspace for mentorship, jobs, events, announcements, and messaging.
 
-The current app supports:
+### What the platform supports
 
-- Student registration and login
-- Alumni registration and login
-- CDC login only
+- Student and alumni authentication
+- CDC login-only access
 - Student, alumni, and CDC dashboards
-- Job browsing, bookmarking, application tracking, and moderation
-- Event creation, registration, attendance, and approval flow
+- Job browsing, bookmarking, applications, and moderation
+- Event creation, registration, attendance, and approvals
 - Mentorship requests and one-to-one messaging
-- Real-time online presence and chat updates through Socket.IO
-- File uploads with Cloudinary, with a local fallback when Cloudinary is not configured
+- Real-time online presence updates through Socket.IO
+- File uploads with Cloudinary, plus a local fallback
 - Optional email verification and password reset flows
 
-## UI Notes
+## At a Glance
 
-- There is no separate Saved page in the student sidebar.
-- There is no separate Notifications page in the student sidebar.
-- Saved jobs are handled inside the Jobs view with bookmark actions.
-- Notifications are surfaced in the top bar and in the dashboard announcements area.
+| Area | Details |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS v4 |
+| Backend | Express 5, Prisma, PostgreSQL |
+| Realtime | Socket.IO |
+| Forms | React Hook Form + Zod |
+| HTTP | Axios |
+| File Uploads | Cloudinary or local `uploads/` fallback |
+| Dev Ports | Frontend `5173`, Backend `5002` |
 
-## Key Features
+## Architecture
 
-### Student portal
+```mermaid
+flowchart LR
+  U["Students / Alumni / CDC"] --> F["React + Vite Frontend"]
+  F --> A["Express + Prisma API"]
+  A --> D["PostgreSQL / Neon"]
+  A --> S["Socket.IO realtime"]
+  A --> C["Cloudinary + Resend"]
+```
 
-- Dashboard with jobs, events, mentorship, and unread message stats
-- Profile management
-- My applications
-- Event browsing, registration, certificates, and event details
-- Job browsing, details, and bookmark actions
-- Alumni directory and alumni profile views
-- Mentorship and messaging
-- Settings
+## Role-Based Features
 
-### Alumni portal
+### Student
 
-- Dashboard for managing created events and job postings
+- Register and log in
+- Build and update a profile
+- Browse alumni and request mentorship
+- Apply for jobs and internships
+- Register for events
+- View event certificates
+- Chat with mentors and peers
+- Review announcements in the dashboard
+
+### Alumni
+
+- Register and log in
+- Manage profile and availability
 - Create and edit events
-- Track event registrations and attendance
-- Create and manage job postings
-- View applicants and update candidate status
-- Mentorship and messaging
+- Post jobs and internships
+- Review applicants and update candidate status
+- Accept or reject mentorship requests
+- Chat with students
 
-### CDC portal
+### CDC
 
-- Verify student applications
+- Login only, no signup
+- Review student applications
 - Approve or reject alumni events
 - Approve or reject alumni jobs
 - Create official CDC events
 - Export event registrants as CSV
+
+## UI Notes
+
+> Saved jobs are not a separate student page.
+>
+> Notifications are not a separate student page.
+>
+> Saved jobs are handled inside the Jobs view, and notifications appear in the top bar and dashboard announcements area.
+
+## Core Screens
+
+| Screen | Purpose |
+| --- | --- |
+| `/auth` | Role selection |
+| `/auth/student/login` | Student login |
+| `/auth/student/signup` | Student registration |
+| `/auth/alumni/login` | Alumni login |
+| `/auth/alumni/signup` | Alumni registration |
+| `/auth/cdc/login` | CDC login |
+| `/student/dashboard` | Student workspace |
+| `/alumni/dashboard` | Alumni workspace |
+| `/cdc/dashboard` | CDC console |
+
+## API Surface
+
+### Auth
+
+- `POST /api/auth/student/signup`
+- `POST /api/auth/alumni/signup`
+- `POST /api/auth/student/login`
+- `POST /api/auth/alumni/login`
+- `POST /api/auth/cdc/login`
+
+### Student
+
+- `GET /api/student/profile`
+- `GET /api/student/dashboard`
+- `PUT /api/student/profile`
+
+### Jobs
+
+- `GET /api/jobs`
+- `GET /api/jobs/:id`
+- `POST /api/jobs/create`
+- `PUT /api/jobs/:id`
+- `POST /api/jobs/:id/apply`
+- `POST /api/jobs/:id/save`
+
+### Events
+
+- `GET /api/events`
+- `GET /api/events/admin/all`
+- `GET /api/events/my-registrations`
+- `GET /api/events/my-certificates`
+- `POST /api/events/create`
+- `POST /api/events/:id/register`
+- `POST /api/events/:id/mark-attendance`
+- `POST /api/events/:id/approve`
+- `POST /api/events/:id/reject`
+
+### Mentorship and Messages
+
+- `GET /api/mentorship/dashboard`
+- `POST /api/mentorship/request`
+- `PATCH /api/mentorship/accept`
+- `PATCH /api/mentorship/reject`
+- `GET /api/messages`
+- `POST /api/messages/send`
 
 ## Tech Stack
 
@@ -69,7 +160,6 @@ The current app supports:
 - React Query
 - React Hook Form
 - Zod
-- Axios
 - Socket.IO client
 
 ### Backend
@@ -83,7 +173,6 @@ The current app supports:
 - bcryptjs
 - Socket.IO
 - multer
-- zod
 
 ### Services
 
@@ -91,73 +180,7 @@ The current app supports:
 - Cloudinary
 - Resend
 
-## Important Routes
-
-### Frontend routes
-
-- `/auth`
-- `/auth/student/login`
-- `/auth/student/signup`
-- `/auth/alumni/login`
-- `/auth/alumni/signup`
-- `/auth/cdc/login`
-- `/student/dashboard`
-- `/alumni/dashboard`
-- `/cdc/dashboard`
-
-### Backend routes
-
-- `/api/auth`
-- `/api/student`
-- `/api/applications`
-- `/api/events`
-- `/api/jobs`
-- `/api/alumni`
-- `/api/mentorship`
-- `/api/messages`
-- `/api/files`
-
-### Main API behavior
-
-- `POST /api/auth/student/signup`
-- `POST /api/auth/alumni/signup`
-- `POST /api/auth/student/login`
-- `POST /api/auth/alumni/login`
-- `POST /api/auth/cdc/login`
-- `GET /api/student/profile`
-- `GET /api/student/dashboard`
-- `GET /api/jobs`
-- `GET /api/events`
-- `POST /api/mentorship/request`
-- `GET /api/messages`
-
-## Core Data Models
-
-The backend is centered around these main Prisma models:
-
-- User
-- StudentProfile
-- AlumniProfile
-- CdcProfile
-- StudentApplication
-- Event
-- EventRegistration
-- EventCertificate
-- Job
-- JobApplication
-- MentorshipRequest
-- MentorshipConnection
-- Conversation
-- Message
-- Notification
-
 ## Local Setup
-
-### Prerequisites
-
-- Node.js 20 or newer
-- npm
-- PostgreSQL access, such as Neon
 
 ### 1. Clone the repository
 
@@ -176,9 +199,9 @@ cd ../frontend
 npm install
 ```
 
-### 3. Configure the backend environment
+### 3. Configure the backend
 
-Create `backend/.env` with values similar to:
+Create `backend/.env`:
 
 ```env
 DATABASE_URL=your_postgres_connection_string
@@ -205,17 +228,15 @@ Notes:
 
 - `RESEND_API_KEY` is optional for local development. If it is missing, email sending is skipped.
 - `CLOUDINARY_*` is optional. If it is missing, file uploads use the local `uploads/` folder.
-- The included frontend config expects the backend to run on port `5002`.
+- If you change the backend port, update the frontend env and restart Vite.
 
-### 4. Configure the frontend environment
+### 4. Configure the frontend
 
-Create `frontend/.env` with:
+Create `frontend/.env`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:5002/api
 ```
-
-If you change the backend port, update this value and restart the Vite dev server.
 
 ### 5. Run the app
 
@@ -242,16 +263,23 @@ npx prisma migrate dev
 npx prisma studio
 ```
 
-### 7. Build commands
+### 7. Build and preview
 
-Frontend:
+Frontend build:
 
 ```bash
 cd frontend
 npm run build
 ```
 
-Backend:
+Frontend preview:
+
+```bash
+cd frontend
+npm run preview
+```
+
+Backend production run:
 
 ```bash
 cd backend
@@ -259,20 +287,16 @@ npm run build
 npm start
 ```
 
-## Available Scripts
+## Useful Commands
 
-### Backend
-
-- `npm run dev` - start the backend in watch mode
-- `npm run build` - compile TypeScript
-- `npm start` - run the compiled server from `dist/`
-
-### Frontend
-
-- `npm run dev` - start the Vite dev server
-- `npm run build` - build the production bundle
-- `npm run lint` - run ESLint
-- `npm run preview` - preview the production build
+| Task | Command |
+| --- | --- |
+| Start backend dev server | `cd backend && npm run dev` |
+| Start frontend dev server | `cd frontend && npm run dev` |
+| Build frontend | `cd frontend && npm run build` |
+| Run frontend preview | `cd frontend && npm run preview` |
+| Generate Prisma client | `cd backend && npx prisma generate` |
+| Open Prisma Studio | `cd backend && npx prisma studio` |
 
 ## Project Structure
 
@@ -300,18 +324,11 @@ alumniconnect/
 `-- README.md
 ```
 
-## Development Checklist
+## Development Notes
 
-- Frontend and backend are wired together
-- Student, alumni, and CDC auth flows are implemented
-- Dashboard sections are implemented for all three roles
-- Socket.IO is used for messaging and online presence
+- Backend health check: `GET /health`
+- CDC accounts are login-only
+- The active student dashboard is the role-based dashboard in `frontend/src/pages/student/StudentDashboard.tsx`
 - Saved and Notifications are not separate student pages
-
-## Notes
-
-- The backend health check is available at `GET /health`.
-- Student and alumni signup use role-specific endpoints.
-- CDC accounts are login-only in the current app.
-- The student dashboard uses in-page sections rather than separate pages for saved items or notifications.
+- The backend is currently configured to run on port `5002`
 
