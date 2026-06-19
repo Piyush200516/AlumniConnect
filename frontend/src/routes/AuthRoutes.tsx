@@ -7,6 +7,8 @@ import { AlumniSignup } from '../pages/auth/alumni/Signup';
 import { CdcLogin } from '../pages/auth/cdc/Login';
 import { ProtectedRoute } from '../components/layout/ProtectedRoute';
 import StudentDashboard from '../pages/student/StudentDashboard';
+import CdcDashboard from '../pages/cdc/CdcDashboard';
+import AlumniDashboard from '../pages/alumni/AlumniDashboard';
 
 export const AuthRoutes = () => (
   <Routes>
@@ -21,6 +23,16 @@ export const AuthRoutes = () => (
     {/* Protected Student Routes */}
     <Route element={<ProtectedRoute allowedRoles={['student']} />}>
       <Route path="/student/dashboard" element={<StudentDashboard />} />
+    </Route>
+
+    {/* Protected Alumni Routes */}
+    <Route element={<ProtectedRoute allowedRoles={['alumni']} />}>
+      <Route path="/alumni/dashboard" element={<AlumniDashboard />} />
+    </Route>
+
+    {/* Protected CDC Routes */}
+    <Route element={<ProtectedRoute allowedRoles={['cdc']} />}>
+      <Route path="/cdc/dashboard" element={<CdcDashboard />} />
     </Route>
   </Routes>
 );

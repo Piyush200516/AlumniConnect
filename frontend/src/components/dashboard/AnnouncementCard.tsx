@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 
 interface AnnouncementCardProps {
@@ -7,7 +8,7 @@ interface AnnouncementCardProps {
   statusColor: 'green' | 'purple' | 'orange' | 'blue';
 }
 
-export default function AnnouncementCard({ title, description, timestamp, statusColor }: AnnouncementCardProps) {
+const AnnouncementCard = memo(function AnnouncementCard({ title, description, timestamp, statusColor }: AnnouncementCardProps) {
   const dotColors = {
     green: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]',
     purple: 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]',
@@ -43,4 +44,6 @@ export default function AnnouncementCard({ title, description, timestamp, status
       </span>
     </motion.div>
   );
-}
+});
+
+export default AnnouncementCard;

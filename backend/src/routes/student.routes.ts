@@ -1,7 +1,7 @@
 // src/routes/student.routes.ts
 import { Router } from 'express';
 import multer from 'multer';
-import { getStudentProfile, updateStudentProfile } from '../controllers/student.controller';
+import { getStudentProfile, updateStudentProfile, getStudentDashboard } from '../controllers/student.controller';
 import { authenticateUser } from '../middleware/auth.middleware';
 import { authorizeRoles } from '../middleware/role.middleware';
 
@@ -14,6 +14,7 @@ const upload = multer({
 });
 
 router.get('/profile', authenticateUser as any, authorizeRoles('STUDENT') as any, getStudentProfile);
+router.get('/dashboard', authenticateUser as any, authorizeRoles('STUDENT') as any, getStudentDashboard);
 
 router.put(
   '/profile',

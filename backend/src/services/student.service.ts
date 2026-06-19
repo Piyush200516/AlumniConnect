@@ -20,7 +20,7 @@ if (isCloudinaryConfigured) {
   });
 }
 
-const uploadFile = async (file: Express.Multer.File, folder: string): Promise<string> => {
+export const uploadFile = async (file: Express.Multer.File, folder: string): Promise<string> => {
   if (isCloudinaryConfigured) {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -156,6 +156,187 @@ export class StudentService {
       profileImage: updatedProfile.profileImage,
       isVerified: updatedProfile.isVerified,
       verificationStatus: updatedProfile.verificationStatus,
+    };
+  }
+
+  async getDashboardData(userId: string) {
+    // 1. Fetch profile details first (for completion percentage)
+    const profile = await prisma.studentProfile.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new ApiError(404, 'Student profile not found');
+    }
+
+    // 2. Fetch all other dashboard metrics in parallel using Promise.all
+    const [
+      jobsCount,
+      eventsCount,
+      mentorsCount,
+      unreadMessagesCount,
+      recentJobs,
+      upcomingEvents,
+      recentNotifications,
+      suggestedMentors
+    ] = await Promise.all([
+      // Count active jobs
+      prisma.job.count({
+        where: { isActive: true },
+      }),
+      // Count upcoming events
+      prisma.event.count({
+        where: {
+          approvalStatus: 'APPROVED',
+          status: 'PUBLISHED',
+          eventDate: { gte: new Date() },
+        },
+      }),
+      // Count available mentors (role ALUMNI)
+      prisma.user.count({
+        where: { role: 'ALUMNI', status: 'ACTIVE' },
+      }),
+      // Count unread messages
+      prisma.message.count({
+        where: {
+          conversation: {
+            OR: [
+              { user1Id: userId },
+              { user2Id: userId },
+            ],
+          },
+          senderId: { not: userId },
+          isRead: false,
+        },
+      }),
+      // Recent Jobs (limit 5)
+      prisma.job.findMany({
+        where: { isActive: true },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          title: true,
+          company: true,
+          location: true,
+          jobType: true,
+          createdAt: true,
+        },
+      }),
+      // Upcoming approved events (limit 5)
+      prisma.event.findMany({
+        where: {
+          approvalStatus: 'APPROVED',
+          status: 'PUBLISHED',
+          eventDate: { gte: new Date() },
+        },
+        orderBy: { eventDate: 'asc' },
+        take: 5,
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          mode: true,
+          eventDate: true,
+          eventTime: true,
+          venue: true,
+          bannerUrl: true,
+          availableSeats: true,
+          totalSeats: true,
+          registrationDeadline: true,
+          speakerName: true,
+          speakerCompany: true,
+        },
+      }),
+      // Recent notifications (limit 5)
+      prisma.notification.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          message: true,
+          isRead: true,
+          linkUrl: true,
+          createdAt: true,
+        },
+      }),
+      // Suggested Mentors (limit 5 alumni profiles)
+      prisma.alumniProfile.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          fullName: true,
+          designation: true,
+          currentCompany: true,
+          skills: true,
+          profileImageUrl: true,
+        },
+      }),
+    ]);
+
+    // Calculate completeness percentage
+    let completionPercentage = 0;
+    let basic = 0;
+    if (profile.fullName) basic += 10;
+    if (profile.enrollmentNumber) basic += 5;
+    if (profile.branch) basic += 5;
+    if (profile.course) basic += 5;
+    if (profile.graduationYear) basic += 5;
+
+    let contact = 0;
+    if (profile.user.email) contact += 10;
+    if (profile.phone) contact += 10;
+
+    let social = 0;
+    if (profile.linkedinUrl) social += 10;
+    if (profile.githubUrl) social += 10;
+
+    let skills = profile.skills && profile.skills.length > 0 ? 15 : 0;
+    let resume = profile.resumeUrl ? 15 : 0;
+
+    completionPercentage = basic + contact + social + skills + resume;
+
+    return {
+      profileSummary: {
+        id: profile.id,
+        fullName: profile.fullName,
+        email: profile.user.email,
+        enrollmentNumber: profile.enrollmentNumber,
+        branch: profile.branch,
+        course: profile.course,
+        graduationYear: profile.graduationYear,
+        phone: profile.phone,
+        bio: profile.bio,
+        skills: profile.skills,
+        linkedinUrl: profile.linkedinUrl,
+        githubUrl: profile.githubUrl,
+        resumeUrl: profile.resumeUrl,
+        profileImage: profile.profileImage,
+        isVerified: profile.isVerified,
+        verificationStatus: profile.verificationStatus,
+      },
+      profileCompletion: completionPercentage,
+      dashboardStats: {
+        jobsCount,
+        eventsCount,
+        mentorsCount,
+        unreadMessagesCount,
+      },
+      recentJobs,
+      upcomingEvents,
+      recentNotifications,
+      suggestedMentors,
     };
   }
 }

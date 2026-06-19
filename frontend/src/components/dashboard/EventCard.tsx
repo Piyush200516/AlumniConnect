@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -10,7 +11,7 @@ interface EventCardProps {
   location?: string;
 }
 
-export default function EventCard({ title, organizer, date, time, imageUrl, location }: EventCardProps) {
+const EventCard = memo(function EventCard({ title, organizer, date, time, imageUrl, location }: EventCardProps) {
   return (
     <motion.div
       whileHover={{ x: 4 }}
@@ -28,6 +29,7 @@ export default function EventCard({ title, organizer, date, time, imageUrl, loca
               // Fallback placeholder gradient if image fails to load
               e.currentTarget.src = "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=150&auto=format&fit=crop&q=60";
             }}
+            loading="lazy"
           />
         </div>
 
@@ -62,4 +64,6 @@ export default function EventCard({ title, organizer, date, time, imageUrl, loca
       </div>
     </motion.div>
   );
-}
+});
+
+export default EventCard;

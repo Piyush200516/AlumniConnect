@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { UserCheck, UserPlus, CheckCircle2 } from 'lucide-react';
-
 
 interface MentorCardProps {
   name: string;
@@ -11,7 +10,7 @@ interface MentorCardProps {
   isPendingInitial?: boolean;
 }
 
-export default function MentorCard({
+const MentorCard = memo(function MentorCard({
   name,
   designation,
   company,
@@ -41,6 +40,7 @@ export default function MentorCard({
             src={avatarUrl} 
             alt={name} 
             className="h-full w-full object-cover"
+            loading="lazy"
             onError={(e) => {
               // Fallback placeholder image
               e.currentTarget.src = `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name)}`;
@@ -97,4 +97,6 @@ export default function MentorCard({
       </div>
     </div>
   );
-}
+});
+
+export default MentorCard;

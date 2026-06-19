@@ -55,3 +55,26 @@ export const sendPasswordResetEmail = async (
     `,
   });
 };
+
+export const sendEventRegistrationConfirmation = async (
+  to: string,
+  eventTitle: string,
+  registrationId: string
+) => {
+  if (!resend) {
+    console.log(`[Email Mock] Event confirmation to ${to} for "${eventTitle}" (RegID: ${registrationId})`);
+    return;
+  }
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `Registered: ${eventTitle}`,
+    html: `
+      <h3>Registration Confirmed!</h3>
+      <p>You have registered for <strong>${eventTitle}</strong>.</p>
+      <p>Your Registration ID is: <strong>${registrationId}</strong></p>
+      <p>Present your event pass QR code at the venue on the event day.</p>
+    `,
+  });
+};

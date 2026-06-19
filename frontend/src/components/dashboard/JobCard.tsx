@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Bookmark, MapPin, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -12,7 +12,7 @@ interface JobCardProps {
   isSavedInitial?: boolean;
 }
 
-export default function JobCard({ 
+const JobCard = memo(function JobCard({ 
   title, 
   companyName, 
   location, 
@@ -42,6 +42,7 @@ export default function JobCard({
             src={logoUrl} 
             alt={companyName} 
             className="h-full w-full object-contain"
+            loading="lazy"
             onError={(e) => {
               // Fallback gradient with initials if image fails
               e.currentTarget.style.display = 'none';
@@ -97,4 +98,6 @@ export default function JobCard({
       </div>
     </motion.div>
   );
-}
+});
+
+export default JobCard;

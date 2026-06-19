@@ -6,6 +6,8 @@ import { prisma } from "./lib/prisma";
 import path from "path";
 import authRoutes from "./routes/auth.routes";
 import studentRoutes from "./routes/student.routes";
+import applicationRoutes from "./routes/application.routes";
+import eventRoutes from "./routes/event.routes";
 import { logger } from "./utils/logger";
 import { requestLogger } from "./middleware/requestLogger";
 import { errorHandler } from "./middleware/errorHandler";
@@ -32,6 +34,8 @@ app.get("/", (_req, res) => {
 // Register routes
 app.use("/api/auth", authRoutes);
 app.use("/api/student", studentRoutes);
+app.use("/api/applications", applicationRoutes);
+app.use("/api/events", eventRoutes);
 
 // Global error handler
 app.use(errorHandler);

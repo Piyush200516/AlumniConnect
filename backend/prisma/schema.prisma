@@ -22,12 +22,15 @@ model User {
   createdAt                  DateTime            @default(now())
   updatedAt                  DateTime            @updatedAt
   alumniProfile              AlumniProfile?
+  studentProfile             StudentProfile?
+  studentApplication         StudentApplication?
   cdcProfile                 CdcProfile?
   comments                   Comment[]
   conversationsAsUser1       Conversation[]      @relation("ConversationUser1")
   conversationsAsUser2       Conversation[]      @relation("ConversationUser2")
   eventRegistrations         EventRegistration[]
   createdEvents              Event[]
+  eventCertificates          EventCertificate[]  @relation("StudentCertificates")
   jobApplications            JobApplication[]
   postedJobs                 Job[]
   likes                      Like[]
@@ -36,7 +39,6 @@ model User {
   sentMessages               Message[]
   notifications              Notification[]
   posts                      Post[]
-  studentProfile             StudentProfile?
 
   @@index([role])
   @@index([status])
@@ -182,6 +184,7 @@ model MentorshipRequest {
   @@index([studentId])
   @@index([alumniId])
   @@index([status])
+  @@index([createdAt])
   @@map("mentorship_requests")
 }
 
@@ -229,43 +232,70 @@ model JobApplication {
   @@index([jobId])
   @@index([applicantId])
   @@index([status])
+  @@index([createdAt])
   @@map("job_applications")
 }
 
 /// Events created by CDC or Alumni
 model Event {
-  id            String              @id @default(uuid())
-  createdById   String
-  title         String
-  description   String
-  /// Cloudinary URL
-  bannerUrl     String?
-  eventDate     DateTime
-  eventLocation String
-  isActive      Boolean             @default(true)
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  registrations EventRegistration[]
-  createdBy     User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  id                   String              @id @default(uuid())
+  createdById          String
+  title                String
+  description          String
+  bannerUrl            String?             // Cloudinary URL
+  category             String              // EventCategory
+  mode                 EventMode           @default(ONLINE)
+  eventDate            DateTime
+  eventTime            String              // e.g. "10:00 AM - 12:00 PM"
+  duration             String              // e.g. "2 hours"
+  venue                String              // e.g. "CSE Seminar Hall"
+  googleMapsLocation   String?
+  totalSeats           Int                 @default(100)
+  availableSeats       Int                 @default(100)
+  registrationDeadline DateTime
+  status               EventStatus         @default(PUBLISHED)
+  approvalStatus       EventApprovalStatus @default(PENDING)
+  remarks              String?             // CDC auditor feedback remarks
+  agenda               String?             // Event Agenda markdown/text
+  keyBenefits          String[]            @default([])
+  eligibilityCriteria  String?
+  requiredDocuments    String[]            @default([])
+  isActive             Boolean             @default(true)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  registrations        EventRegistration[]
+  certificates         EventCertificate[]
+  createdBy            User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([createdById])
   @@index([eventDate])
   @@index([isActive])
+  @@index([status])
+  @@index([createdAt])
   @@map("events")
 }
 
 /// Event registration — Students and Alumni can register
 model EventRegistration {
-  id        String   @id @default(uuid())
-  eventId   String
-  userId    String
-  createdAt DateTime @default(now())
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String                  @id @default(uuid())
+  registrationId     String                  @unique // short code or unique code
+  eventId            String
+  userId             String
+  status             EventRegistrationStatus @default(REGISTERED)
+  eventPassUrl       String?
+  qrCodeUrl          String?
+  attendanceMarkedAt DateTime?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  event              Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  certificate        EventCertificate?
 
   @@unique([eventId, userId])
   @@index([eventId])
   @@index([userId])
+  @@index([status])
+  @@index([createdAt])
   @@map("event_registrations")
 }
 
@@ -391,5 +421,161 @@ enum VerificationStatus {
   PENDING
   VERIFIED
   REJECTED
+}
+
+enum PortalApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_VERIFICATION
+  APPROVED
+  REJECTED
+}
+
+model StudentApplication {
+  id                   String                   @id @default(uuid())
+  userId               String                   @unique
+  user                 User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status               PortalApplicationStatus  @default(DRAFT)
+  remarks              String?
+  submittedAt          DateTime?
+  verifiedAt           DateTime?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  // Section A: Personal Information
+  fullName             String
+  enrollmentNumber     String
+  email                String
+  phone                String
+  gender               String
+  dateOfBirth          DateTime
+  profileImage         String
+
+  // Section B: Documents & ID Proof
+  aadharNumber         String
+  panCard              String?
+  collegeIdNumber      String
+
+  // Section C: Family Details
+  fatherName           String
+  fatherOccupation     String
+  fatherPhone          String
+  motherName           String
+  motherOccupation     String
+  motherPhone          String
+  familyIncome         String
+  emergencyContact     String
+
+  // Section D: Address Details
+  currentAddress       String
+  currentCity          String
+  currentState         String
+  currentPincode       String
+  permanentAddress     String
+  permanentCity        String
+  permanentState       String
+  permanentPincode     String
+  sameAsCurrent        Boolean                  @default(false)
+
+  // Section E: Academic Record
+  class10Board         String
+  class10School        String
+  class10Percentage    Float
+  class10PassingYear   Int
+  class12Board         String?
+  class12School        String?
+  class12Percentage    Float?
+  class12PassingYear   Int?
+  diplomaCollege       String?
+  diplomaBranch        String?
+  diplomaCGPA          Float?
+  diplomaPassingYear   Int?
+  currentCourse        String
+  currentBranch        String
+  currentSemester      Int
+  currentCGPA          Float
+  sgpaSemester1        Float?
+  sgpaSemester2        Float?
+  sgpaSemester3        Float?
+  sgpaSemester4        Float?
+  sgpaSemester5        Float?
+  sgpaSemester6        Float?
+  sgpaSemester7        Float?
+  sgpaSemester8        Float?
+
+  // Section F: Professional Profile
+  careerPreference     String
+  primaryDomain        String
+  secondaryDomain      String?
+  skills               String[]                 @default([])
+  linkedinUrl          String?
+  githubUrl            String?
+  portfolioUrl         String?
+  resumeUrl            String
+
+  // Section G: Certifications
+  certifications       ApplicationCertification[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("student_applications")
+}
+
+model ApplicationCertification {
+  id                   String             @id @default(uuid())
+  applicationId        String
+  application          StudentApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  name                 String
+  issuingOrganization  String
+  issueDate            DateTime
+  certificateUrl       String
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@map("application_certifications")
+}
+
+enum EventMode {
+  ONLINE
+  OFFLINE
+  HYBRID
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum EventApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EventRegistrationStatus {
+  REGISTERED
+  ATTENDED
+  CANCELLED
+  NO_SHOW
+}
+
+model EventCertificate {
+  id             String            @id @default(uuid())
+  registrationId String            @unique
+  registration   EventRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  studentId      String
+  student        User              @relation("StudentCertificates", fields: [studentId], references: [id], onDelete: Cascade)
+  eventId        String
+  event          Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  certificateUrl String            // SVG or PDF path / download link
+  issuedAt       DateTime          @default(now())
+  createdAt      DateTime          @default(now())
+
+  @@index([studentId])
+  @@index([eventId])
+  @@index([createdAt])
+  @@map("event_certificates")
 }
 
