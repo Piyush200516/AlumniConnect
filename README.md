@@ -1,407 +1,317 @@
-# 🎓 AlumniConnect
+# AlumniConnect
 
-> Connecting Students, Alumni, and the Career Development Cell (CDC) through mentorship, networking, opportunities, and collaboration.
+AlumniConnect is a role-based college networking platform that connects students, alumni, and the Career Development Cell (CDC) for mentorship, job opportunities, events, and real-time communication.
 
-![Status](https://img.shields.io/badge/Status-Under%20Development-orange)
-![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20TypeScript-blue)
-![Backend](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-green)
-![Database](https://img.shields.io/badge/Database-Neon%20PostgreSQL-blueviolet)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+## Overview
 
----
+The project is split into a React frontend and an Express + Prisma backend.
 
-## 📌 Overview
+The current app supports:
 
-AlumniConnect is a centralized platform designed to strengthen the relationship between Students, Alumni, and the Career Development Cell (CDC).
+- Student registration and login
+- Alumni registration and login
+- CDC login only
+- Student, alumni, and CDC dashboards
+- Job browsing, bookmarking, application tracking, and moderation
+- Event creation, registration, attendance, and approval flow
+- Mentorship requests and one-to-one messaging
+- Real-time online presence and chat updates through Socket.IO
+- File uploads with Cloudinary, with a local fallback when Cloudinary is not configured
+- Optional email verification and password reset flows
 
-The platform enables:
+## UI Notes
 
-* 🤝 Alumni Mentorship
-* 💼 Job & Internship Opportunities
-* 📅 Event Management
-* 💬 Real-time Communication
-* 🔔 Notifications & Announcements
-* 🌐 Professional Networking
+- There is no separate Saved page in the student sidebar.
+- There is no separate Notifications page in the student sidebar.
+- Saved jobs are handled inside the Jobs view with bookmark actions.
+- Notifications are surfaced in the top bar and in the dashboard announcements area.
 
----
+## Key Features
 
-## 👥 User Roles
+### Student portal
 
-### 🎓 Student
+- Dashboard with jobs, events, mentorship, and unread message stats
+- Profile management
+- My applications
+- Event browsing, registration, certificates, and event details
+- Job browsing, details, and bookmark actions
+- Alumni directory and alumni profile views
+- Mentorship and messaging
+- Settings
 
-* Student Registration & Login
-* Create Professional Profile
-* Search Alumni Directory
-* Request Mentorship
-* Apply for Jobs & Internships
-* Register for Events
-* Real-time Chat
-* Notifications
+### Alumni portal
 
-### 🏆 Alumni
+- Dashboard for managing created events and job postings
+- Create and edit events
+- Track event registrations and attendance
+- Create and manage job postings
+- View applicants and update candidate status
+- Mentorship and messaging
 
-* Alumni Registration & Login
-* Professional Profile Management
-* Post Jobs & Internships
-* Accept Mentorship Requests
-* Participate in Events
-* Real-time Messaging
-* Notifications
+### CDC portal
 
-### 🏢 Career Development Cell (CDC)
+- Verify student applications
+- Approve or reject alumni events
+- Approve or reject alumni jobs
+- Create official CDC events
+- Export event registrants as CSV
 
-* Login Only (No Signup)
-* Manage Students & Alumni
-* Create & Manage Events
-* Publish Opportunities
-* Send Announcements
-* View Analytics Dashboard
-
----
-
-## 🚀 Tech Stack
+## Tech Stack
 
 ### Frontend
 
-* React
-* TypeScript
-* Vite
-* Tailwind CSS v4
-* Framer Motion
-* React Router DOM
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS v4
+- Framer Motion
+- React Router DOM
+- React Query
+- React Hook Form
+- Zod
+- Axios
+- Socket.IO client
 
 ### Backend
 
-* Node.js
-* Express.js
-* JWT Authentication
-* Socket.IO
+- Node.js
+- Express 5
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- JWT auth
+- bcryptjs
+- Socket.IO
+- multer
+- zod
 
-### Database
+### Services
 
-* Neon PostgreSQL
-* Prisma ORM
+- Neon PostgreSQL
+- Cloudinary
+- Resend
 
-### Cloud Services
+## Important Routes
 
-* Cloudinary
-* Resend
+### Frontend routes
 
----
+- `/auth`
+- `/auth/student/login`
+- `/auth/student/signup`
+- `/auth/alumni/login`
+- `/auth/alumni/signup`
+- `/auth/cdc/login`
+- `/student/dashboard`
+- `/alumni/dashboard`
+- `/cdc/dashboard`
 
-## ✨ Core Features
+### Backend routes
 
-### Authentication
+- `/api/auth`
+- `/api/student`
+- `/api/applications`
+- `/api/events`
+- `/api/jobs`
+- `/api/alumni`
+- `/api/mentorship`
+- `/api/messages`
+- `/api/files`
 
-* Role-Based Authentication
-* JWT Authorization
-* Email Verification
-* Password Reset
+### Main API behavior
 
-### Alumni Network
+- `POST /api/auth/student/signup`
+- `POST /api/auth/alumni/signup`
+- `POST /api/auth/student/login`
+- `POST /api/auth/alumni/login`
+- `POST /api/auth/cdc/login`
+- `GET /api/student/profile`
+- `GET /api/student/dashboard`
+- `GET /api/jobs`
+- `GET /api/events`
+- `POST /api/mentorship/request`
+- `GET /api/messages`
 
-* Alumni Directory
-* Search & Filter Alumni
-* Professional Profiles
+## Core Data Models
 
-### Mentorship System
+The backend is centered around these main Prisma models:
 
-* Request Mentorship
-* Accept/Reject Requests
-* Track Mentorship Status
+- User
+- StudentProfile
+- AlumniProfile
+- CdcProfile
+- StudentApplication
+- Event
+- EventRegistration
+- EventCertificate
+- Job
+- JobApplication
+- MentorshipRequest
+- MentorshipConnection
+- Conversation
+- Message
+- Notification
 
-### Job Portal
+## Local Setup
 
-* Job Listings
-* Internship Opportunities
-* Application Tracking
+### Prerequisites
 
-### Event Management
+- Node.js 20 or newer
+- npm
+- PostgreSQL access, such as Neon
 
-* Create Events
-* Event Registration
-* Event Notifications
-
-### Real-Time Communication
-
-* One-to-One Chat
-* Socket.IO Integration
-* Instant Messaging
-
-### Notifications
-
-* In-App Notifications
-* Event Updates
-* Opportunity Alerts
-
----
-
-## 🗄️ Database Models
-
-* User
-* StudentProfile
-* AlumniProfile
-* CdcProfile
-* Post
-* Comment
-* Like
-* MentorshipRequest
-* Job
-* JobApplication
-* Event
-* EventRegistration
-* Conversation
-* Message
-* Notification
-
----
-
-## 🔐 Authentication Flow
-
-### Student
-
-Signup → Email Verification → Login → Dashboard
-
-### Alumni
-
-Signup → Email Verification → Login → Dashboard
-
-### CDC
-
-Account Created by Admin → Login → Dashboard
-
----
-
-## 📁 Project Structure
-
-```text
-AlumniConnect
-│
-├── frontend
-│   ├── React
-│   ├── TypeScript
-│   ├── Tailwind CSS
-│   └── Framer Motion
-│
-├── backend
-│   ├── Express.js
-│   ├── Prisma ORM
-│   ├── Socket.IO
-│   └── JWT Auth
-│
-└── database
-    └── Neon PostgreSQL
-```
-
----
-
-# 🚀 Running AlumniConnect Locally
-
-## 1. Clone Repository
+### 1. Clone the repository
 
 ```bash
 git clone <repository-url>
 cd alumniconnect
 ```
 
----
-
-## 2. Frontend Setup
-
-```bash
-cd frontend
-npm install
-```
-
-### Start Frontend Development Server
-
-```bash
-npm run dev
-```
-
-Frontend will run on:
-
-```txt
-http://localhost:5173
-```
-
----
-
-## 3. Backend Setup
-
-Open a new terminal:
+### 2. Install dependencies
 
 ```bash
 cd backend
 npm install
+
+cd ../frontend
+npm install
 ```
 
-### Start Backend Development Server
+### 3. Configure the backend environment
+
+Create `backend/.env` with values similar to:
+
+```env
+DATABASE_URL=your_postgres_connection_string
+PORT=5002
+FRONTEND_URL=http://localhost:5173
+
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRES_IN=7d
+
+EMAIL_VERIFY_SECRET=your_email_verify_secret
+PASSWORD_RESET_SECRET=your_password_reset_secret
+
+RESEND_API_KEY=your_resend_api_key
+RESEND_FROM_EMAIL=no-reply@alumniconnect.com
+
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+BACKEND_URL=http://localhost:5002
+```
+
+Notes:
+
+- `RESEND_API_KEY` is optional for local development. If it is missing, email sending is skipped.
+- `CLOUDINARY_*` is optional. If it is missing, file uploads use the local `uploads/` folder.
+- The included frontend config expects the backend to run on port `5002`.
+
+### 4. Configure the frontend environment
+
+Create `frontend/.env` with:
+
+```env
+VITE_API_BASE_URL=http://localhost:5002/api
+```
+
+If you change the backend port, update this value and restart the Vite dev server.
+
+### 5. Run the app
+
+Backend:
 
 ```bash
+cd backend
 npm run dev
 ```
 
-Backend will run on:
-
-```txt
-http://localhost:5002
-```
-
----
-
-## 4. Prisma Commands
-
-### Generate Prisma Client
+Frontend:
 
 ```bash
+cd frontend
+npm run dev
+```
+
+### 6. Optional Prisma commands
+
+```bash
+cd backend
 npx prisma generate
-```
-
-### Run Database Migration
-
-```bash
 npx prisma migrate dev
-```
-
-### Open Prisma Studio
-
-```bash
 npx prisma studio
 ```
 
----
+### 7. Build commands
 
-## 5. Build Frontend
+Frontend:
 
 ```bash
 cd frontend
 npm run build
 ```
 
----
-
-## 6. Preview Production Build
-
-```bash
-npm run preview
-```
-
----
-
-## 7. Environment Variables
-
-### Frontend (.env)
-
-```env
-VITE_API_BASE_URL=http://localhost:5002/api
-```
-
-### Backend (.env)
-
-```env
-DATABASE_URL=your_neon_database_url
-
-JWT_SECRET=your_jwt_secret
-
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-
-RESEND_API_KEY=your_resend_api_key
-```
-
----
-
-## 8. Common Commands
-
-### Install Dependencies
-
-```bash
-npm install
-```
-
-### Check Prisma Status
-
-```bash
-npx prisma validate
-```
-
-### Reset Database
-
-```bash
-npx prisma migrate reset
-```
-
-### Format Prisma Schema
-
-```bash
-npx prisma format
-```
-
----
-
-## 9. Development Workflow
-
-### Terminal 1
+Backend:
 
 ```bash
 cd backend
-npm run dev
+npm run build
+npm start
 ```
 
-### Terminal 2
+## Available Scripts
 
-```bash
-cd frontend
-npm run dev
+### Backend
+
+- `npm run dev` - start the backend in watch mode
+- `npm run build` - compile TypeScript
+- `npm start` - run the compiled server from `dist/`
+
+### Frontend
+
+- `npm run dev` - start the Vite dev server
+- `npm run build` - build the production bundle
+- `npm run lint` - run ESLint
+- `npm run preview` - preview the production build
+
+## Project Structure
+
+```text
+alumniconnect/
+|-- frontend/
+|   |-- src/
+|   |   |-- components/
+|   |   |-- pages/
+|   |   |-- routes/
+|   |   |-- services/
+|   |   `-- hooks/
+|   `-- .env
+|-- backend/
+|   |-- src/
+|   |   |-- controllers/
+|   |   |-- routes/
+|   |   |-- services/
+|   |   |-- validators/
+|   |   |-- middleware/
+|   |   |-- utils/
+|   |   |-- socket.ts
+|   |   `-- server.ts
+|   `-- .env
+`-- README.md
 ```
 
-### Terminal 3 (Optional)
+## Development Checklist
 
-```bash
-cd backend
-npx prisma studio
-```
+- Frontend and backend are wired together
+- Student, alumni, and CDC auth flows are implemented
+- Dashboard sections are implemented for all three roles
+- Socket.IO is used for messaging and online presence
+- Saved and Notifications are not separate student pages
 
-Open:
+## Notes
 
-```txt
-Frontend: http://localhost:5173
-Backend: http://localhost:5002
-Prisma Studio: http://localhost:5555
-```
- ___
- 
-------
+- The backend health check is available at `GET /health`.
+- Student and alumni signup use role-specific endpoints.
+- CDC accounts are login-only in the current app.
+- The student dashboard uses in-page sections rather than separate pages for saved items or notifications.
 
-## 📈 Development Progress
-
-* [x] Project Setup
-* [x] Database Design
-* [x] Prisma Schema
-* [x] Neon Database Integration
-* [x] CDC Seed Data
-* [x] Student Seed Data
-* [x] Alumni Seed Data
-* [ ] Authentication APIs
-* [ ] Frontend Authentication
-* [ ] Dashboards
-* [ ] Mentorship System
-* [ ] Job Portal
-* [ ] Event Management
-* [ ] Real-time Chat
-* [ ] Notifications
-* [ ] Deployment
-
----
-
-## 👨‍💻 Team
-
-Major Project – AlumniConnect
-
-Developed to bridge the gap between students and alumni through mentorship, networking, and career opportunities.
-
----
-
-⭐ If you like this project, consider giving it a star on GitHub.
