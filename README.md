@@ -245,7 +245,7 @@ npm run dev
 Backend will run on:
 
 ```txt
-http://localhost:5000
+http://localhost:5002
 ```
 
 ---
@@ -294,7 +294,7 @@ npm run preview
 ### Frontend (.env)
 
 ```env
-VITE_API_BASE_URL=http://localhost:5000/api
+VITE_API_BASE_URL=http://localhost:5002/api
 ```
 
 ### Backend (.env)
@@ -368,7 +368,7 @@ Open:
 
 ```txt
 Frontend: http://localhost:5173
-Backend: http://localhost:5000
+Backend: http://localhost:5002
 Prisma Studio: http://localhost:5555
 ```
  ___

@@ -26,8 +26,6 @@ model User {
   studentApplication         StudentApplication?
   cdcProfile                 CdcProfile?
   comments                   Comment[]
-  conversationsAsUser1       Conversation[]      @relation("ConversationUser1")
-  conversationsAsUser2       Conversation[]      @relation("ConversationUser2")
   eventRegistrations         EventRegistration[]
   createdEvents              Event[]
   eventCertificates          EventCertificate[]  @relation("StudentCertificates")
@@ -37,6 +35,8 @@ model User {
   likes                      Like[]
   receivedMentorshipRequests MentorshipRequest[] @relation("MentorshipAlumni")
   sentMentorshipRequests     MentorshipRequest[] @relation("MentorshipStudent")
+  menteeConnections          MentorshipConnection[] @relation("MenteeConnections")
+  mentorConnections          MentorshipConnection[] @relation("MentorConnections")
   sentMessages               Message[]
   notifications              Notification[]
   posts                      Post[]
@@ -108,6 +108,13 @@ model AlumniProfile {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Mentorship Extensions
+  phone           String?
+  portfolioUrl    String?
+  currentCtc      String?
+  privacySetting  PrivacySetting   @default(PUBLIC)
+  achievements    String[]         @default([])
 
   @@index([passingYear])
   @@index([industry])
@@ -333,18 +340,13 @@ model EventRegistration {
 
 /// One-to-one conversation between two users
 model Conversation {
-  id        String    @id @default(uuid())
-  user1Id   String
-  user2Id   String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  user1     User      @relation("ConversationUser1", fields: [user1Id], references: [id], onDelete: Cascade)
-  user2     User      @relation("ConversationUser2", fields: [user2Id], references: [id], onDelete: Cascade)
-  messages  Message[]
+  id           String               @id @default(uuid())
+  connectionId String               @unique
+  connection   MentorshipConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  messages     Message[]
 
-  @@unique([user1Id, user2Id])
-  @@index([user1Id])
-  @@index([user2Id])
   @@map("conversations")
 }
 
@@ -353,13 +355,16 @@ model Message {
   id             String       @id @default(uuid())
   conversationId String
   senderId       String
-  content        String
-  /// Cloudinary URL — optional image attachment
-  imageUrl       String?
+  message        String
+  fileUrl        String?
+  fileType       String?
   isRead         Boolean      @default(false)
+  isSystem       Boolean      @default(false)
+  isResumeReview Boolean      @default(false)
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  attachments    MessageAttachment[]
 
   @@index([conversationId])
   @@index([senderId])
@@ -722,5 +727,81 @@ model SavedAlumni {
 
   @@unique([userId, alumniId])
   @@map("saved_alumni")
+}
+
+enum PrivacySetting {
+  PUBLIC
+  CONNECTIONS_ONLY
+  HIDDEN
+}
+
+model MentorshipConnection {
+  id           String               @id @default(uuid())
+  studentId    String
+  alumniId     String
+  connectedAt  DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  student      User                 @relation("MenteeConnections", fields: [studentId], references: [id], onDelete: Cascade)
+  alumni       User                 @relation("MentorConnections", fields: [alumniId], references: [id], onDelete: Cascade)
+  meetings     Meeting[]
+  resources    SharedResource[]
+  conversation Conversation?
+
+  @@unique([studentId, alumniId])
+  @@index([studentId])
+  @@index([alumniId])
+  @@map("mentorship_connections")
+}
+
+model MessageAttachment {
+  id         String   @id @default(uuid())
+  messageId  String
+  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  fileUrl    String
+  fileName   String
+  fileType   String
+  fileSize   Int
+  createdAt  DateTime @default(now())
+
+  @@index([messageId])
+  @@map("message_attachments")
+}
+
+model Meeting {
+  id           String               @id @default(uuid())
+  connectionId String
+  connection   MentorshipConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  scheduledAt  DateTime
+  duration     Int                  // In minutes
+  meetingLink  String?
+  status       MeetingStatus        @default(SCHEDULED)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@index([connectionId])
+  @@map("meetings")
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model SharedResource {
+  id           String               @id @default(uuid())
+  connectionId String
+  connection   MentorshipConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  fileUrl      String?
+  linkUrl      String?
+  sharedById   String
+  createdAt    DateTime             @default(now())
+
+  @@index([connectionId])
+  @@map("shared_resources")
 }
 

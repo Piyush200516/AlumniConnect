@@ -30,6 +30,7 @@ const JobsPage = lazy(() => import('./JobsPage'));
 const JobDetails = lazy(() => import('./JobDetails'));
 const AlumniDirectory = lazy(() => import('./AlumniDirectory'));
 const AlumniProfileView = lazy(() => import('./AlumniProfileView'));
+const Mentorship = lazy(() => import('./Mentorship'));
 
 // Lazy-loaded Dashboard Widget Sections
 const EventsSection = lazy(() => import('../../components/dashboard/lazy/EventsSection'));
@@ -61,6 +62,7 @@ export default function StudentDashboard() {
   const [selectedCertificateId, setSelectedCertificateId] = useState<string | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedAlumniId, setSelectedAlumniId] = useState<string | null>(null);
+  const [preselectedPartnerId, setPreselectedPartnerId] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -148,6 +150,9 @@ export default function StudentDashboard() {
       handleLogout();
     } else {
       setActiveMenu(item);
+      if (item !== 'Messages') {
+        setPreselectedPartnerId(null);
+      }
     }
   }, [handleLogout]);
   const handleToggleSidebar = useCallback(() => setSidebarOpen(prev => !prev), []);
@@ -159,7 +164,6 @@ export default function StudentDashboard() {
   const handleGoToEvents = useCallback(() => setActiveMenu('Events'), []);
   const handleGoToMentorship = useCallback(() => setActiveMenu('Mentorship'), []);
   const handleGoToMessages = useCallback(() => setActiveMenu('Messages'), []);
-  const handleGoToNotifications = useCallback(() => setActiveMenu('Notifications'), []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#060a12] via-[#09101f] to-[#04070e] text-slate-100 antialiased font-sans">
@@ -186,7 +190,7 @@ export default function StudentDashboard() {
         <main className="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-8">
           
           {/* Header Hero Section */}
-          {activeMenu !== 'Profile' && activeMenu !== 'Settings' && activeMenu !== 'My Applications' && activeMenu !== 'Events' && activeMenu !== 'EventDetails' && activeMenu !== 'CertificateViewer' && activeMenu !== 'Messages' && activeMenu !== 'Alumni Directory' && activeMenu !== 'AlumniProfileDetails' && (
+          {activeMenu !== 'Profile' && activeMenu !== 'Settings' && activeMenu !== 'My Applications' && activeMenu !== 'Events' && activeMenu !== 'EventDetails' && activeMenu !== 'CertificateViewer' && activeMenu !== 'Messages' && activeMenu !== 'Alumni Directory' && activeMenu !== 'AlumniProfileDetails' && activeMenu !== 'Mentorship' && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -276,7 +280,13 @@ export default function StudentDashboard() {
                   exit={{ opacity: 0, y: -15 }}
                   transition={{ duration: 0.35, ease: 'easeOut' }}
                 >
-                  <AlumniDirectory onSelectAlumni={handleSelectAlumni} />
+                  <AlumniDirectory 
+                    onSelectAlumni={handleSelectAlumni} 
+                    onNavigate={(tab, partnerId) => {
+                      if (partnerId) setPreselectedPartnerId(partnerId);
+                      setActiveMenu(tab);
+                    }}
+                  />
                 </motion.div>
               ) : activeMenu === 'AlumniProfileDetails' && selectedAlumniId ? (
                 <motion.div
@@ -286,7 +296,14 @@ export default function StudentDashboard() {
                   exit={{ opacity: 0, y: -15 }}
                   transition={{ duration: 0.35, ease: 'easeOut' }}
                 >
-                  <AlumniProfileView alumniId={selectedAlumniId} onGoBack={handleGoBackToDirectory} />
+                  <AlumniProfileView 
+                    alumniId={selectedAlumniId} 
+                    onGoBack={handleGoBackToDirectory} 
+                    onNavigate={(tab, partnerId) => {
+                      if (partnerId) setPreselectedPartnerId(partnerId);
+                      setActiveMenu(tab);
+                    }}
+                  />
                 </motion.div>
               ) : activeMenu === 'JobDetails' && selectedJobId ? (
                 <motion.div
@@ -324,6 +341,16 @@ export default function StudentDashboard() {
                     onGoBack={handleGoBackToEvents}
                   />
                 </motion.div>
+              ) : activeMenu === 'Mentorship' ? (
+                <motion.div
+                  key="mentorship"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                >
+                  <Mentorship />
+                </motion.div>
               ) : activeMenu === 'Messages' ? (
                 <motion.div
                   key="messages"
@@ -332,7 +359,10 @@ export default function StudentDashboard() {
                   exit={{ opacity: 0, y: -15 }}
                   transition={{ duration: 0.35, ease: 'easeOut' }}
                 >
-                  <MessagesSection />
+                  <MessagesSection 
+                    preselectedPartnerId={preselectedPartnerId}
+                    clearPreselected={() => setPreselectedPartnerId(null)}
+                  />
                 </motion.div>
               ) : (
                 // FULLY LOADED DASHBOARD
@@ -466,12 +496,6 @@ export default function StudentDashboard() {
                           <h2 className="text-lg font-bold text-white tracking-tight">
                             Announcements
                           </h2>
-                          <button 
-                            onClick={handleGoToNotifications}
-                            className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
-                          >
-                            View all
-                          </button>
                         </div>
 
                         <Suspense fallback={<SectionLoadingFallback />}>

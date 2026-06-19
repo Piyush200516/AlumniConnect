@@ -6,12 +6,11 @@ import {
   cdcLogin,
   studentLogin,
   alumniLogin,
+  commonLogin,
   verifyEmail,
   forgotPassword,
   resetPassword,
 } from '../controllers/auth.controller';
-import { authenticateUser } from '../middleware/auth.middleware';
-import { authorizeRoles } from '../middleware/role.middleware';
 
 const router = Router();
 
@@ -24,6 +23,7 @@ router.post('/alumni/signup', alumniSignup);
 router.post('/student/login', studentLogin);
 router.post('/alumni/login', alumniLogin);
 router.post('/cdc/login', cdcLogin);
+router.post('/login', commonLogin);
 
 // ---- Email verification ----
 router.get('/verify-email/:token', verifyEmail);

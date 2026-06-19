@@ -12,7 +12,6 @@ import {
   UserPlus,
   CheckCircle,
   X,
-  Send,
   Loader2,
   Clock,
   ExternalLink
@@ -70,16 +69,19 @@ interface AlumniDetails {
 interface AlumniProfileViewProps {
   alumniId: string;
   onGoBack: () => void;
+  onNavigate?: (menuItem: string, preselectedPartnerId?: string) => void;
 }
 
-export default function AlumniProfileView({ alumniId, onGoBack }: AlumniProfileViewProps) {
+export default function AlumniProfileView({ alumniId, onGoBack, onNavigate }: AlumniProfileViewProps) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'about' | 'history' | 'mentorship'>('about');
 
-  // Message modal state
-  const [isMessageOpen, setIsMessageOpen] = useState(false);
-  const [messageContent, setMessageContent] = useState('');
-  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  // Mentorship Request Modal State
+  const [isRequestOpen, setIsRequestOpen] = useState(false);
+  const [requestTargetId, setRequestTargetId] = useState<string | null>(null);
+  const [requestTargetName, setRequestTargetName] = useState('');
+  const [requestMsg, setRequestMsg] = useState('');
+  const [isSubmittingReq, setIsSubmittingReq] = useState(false);
 
   // Fetch Alumni Details
   const { data: alumni, isLoading, error } = useQuery<AlumniDetails>({
@@ -139,24 +141,23 @@ export default function AlumniProfileView({ alumniId, onGoBack }: AlumniProfileV
     }
   });
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleRequestMentorshipSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!alumni || !messageContent.trim()) return;
-
-    setIsSendingMessage(true);
+    if (!requestTargetId) return;
+    setIsSubmittingReq(true);
     try {
-      await api.post('/alumni/messages', {
-        receiverId: alumni.userId,
-        content: messageContent.trim()
+      await api.post('/mentorship/request', {
+        alumniId: requestTargetId,
+        message: requestMsg
       });
-      toastSuccess(`Message sent to ${alumni.fullName}!`);
-      setMessageContent('');
-      setIsMessageOpen(false);
+      toastSuccess('Mentorship request sent successfully!');
+      setIsRequestOpen(false);
+      setRequestMsg('');
+      queryClient.invalidateQueries({ queryKey: ['alumniDetails', alumniId] });
     } catch (err: any) {
-      console.error(err);
-      toastError(err.response?.data?.message || 'Failed to send message');
+      toastError(err.response?.data?.message || 'Failed to send mentorship request');
     } finally {
-      setIsSendingMessage(false);
+      setIsSubmittingReq(false);
     }
   };
 
@@ -280,7 +281,18 @@ export default function AlumniProfileView({ alumniId, onGoBack }: AlumniProfileV
             )}
 
             <button 
-              onClick={() => setIsMessageOpen(true)}
+              onClick={() => {
+                if (!alumni) return;
+                if ((alumni as any).mentorshipStatus === 'ACCEPTED') {
+                  if (onNavigate) onNavigate('Messages', alumni.userId);
+                } else if ((alumni as any).mentorshipStatus === 'PENDING') {
+                  toastSuccess('Your mentorship request is pending alumni acceptance.');
+                } else {
+                  setRequestTargetId(alumni.userId);
+                  setRequestTargetName(alumni.fullName);
+                  setIsRequestOpen(true);
+                }
+              }}
               className="px-4 py-2.5 bg-slate-900 border border-slate-850 hover:bg-slate-800 rounded-xl text-xs font-bold text-slate-350 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
             >
               <MessageSquare className="h-4 w-4" /> Message
@@ -504,66 +516,39 @@ export default function AlumniProfileView({ alumniId, onGoBack }: AlumniProfileV
 
       </div>
 
-      {/* SEND MESSAGE MODAL */}
-      {isMessageOpen && (
+      {/* REQUEST MENTORSHIP DIALOG MODAL */}
+      {isRequestOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setIsMessageOpen(false)}></div>
-          <div className="relative w-full max-w-md rounded-2xl border border-slate-850 bg-slate-950 p-6 shadow-2xl text-slate-200 z-10 space-y-5">
-            
-            <div className="flex items-center justify-between border-b border-slate-900 pb-3 shrink-0">
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setIsRequestOpen(false)}></div>
+          <div className="relative w-full max-w-md rounded-3xl border border-slate-900 bg-slate-950 p-6 shadow-2xl text-slate-200 z-10 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-900 pb-3">
               <div>
-                <h3 className="text-base font-bold text-white">Send Message</h3>
-                <p className="text-[10px] text-slate-400">To: {alumni.fullName}</p>
+                <h3 className="text-base font-bold text-white">Mentorship Request</h3>
+                <p className="text-[10px] text-slate-400">To: {requestTargetName}</p>
               </div>
-              <button 
-                onClick={() => setIsMessageOpen(false)}
-                className="w-7 h-7 rounded-lg border border-slate-900 hover:bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <button onClick={() => setIsRequestOpen(false)} className="p-1 border border-slate-900 hover:bg-slate-900 text-slate-400 rounded-lg"><X className="w-4 h-4" /></button>
             </div>
 
-            <form onSubmit={handleSendMessage} className="space-y-4">
+            <form onSubmit={handleRequestMentorshipSubmit} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Message Content</label>
-                <textarea
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Introduction / Goal Message</label>
+                <textarea 
                   rows={4}
                   required
-                  placeholder="Ask a question or request guidance..."
-                  value={messageContent}
-                  onChange={(e) => setMessageContent(e.target.value)}
+                  placeholder="Introduce yourself and explain what guidance you're seeking (career paths, interview prep, resume help)..."
+                  value={requestMsg}
+                  onChange={(e) => setRequestMsg(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-900 border border-slate-855 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-blue-500 leading-relaxed placeholder-slate-700"
                 />
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-900">
-                <button 
-                  type="button" 
-                  onClick={() => setIsMessageOpen(false)}
-                  className="px-4 py-2 border border-slate-850 hover:bg-slate-900 rounded-xl text-xs font-semibold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  disabled={isSendingMessage}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-900 text-white rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-lg shadow-blue-500/10 transition-colors"
-                >
-                  {isSendingMessage ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-3.5 w-3.5" />
-                      Send Message
-                    </>
-                  )}
+                <button type="button" onClick={() => setIsRequestOpen(false)} className="px-4 py-2 border border-slate-850 hover:bg-slate-900 rounded-xl text-xs font-semibold cursor-pointer">Cancel</button>
+                <button type="submit" disabled={isSubmittingReq} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/10 cursor-pointer">
+                  {isSubmittingReq ? 'Submitting...' : 'Send Request'}
                 </button>
               </div>
             </form>
-
           </div>
         </div>
       )}

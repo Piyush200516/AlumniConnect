@@ -48,7 +48,7 @@ export const uploadFile = async (file: Express.Multer.File, folder: string): Pro
     await fs.promises.writeFile(filePath, file.buffer);
 
     // Return backend server URL
-    const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`;
+    const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5002}`;
     return `${backendUrl}/uploads/${filename}`;
   }
 };
@@ -207,10 +207,12 @@ export class StudentService {
       prisma.message.count({
         where: {
           conversation: {
-            OR: [
-              { user1Id: userId },
-              { user2Id: userId },
-            ],
+            connection: {
+              OR: [
+                { studentId: userId },
+                { alumniId: userId },
+              ],
+            },
           },
           senderId: { not: userId },
           isRead: false,

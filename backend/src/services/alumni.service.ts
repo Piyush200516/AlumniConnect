@@ -100,7 +100,7 @@ export class AlumniService {
     }
 
     // 4. Fetch Alumni Records and count in parallel
-    const [alumniCount, alumniList] = await Promise.all([
+    const [alumniCount, alumniList, mentorshipRequests] = await Promise.all([
       prisma.alumniProfile.count({ where: whereClause }),
       prisma.alumniProfile.findMany({
         where: whereClause,
@@ -132,6 +132,9 @@ export class AlumniService {
           skillsList: true,
           company: true,
         }
+      }),
+      prisma.mentorshipRequest.findMany({
+        where: { studentId: currentUserId }
       })
     ]);
 
@@ -161,6 +164,10 @@ export class AlumniService {
         }
       }
 
+      // Mentorship Request Status
+      const mentorshipReq = mentorshipRequests.find(r => r.alumniId === alumni.userId);
+      const mentorshipStatus = mentorshipReq ? mentorshipReq.status : null;
+
       return {
         id: alumni.id,
         userId: alumni.userId,
@@ -182,6 +189,7 @@ export class AlumniService {
         isSaved,
         connectionState,
         connectionId: activeConnectionId,
+        mentorshipStatus,
       };
     });
 
@@ -248,6 +256,11 @@ export class AlumniService {
     if (!alumni) {
       throw new ApiError(404, 'Alumni profile not found');
     }
+
+    const mentorshipReq = await prisma.mentorshipRequest.findFirst({
+      where: { studentId: currentUserId, alumniId: alumni.userId }
+    });
+    const mentorshipStatus = mentorshipReq ? mentorshipReq.status : null;
 
     const followers = alumni.user.followers || [];
     const savedBy = alumni.user.savedByUsers || [];
@@ -316,6 +329,7 @@ export class AlumniService {
       isSaved,
       connectionState,
       connectionId: activeConnectionId,
+      mentorshipStatus,
       mentorshipAvailability: mentorshipCount < 5 ? 'AVAILABLE' : 'BUSY',
       achievements: [
         'TechMart Lead of the Quarter 2025',

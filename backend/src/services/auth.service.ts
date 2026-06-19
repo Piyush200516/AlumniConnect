@@ -1,5 +1,6 @@
 // src/services/auth.service.ts
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
@@ -20,18 +21,48 @@ import { Role } from '@prisma/client';
 import { logger } from '../utils/logger';
 import { ApiError } from '../utils/error';
 
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+const isBcryptHash = (value: string) => /^\$2[aby]\$\d{2}\$/.test(value);
+const isLegacyMd5Hash = (value: string) => /^[a-f0-9]{32}$/i.test(value);
+
+const verifyStoredPassword = async (plainPassword: string, storedPassword: string) => {
+  if (isBcryptHash(storedPassword)) {
+    return {
+      matched: await bcrypt.compare(plainPassword, storedPassword),
+      needsUpgrade: false,
+    };
+  }
+
+  if (isLegacyMd5Hash(storedPassword)) {
+    const md5 = crypto.createHash('md5').update(plainPassword).digest('hex');
+    return {
+      matched: md5 === storedPassword.toLowerCase(),
+      needsUpgrade: md5 === storedPassword.toLowerCase(),
+    };
+  }
+
+  return {
+    matched: plainPassword === storedPassword,
+    needsUpgrade: plainPassword === storedPassword,
+  };
+};
+
 class AuthService {
   /** Student signup */
   async studentSignup(payload: any) {
     try {
       const data = studentSignupSchema.parse(payload);
-      const existing = await prisma.user.findUnique({ where: { email: data.email } });
+      const email = normalizeEmail(data.email);
+      const existing = await prisma.user.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' } },
+      });
       if (existing) throw new ApiError(409, 'Email already in use');
 
       const hashed = await bcrypt.hash(data.password, 12);
       const user = await prisma.user.create({
         data: {
-          email: data.email,
+          email,
           password: hashed,
           role: Role.STUDENT,
           isEmailVerified: true,
@@ -67,13 +98,16 @@ class AuthService {
   /** Alumni signup */
   async alumniSignup(payload: any) {
     const data = alumniSignupSchema.parse(payload);
-    const existing = await prisma.user.findUnique({ where: { email: data.email } });
-    if (existing) throw new Error('Email already in use');
+    const email = normalizeEmail(data.email);
+    const existing = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    });
+    if (existing) throw new ApiError(409, 'Email already in use');
 
     const hashed = await bcrypt.hash(data.password, 12);
     const user = await prisma.user.create({
       data: {
-        email: data.email,
+        email,
         password: hashed,
         role: Role.ALUMNI,
         isEmailVerified: true,
@@ -99,6 +133,7 @@ class AuthService {
   async login(payload: any, forcedRole?: Role) {
     try {
       const loginData = loginSchema.parse(payload);
+      const email = normalizeEmail(loginData.email);
       
       // Log DATABASE_URL status
       logger.info(`Login service check: DATABASE_URL exists = ${!!process.env.DATABASE_URL}`);
@@ -113,10 +148,12 @@ class AuthService {
       }
 
       // Log User lookup
-      logger.info(`Attempting user lookup for email: ${loginData.email}`);
-      const user = await prisma.user.findUnique({ where: { email: loginData.email } });
+      logger.info(`Attempting user lookup for email: ${email}`);
+      const user = await prisma.user.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' } },
+      });
       if (!user) {
-        logger.warn(`User lookup failed: no user found with email: ${loginData.email}`);
+        logger.warn(`User lookup failed: no user found with email: ${email}`);
         throw new ApiError(401, 'Invalid email or password');
       }
       logger.info(`User lookup successful: found user with ID: ${user.id}, role: ${user.role}`);
@@ -125,10 +162,11 @@ class AuthService {
         logger.warn(`Role verification failed. Expected: ${forcedRole}, got: ${user.role}`);
         throw new ApiError(401, 'Invalid email or password');
       }
-      if (!user.isEmailVerified) {
-        logger.warn(`Email verification check failed for user ID: ${user.id}`);
-        throw new ApiError(401, 'Email not verified');
-      }
+      // Email verification check removed to allow login without verifying email
+      // if (!user.isEmailVerified) {
+      //   logger.warn(`Email verification check failed for user ID: ${user.id}`);
+      //   throw new ApiError(401, 'Email not verified');
+      // }
       if (user.status !== 'ACTIVE') {
         logger.warn(`User status is not active: ${user.status} for user ID: ${user.id}`);
         throw new ApiError(403, 'Account not active');
@@ -140,15 +178,25 @@ class AuthService {
         logger.error(`Password stored in DB is not a string for user ID: ${user.id}`);
         throw new ApiError(500, 'Internal server error');
       }
-      const match = await bcrypt.compare(
-        loginData.password,
-        user.password
-      );
-      logger.info(`Password comparison completed. Result match: ${match}`);
+      const passwordCheck = await verifyStoredPassword(loginData.password, user.password);
+      logger.info(`Password comparison completed. Result match: ${passwordCheck.matched}`);
 
-      if (!match) {
-        logger.warn(`Invalid credentials provided for user: ${loginData.email}`);
+      if (!passwordCheck.matched) {
+        logger.warn(`Invalid credentials provided for user: ${email}`);
         throw new ApiError(401, 'Invalid email or password');
+      }
+
+      if (passwordCheck.needsUpgrade) {
+        try {
+          const upgradedPassword = await bcrypt.hash(loginData.password, 12);
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { password: upgradedPassword },
+          });
+          logger.info(`Upgraded legacy password hash for user ${email}`);
+        } catch (upgradeError) {
+          logger.warn(`Failed to upgrade legacy password hash for user ${email}: ${upgradeError instanceof Error ? upgradeError.message : upgradeError}`);
+        }
       }
 
       const accessToken = generateAccessToken({ userId: user.id, email: user.email, role: user.role });
@@ -176,7 +224,10 @@ class AuthService {
   /** Forgot password */
   async forgotPassword(email: string) {
     const parsed = forgotPasswordSchema.parse({ email });
-    const user = await prisma.user.findUnique({ where: { email: parsed.email } });
+    const normalized = normalizeEmail(parsed.email);
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: normalized, mode: 'insensitive' } },
+    });
     if (!user) throw new Error('User not found');
     const resetToken = await createPasswordResetToken(user.id);
     await sendPasswordResetEmail(user.email, resetToken);

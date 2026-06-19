@@ -72,12 +72,10 @@ export const postMessage = async (req: Request, res: Response, next: NextFunctio
   try {
     const senderId = (req as any).user.id;
     const validated = sendMessageSchema.parse(req.body);
-    const message = await messageService.sendMessage(
-      senderId,
-      validated.receiverId,
-      validated.content,
-      validated.imageUrl
-    );
+    const message = await messageService.sendMessage(senderId, {
+      receiverId: validated.receiverId,
+      content: validated.content
+    });
     responseSuccess(res, 'Message sent successfully', message);
   } catch (err) {
     next(err);

@@ -7,8 +7,6 @@ import {
   Users, 
   UserSquare2, 
   MessageSquare, 
-  Bookmark, 
-  Bell, 
   Settings, 
   LogOut, 
   X,
@@ -35,8 +33,6 @@ export default function Sidebar({ isOpen, onClose, activeItem = 'Dashboard', onS
     { name: 'Mentorship', icon: Users },
     { name: 'Alumni Directory', icon: UserSquare2 },
     { name: 'Messages', icon: MessageSquare, badge: 5 },
-    { name: 'Saved', icon: Bookmark },
-    { name: 'Notifications', icon: Bell },
     { name: 'Settings', icon: Settings },
   ];
 

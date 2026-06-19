@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { 
   Edit, 
   X, 
@@ -18,6 +18,9 @@ import {
 import { useAuthContext } from '../../components/layout/AuthProvider';
 import api from '../../services/api';
 import { toastSuccess, toastError } from '../../utils/toast';
+
+const Mentorship = lazy(() => import('../student/Mentorship'));
+const MessagesSection = lazy(() => import('../../components/dashboard/lazy/MessagesSection'));
 
 interface Event {
   id: string;
@@ -65,7 +68,7 @@ export default function AlumniDashboard() {
   const profile = authProfile as any;
   
   // Dashboard view selection
-  const [activeTab, setActiveTab] = useState<'events' | 'create' | 'jobs' | 'create_job'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'create' | 'jobs' | 'create_job' | 'mentorship' | 'messages'>('events');
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -464,6 +467,26 @@ export default function AlumniDashboard() {
             >
               Post a Job
             </button>
+            <button 
+              onClick={() => setActiveTab('mentorship')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${
+                activeTab === 'mentorship' 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+                  : 'bg-slate-900 border border-slate-850 text-slate-300 hover:bg-slate-850'
+              }`}
+            >
+              Mentorship Hub
+            </button>
+            <button 
+              onClick={() => setActiveTab('messages')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${
+                activeTab === 'messages' 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+                  : 'bg-slate-900 border border-slate-850 text-slate-300 hover:bg-slate-850'
+              }`}
+            >
+              Messages
+            </button>
           </div>
         </div>
 
@@ -818,7 +841,7 @@ export default function AlumniDashboard() {
               ))}
             </div>
           )
-        ) : (
+        ) : activeTab === 'create_job' ? (
           /* Post a Job Form */
           <div className="rounded-2xl border border-slate-900 bg-slate-950/40 p-6 md:p-8 shadow-xl shadow-black/10 backdrop-blur-md">
             <h2 className="text-lg font-bold text-white mb-6 uppercase tracking-wider border-b border-slate-900 pb-2">Post Job Opportunity</h2>
@@ -994,6 +1017,24 @@ export default function AlumniDashboard() {
               </div>
             </form>
           </div>
+        ) : activeTab === 'messages' ? (
+          <Suspense fallback={
+            <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+              <p className="text-slate-400 text-xs font-semibold">Loading messages...</p>
+            </div>
+          }>
+            <MessagesSection />
+          </Suspense>
+        ) : (
+          <Suspense fallback={
+            <div className="flex h-[40vh] flex-col items-center justify-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+              <p className="text-slate-400 text-xs font-semibold">Loading mentorship console...</p>
+            </div>
+          }>
+            <Mentorship />
+          </Suspense>
         )}
       </main>
 
