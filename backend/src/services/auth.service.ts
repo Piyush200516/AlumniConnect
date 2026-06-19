@@ -34,6 +34,7 @@ class AuthService {
           email: data.email,
           password: hashed,
           role: Role.STUDENT,
+          isEmailVerified: true,
           studentProfile: {
             create: {
               fullName: data.name,
@@ -75,6 +76,7 @@ class AuthService {
         email: data.email,
         password: hashed,
         role: Role.ALUMNI,
+        isEmailVerified: true,
         alumniProfile: {
           create: {
             fullName: data.name,

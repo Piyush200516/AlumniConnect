@@ -260,6 +260,9 @@ model Event {
   keyBenefits          String[]            @default([])
   eligibilityCriteria  String?
   requiredDocuments    String[]            @default([])
+  speakerName          String
+  speakerDesignation   String?
+  speakerCompany       String?
   isActive             Boolean             @default(true)
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt

@@ -117,31 +117,45 @@ export default function StudentDashboard() {
     setActiveMenu('Events');
   }, []);
 
+  // Sidebar / Navbar handlers
+  const handleCloseSidebar = useCallback(() => setSidebarOpen(false), []);
+  const handleSelectSidebarItem = useCallback((item: string) => {
+    if (item === 'Logout') {
+      handleLogout();
+    } else {
+      setActiveMenu(item);
+    }
+  }, [handleLogout]);
+  const handleToggleSidebar = useCallback(() => setSidebarOpen(prev => !prev), []);
+  const handleProfileClick = useCallback(() => setActiveMenu('Profile'), []);
+  const handleSettingsClick = useCallback(() => setActiveMenu('Settings'), []);
+
+  // Dashboard navigation handlers
+  const handleGoToJobs = useCallback(() => setActiveMenu('Job Opportunities'), []);
+  const handleGoToEvents = useCallback(() => setActiveMenu('Events'), []);
+  const handleGoToMentorship = useCallback(() => setActiveMenu('Mentorship'), []);
+  const handleGoToMessages = useCallback(() => setActiveMenu('Messages'), []);
+  const handleGoToNotifications = useCallback(() => setActiveMenu('Notifications'), []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#060a12] via-[#09101f] to-[#04070e] text-slate-100 antialiased font-sans">
       
       {/* Sidebar Navigation */}
       <Sidebar 
         isOpen={sidebarOpen} 
-        onClose={useCallback(() => setSidebarOpen(false), [])} 
+        onClose={handleCloseSidebar} 
         activeItem={activeMenu}
-        onSelect={useCallback((item: string) => {
-          if (item === 'Logout') {
-            handleLogout();
-          } else {
-            setActiveMenu(item);
-          }
-        }, [handleLogout])}
+        onSelect={handleSelectSidebarItem}
       />
 
       {/* Main Panel */}
       <div className="flex flex-col min-h-screen lg:pl-[280px]">
         {/* Top Navbar */}
         <Navbar 
-          onMenuToggle={useCallback(() => setSidebarOpen(prev => !prev), [])} 
+          onMenuToggle={handleToggleSidebar} 
           onLogout={handleLogout}
-          onProfileClick={useCallback(() => setActiveMenu('Profile'), [])}
-          onSettingsClick={useCallback(() => setActiveMenu('Settings'), [])}
+          onProfileClick={handleProfileClick}
+          onSettingsClick={handleSettingsClick}
         />
 
         {/* Content Wrapper */}
@@ -272,28 +286,28 @@ export default function StudentDashboard() {
                       count={isLoading ? '-' : stats.jobsCount} 
                       icon={Briefcase} 
                       colorScheme="blue"
-                      onViewAllClick={useCallback(() => setActiveMenu('Job Opportunities'), [])}
+                      onViewAllClick={handleGoToJobs}
                     />
                     <StatCard 
                       title="Upcoming Events" 
                       count={isLoading ? '-' : stats.eventsCount} 
                       icon={CalendarIcon} 
                       colorScheme="green"
-                      onViewAllClick={useCallback(() => setActiveMenu('Events'), [])}
+                      onViewAllClick={handleGoToEvents}
                     />
                     <StatCard 
                       title="Mentorship Offers" 
                       count={isLoading ? '-' : stats.mentorsCount} 
                       icon={Users} 
                       colorScheme="purple"
-                      onViewAllClick={useCallback(() => setActiveMenu('Mentorship'), [])}
+                      onViewAllClick={handleGoToMentorship}
                     />
                     <StatCard 
                       title="Unread Messages" 
                       count={isLoading ? '-' : stats.unreadMessagesCount} 
                       icon={MessageSquare} 
                       colorScheme="orange"
-                      onViewAllClick={useCallback(() => setActiveMenu('Messages'), [])}
+                      onViewAllClick={handleGoToMessages}
                     />
                   </div>
 
@@ -310,7 +324,7 @@ export default function StudentDashboard() {
                             Upcoming Events
                           </h2>
                           <button 
-                            onClick={useCallback(() => setActiveMenu('Events'), [])}
+                            onClick={handleGoToEvents}
                             className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
                           >
                             View all
@@ -332,7 +346,7 @@ export default function StudentDashboard() {
                             Mentorship Offers
                           </h2>
                           <button 
-                            onClick={useCallback(() => setActiveMenu('Mentorship'), [])}
+                            onClick={handleGoToMentorship}
                             className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
                           >
                             View all
@@ -359,7 +373,7 @@ export default function StudentDashboard() {
                             Recent Job Opportunities
                           </h2>
                           <button 
-                            onClick={useCallback(() => setActiveMenu('Job Opportunities'), [])}
+                            onClick={handleGoToJobs}
                             className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
                           >
                             View all
@@ -374,7 +388,7 @@ export default function StudentDashboard() {
                         </Suspense>
 
                         <button 
-                          onClick={useCallback(() => setActiveMenu('Job Opportunities'), [])}
+                          onClick={handleGoToJobs}
                           className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl border border-slate-900 bg-slate-900/20 text-xs font-semibold text-blue-400 hover:text-blue-300 hover:bg-slate-900/40 hover:border-slate-800 transition-all duration-300 group cursor-pointer"
                         >
                           <span>View all opportunities</span>
@@ -389,7 +403,7 @@ export default function StudentDashboard() {
                             Announcements
                           </h2>
                           <button 
-                            onClick={useCallback(() => setActiveMenu('Notifications'), [])}
+                            onClick={handleGoToNotifications}
                             className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
                           >
                             View all
