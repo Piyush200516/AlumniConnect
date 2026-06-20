@@ -20,7 +20,8 @@ export const useAuth = () => {
   const storeUser = (role: Role, token: string) => {
     localStorage.clear();
     sessionStorage.clear();
-    const user: User = { role, token };
+    const normalizedRole = role.trim().toLowerCase() as Role;
+    const user: User = { role: normalizedRole, token };
     setUser(user);
   };
 

@@ -3,6 +3,19 @@ import type { ReactNode } from 'react';
 import type { User } from '../../types/auth';
 import api from '../../services/api';
 
+const normalizeRole = (role: unknown): User['role'] | null => {
+  if (typeof role !== 'string') {
+    return null;
+  }
+
+  const normalized = role.trim().toLowerCase();
+  if (normalized === 'student' || normalized === 'alumni' || normalized === 'cdc') {
+    return normalized;
+  }
+
+  return null;
+};
+
 export interface StudentProfile {
   id: string;
   fullName: string;
@@ -93,13 +106,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       try {
-        return JSON.parse(savedUser);
+        const parsed = JSON.parse(savedUser);
+        const role = normalizeRole(parsed?.role);
+        if (!role || typeof parsed?.token !== 'string') {
+          return null;
+        }
+        return { ...parsed, role, token: parsed.token };
       } catch (e) {
         return null;
       }
     }
     const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role') as any;
+    const role = normalizeRole(localStorage.getItem('role'));
     if (token && role) {
       return { token, role };
     }
@@ -111,11 +129,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(!!(user && (user.role === 'student' || user.role === 'alumni')));
 
   const setUser = (newUser: User | null) => {
-    setUserState(newUser);
+    const normalizedUser = newUser
+      ? { ...newUser, role: normalizeRole(newUser.role) ?? newUser.role }
+      : null;
+    setUserState(normalizedUser);
     if (newUser) {
-      localStorage.setItem('user', JSON.stringify(newUser));
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
       localStorage.setItem('token', newUser.token);
-      localStorage.setItem('role', newUser.role);
+      localStorage.setItem('role', normalizedUser?.role || newUser.role);
     } else {
       localStorage.removeItem('user');
       localStorage.removeItem('token');
