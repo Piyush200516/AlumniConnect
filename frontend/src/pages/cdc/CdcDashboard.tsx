@@ -1,117 +1,184 @@
-import { useState, useEffect } from 'react';
-import { 
-  GraduationCap, 
-  LogOut, 
-  Search, 
-  FileText, 
-  X, 
-  Loader2, 
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import {
   AlertCircle,
-  Info,
-  Calendar,
-  Plus,
+  BadgeCheck,
+  Briefcase,
+  Calendar as CalendarIcon,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
   Download,
-  Briefcase
+  ExternalLink,
+  GraduationCap,
+  Loader2,
+  LogOut,
+  MapPin,
+  Menu,
+  Plus,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  X,
 } from 'lucide-react';
 import { useAuthContext } from '../../components/layout/AuthProvider';
 import api from '../../services/api';
-import { toastSuccess, toastError } from '../../utils/toast';
+import { toastError, toastSuccess } from '../../utils/toast';
 
-interface Application {
+type DashboardTab = 'overview' | 'applications' | 'people' | 'events' | 'jobs';
+type PeopleView = 'students' | 'placed' | 'alumni';
+type ApplicationStatusFilter = 'ALL' | 'DRAFT' | 'SUBMITTED' | 'UNDER_VERIFICATION' | 'APPROVED' | 'REJECTED';
+type EventStatusFilter = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED';
+type JobStatusFilter = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED';
+
+interface DashboardStats {
+  studentUsersCount: number;
+  alumniUsersCount: number;
+  totalApplications: number;
+  verifiedApplications: number;
+  pendingApplications: number;
+  placedStudentsCount: number;
+  upcomingEventsCount: number;
+  pendingEventCount: number;
+  activeJobsCount: number;
+}
+
+interface CdcApplication {
   id: string;
   userId: string;
   fullName: string;
   enrollmentNumber: string;
   email: string;
   phone: string;
-  gender: string;
-  dateOfBirth: string;
-  profileImage: string;
-  aadharNumber: string;
-  panCard: string | null;
-  collegeIdNumber: string;
-  fatherName: string;
-  fatherOccupation: string;
-  fatherPhone: string;
-  motherName: string;
-  motherOccupation: string;
-  motherPhone: string;
-  familyIncome: string;
-  emergencyContact: string;
-  currentAddress: string;
-  currentCity: string;
-  currentState: string;
-  currentPincode: string;
-  permanentAddress: string;
-  permanentCity: string;
-  permanentState: string;
-  permanentPincode: string;
-  sameAsCurrent: boolean;
-  class10Board: string;
-  class10School: string;
-  class10Percentage: number;
-  class10PassingYear: number;
-  class12Board: string | null;
-  class12School: string | null;
-  class12Percentage: number | null;
-  class12PassingYear: number | null;
-  diplomaCollege: string | null;
-  diplomaBranch: string | null;
-  diplomaCGPA: number | null;
-  diplomaPassingYear: number | null;
   currentCourse: string;
   currentBranch: string;
   currentSemester: number;
   currentCGPA: number;
-  sgpaSemester1: number | null;
-  sgpaSemester2: number | null;
-  sgpaSemester3: number | null;
-  sgpaSemester4: number | null;
-  sgpaSemester5: number | null;
-  sgpaSemester6: number | null;
-  sgpaSemester7: number | null;
-  sgpaSemester8: number | null;
-  careerPreference: string;
   primaryDomain: string;
   secondaryDomain: string | null;
   skills: string[];
-  linkedinUrl: string | null;
-  githubUrl: string | null;
-  portfolioUrl: string | null;
   resumeUrl: string;
+  profileImage: string;
   status: string;
   remarks: string | null;
   submittedAt: string | null;
-  certifications: any[];
+  verifiedAt: string | null;
+  user: { email: string };
+  certifications: Array<{
+    id?: string;
+    name: string;
+    issuingOrganization: string;
+    issueDate: string;
+    certificateUrl: string;
+  }>;
+  [key: string]: any;
 }
 
-interface Event {
+interface CdcAlumni {
   id: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  passingYear: number;
+  branch: string | null;
+  course: string | null;
+  currentCompany: string | null;
+  designation: string | null;
+  location: string | null;
+  profileImageUrl: string | null;
+  company: {
+    id: string;
+    name: string;
+    logoUrl: string | null;
+    location: string | null;
+  } | null;
+  [key: string]: any;
+}
+
+interface CdcPlacedStudent {
+  id: string;
+  name: string;
+  email: string;
+  enrollmentNumber: string;
+  branch: string;
+  course: string;
+  graduationYear: number | null;
+  phone: string | null;
+  company: string;
+  jobTitle: string;
+  status: string;
+  updatedAt: string;
+}
+
+interface CdcEvent {
+  id: string;
+  createdById: string;
   title: string;
-  category: string;
   description: string;
+  bannerUrl: string | null;
+  category: string;
   mode: 'ONLINE' | 'OFFLINE' | 'HYBRID';
   eventDate: string;
   eventTime: string;
+  duration: string;
   venue: string;
+  googleMapsLocation: string | null;
   totalSeats: number;
   availableSeats: number;
   registrationDeadline: string;
   status: string;
   approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
   remarks: string | null;
+  agenda: string | null;
+  keyBenefits: string[];
+  eligibilityCriteria: string | null;
+  requiredDocuments: string[];
   speakerName: string;
   speakerDesignation: string | null;
   speakerCompany: string | null;
-  createdBy?: {
+  createdBy: {
+    id: string;
+    role: 'STUDENT' | 'ALUMNI' | 'CDC';
     email: string;
-    role: string;
     alumniProfile?: { fullName: string } | null;
     cdcProfile?: { collegeName: string } | null;
   };
+  _count: { registrations: number };
+  [key: string]: any;
 }
 
-interface Registrant {
+interface CdcJob {
+  id: string;
+  postedById: string;
+  title: string;
+  description: string;
+  company: string;
+  companyLogo: string | null;
+  location: string | null;
+  salary: string | null;
+  jobType: string;
+  skillsRequired: string[];
+  deadline: string | null;
+  isActive: boolean;
+  responsibilities: string | null;
+  eligibility: string | null;
+  benefits: string | null;
+  selectionProcess: string | null;
+  applicationLink: string | null;
+  approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  remarks: string | null;
+  postedBy: {
+    id: string;
+    role: 'STUDENT' | 'ALUMNI' | 'CDC';
+    email: string;
+    alumniProfile?: { fullName: string; designation: string | null; currentCompany: string | null } | null;
+    cdcProfile?: { collegeName: string } | null;
+  };
+  _count: { applications: number };
+  [key: string]: any;
+}
+
+interface CdcRegistrant {
   id: string;
   registrationId: string;
   status: string;
@@ -127,46 +194,49 @@ interface Registrant {
   };
 }
 
-export default function CdcDashboard() {
-  const { logout } = useAuthContext();
-  
-  // Dashboard navigation tab
-  const [dashboardTab, setDashboardTab] = useState<'applications' | 'events' | 'jobs'>('applications');
-  
-  // Tab 1: Student Applications States
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [appsLoading, setAppsLoading] = useState(true);
-  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [branchFilter, setBranchFilter] = useState('ALL');
-  const [remarksInput, setRemarksInput] = useState('');
-  const [submitLoading, setSubmitLoading] = useState(false);
+interface CdcDashboardData {
+  stats: DashboardStats;
+  applications: CdcApplication[];
+  alumni: CdcAlumni[];
+  placedStudents: CdcPlacedStudent[];
+  events: CdcEvent[];
+  jobs: CdcJob[];
+}
 
-  // Tab 2: Events Console States
-  const [adminEvents, setAdminEvents] = useState<Event[]>([]);
-  const [eventsLoading, setEventsLoading] = useState(true);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [eventRemarks, setEventRemarks] = useState('');
-  const [eventActionLoading, setEventActionLoading] = useState(false);
-  const [createEventOpen, setCreateEventOpen] = useState(false);
-  const [eventRegistrations, setEventRegistrations] = useState<Registrant[]>([]);
-  const [viewingEventRegistrants, setViewingEventRegistrants] = useState<Event | null>(null);
-  const [registrantsLoading, setRegistrantsLoading] = useState(false);
+const dashboardTabs: Array<{
+  id: DashboardTab;
+  label: string;
+  icon: any;
+}> = [
+  { id: 'overview', label: 'Overview', icon: Sparkles },
+  { id: 'applications', label: 'Applications', icon: ShieldCheck },
+  { id: 'people', label: 'People', icon: Users },
+  { id: 'events', label: 'Events', icon: CalendarIcon },
+  { id: 'jobs', label: 'Jobs', icon: Briefcase },
+];
 
-  // Tab 3: Jobs Moderation States
-  const [adminJobs, setAdminJobs] = useState<any[]>([]);
-  const [jobsLoading, setJobsLoading] = useState(true);
-  const [selectedJob, setSelectedJob] = useState<any | null>(null);
-  const [jobRemarks, setJobRemarks] = useState('');
-  const [jobActionLoading, setJobActionLoading] = useState(false);
+const eventCategories = [
+  'Alumni Talk',
+  'Workshop',
+  'Placement Drive',
+  'Training Program',
+  'Networking Event',
+  'Webinar',
+  'Seminar',
+  'Mock Interview',
+  'Resume Building Session',
+  'Technical Event',
+  'Hackathon',
+  'Career Guidance Session',
+];
 
-  // CDC Event creation form data
-  const [formData, setFormData] = useState({
+function buildInitialEventForm() {
+  return {
     title: '',
     category: 'Workshop',
     description: '',
-    mode: 'OFFLINE',
+    bannerUrl: '',
+    mode: 'OFFLINE' as 'ONLINE' | 'OFFLINE' | 'HYBRID',
     eventDate: '',
     eventTime: '',
     duration: '',
@@ -180,122 +250,309 @@ export default function CdcDashboard() {
     requiredDocuments: 'College ID Card',
     speakerName: '',
     speakerDesignation: '',
-    speakerCompany: ''
-  });
+    speakerCompany: '',
+    hostedByAlumniName: '',
+    hostedByAlumniEmail: '',
+  };
+}
 
-  const categories = [
-    'Alumni Talk',
-    'Workshop',
-    'Placement Drive',
-    'Training Program',
-    'Networking Event',
-    'Webinar',
-    'Seminar',
-    'Mock Interview',
-    'Resume Building Session',
-    'Technical Event',
-    'Hackathon',
-    'Career Guidance Session'
-  ];
+function formatDate(value?: string | Date | null) {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'N/A';
+  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function formatDateTime(value?: string | Date | null) {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'N/A';
+  return date.toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function splitCsv(value: string) {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function StatusChip({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: 'emerald' | 'amber' | 'rose' | 'blue' | 'slate' | 'violet';
+}) {
+  const toneClass: Record<'emerald' | 'amber' | 'rose' | 'blue' | 'slate' | 'violet', string> = {
+    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    rose: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    blue: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    slate: 'bg-slate-900/80 text-slate-300 border-slate-800',
+    violet: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
+  };
+
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${toneClass[tone]}`}>
+      {label}
+    </span>
+  );
+}
+
+function MetricCard({
+  title,
+  value,
+  hint,
+  icon: Icon,
+}: {
+  title: string;
+  value: string | number;
+  hint: string;
+  icon: any;
+}) {
+  return (
+    <div className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-500">{title}</p>
+          <p className="mt-2 text-3xl font-extrabold text-white tracking-tight">{value}</p>
+        </div>
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-500/15 bg-blue-500/10 text-blue-300">
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+      <p className="text-xs font-medium text-slate-400">{hint}</p>
+    </div>
+  );
+}
+
+export default function CdcDashboard() {
+  const { user, logout } = useAuthContext();
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
+  const [peopleView, setPeopleView] = useState<PeopleView>('students');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [applicationStatusFilter, setApplicationStatusFilter] = useState<ApplicationStatusFilter>('ALL');
+  const [eventStatusFilter, setEventStatusFilter] = useState<EventStatusFilter>('ALL');
+  const [jobStatusFilter, setJobStatusFilter] = useState<JobStatusFilter>('ALL');
+
+  const [dashboard, setDashboard] = useState<CdcDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [selectedApplication, setSelectedApplication] = useState<CdcApplication | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CdcEvent | null>(null);
+  const [selectedJob, setSelectedJob] = useState<CdcJob | null>(null);
+  const [registrantsEvent, setRegistrantsEvent] = useState<CdcEvent | null>(null);
+  const [registrants, setRegistrants] = useState<CdcRegistrant[]>([]);
+  const [registrantsLoading, setRegistrantsLoading] = useState(false);
+
+  const [applicationRemarks, setApplicationRemarks] = useState('');
+  const [eventRemarks, setEventRemarks] = useState('');
+  const [jobRemarks, setJobRemarks] = useState('');
+  const [applicationActionLoading, setApplicationActionLoading] = useState(false);
+  const [eventActionLoading, setEventActionLoading] = useState(false);
+  const [jobActionLoading, setJobActionLoading] = useState(false);
+
+  const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [eventForm, setEventForm] = useState(buildInitialEventForm());
+
+  const loadDashboard = async (silent = false) => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    setLoadError(null);
+    try {
+      const res = await api.get('/cdc/dashboard');
+      setDashboard(res.data.data);
+    } catch (err: any) {
+      console.error(err);
+      const message = err.response?.data?.message || 'Failed to load CDC dashboard';
+      setLoadError(message);
+      toastError(message);
+    } finally {
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  };
 
   useEffect(() => {
-    if (dashboardTab === 'applications') {
-      fetchApplications();
-    } else if (dashboardTab === 'events') {
-      fetchAdminEvents();
-    } else {
-      fetchAdminJobs();
-    }
-  }, [dashboardTab]);
+    void loadDashboard();
+  }, []);
 
-  const fetchAdminJobs = async () => {
-    setJobsLoading(true);
-    try {
-      const res = await api.get('/jobs');
-      setAdminJobs(res.data.data || []);
-    } catch (err: any) {
-      console.error(err);
-      toastError('Failed to load jobs list for review');
-    } finally {
-      setJobsLoading(false);
-    }
+  const stats = dashboard?.stats ?? {
+    studentUsersCount: 0,
+    alumniUsersCount: 0,
+    totalApplications: 0,
+    verifiedApplications: 0,
+    pendingApplications: 0,
+    placedStudentsCount: 0,
+    upcomingEventsCount: 0,
+    pendingEventCount: 0,
+    activeJobsCount: 0,
   };
 
-  const handleJobApproval = async (jobId: string, approvalStatus: 'APPROVED' | 'REJECTED') => {
-    setJobActionLoading(true);
-    try {
-      await api.post(`/jobs/${jobId}/${approvalStatus.toLowerCase()}`, {
-        approvalStatus,
-        remarks: jobRemarks
-      });
-      toastSuccess(`Job posting has been ${approvalStatus.toLowerCase()}`);
-      await fetchAdminJobs();
-      setSelectedJob(null);
-      setJobRemarks('');
-    } catch (err: any) {
-      console.error(err);
-      toastError(err.response?.data?.message || 'Failed to update job posting review status');
-    } finally {
-      setJobActionLoading(false);
-    }
+  const applications = dashboard?.applications ?? [];
+  const alumni = dashboard?.alumni ?? [];
+  const placedStudents = dashboard?.placedStudents ?? [];
+  const events = dashboard?.events ?? [];
+  const jobs = dashboard?.jobs ?? [];
+
+  const placedLookup = useMemo(() => {
+    return new Map(placedStudents.map((placed) => [placed.id, placed]));
+  }, [placedStudents]);
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  const filteredApplications = useMemo(() => {
+    return applications.filter((application) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        [
+          application.fullName,
+          application.email,
+          application.enrollmentNumber,
+          application.currentBranch,
+          application.currentCourse,
+          application.primaryDomain,
+        ].some((value) => String(value || '').toLowerCase().includes(normalizedSearch));
+
+      const matchesStatus =
+        applicationStatusFilter === 'ALL' || application.status === applicationStatusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [applications, applicationStatusFilter, normalizedSearch]);
+
+  const filteredStudents = useMemo(() => {
+    return applications.filter((application) => {
+      const placement = placedLookup.get(application.userId);
+      const matchesSearch =
+        !normalizedSearch ||
+        [
+          application.fullName,
+          application.email,
+          application.enrollmentNumber,
+          application.currentBranch,
+          application.currentCourse,
+          placement?.company,
+          placement?.jobTitle,
+        ].some((value) => String(value || '').toLowerCase().includes(normalizedSearch));
+
+      if (!matchesSearch) return false;
+
+      if (peopleView === 'students') return true;
+      if (peopleView === 'placed') return !!placement;
+      return false;
+    });
+  }, [applications, normalizedSearch, peopleView, placedLookup]);
+
+  const filteredAlumni = useMemo(() => {
+    return alumni.filter((alumnus) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        [alumnus.fullName, alumnus.email, alumnus.currentCompany, alumnus.designation, alumnus.location].some((value) =>
+          String(value || '').toLowerCase().includes(normalizedSearch)
+        );
+      return matchesSearch;
+    });
+  }, [alumni, normalizedSearch]);
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        [event.title, event.category, event.speakerName, event.venue, event.createdBy?.email].some((value) =>
+          String(value || '').toLowerCase().includes(normalizedSearch)
+        );
+
+      const matchesStatus =
+        eventStatusFilter === 'ALL' || event.approvalStatus === eventStatusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [events, eventStatusFilter, normalizedSearch]);
+
+  const filteredJobs = useMemo(() => {
+    return jobs.filter((job) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        [job.title, job.company, job.location, job.postedBy?.email, ...(job.skillsRequired || [])].some((value) =>
+          String(value || '').toLowerCase().includes(normalizedSearch)
+        );
+
+      const matchesStatus =
+        jobStatusFilter === 'ALL' || job.approvalStatus === jobStatusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [jobs, jobStatusFilter, normalizedSearch]);
+
+  const pendingApplications = applications.filter(
+    (application) =>
+      application.status === 'DRAFT' ||
+      application.status === 'SUBMITTED' ||
+      application.status === 'UNDER_VERIFICATION'
+  );
+  const upcomingEvents = events.filter((event) => {
+    const eventDate = new Date(event.eventDate);
+    return event.approvalStatus === 'APPROVED' && event.status === 'PUBLISHED' && eventDate >= new Date();
+  });
+
+  const handleRefresh = async () => {
+    await loadDashboard(true);
   };
 
-  const fetchApplications = async () => {
-    setAppsLoading(true);
+  const handleApplicationDecision = async (
+    applicationId: string,
+    status: 'APPROVED' | 'REJECTED' | 'UNDER_VERIFICATION'
+  ) => {
+    setApplicationActionLoading(true);
     try {
-      const res = await api.get('/applications');
-      setApplications(res.data.data || []);
-    } catch (err: any) {
-      console.error(err);
-      toastError('Failed to fetch applications list');
-    } finally {
-      setAppsLoading(false);
-    }
-  };
-
-  const fetchAdminEvents = async () => {
-    setEventsLoading(true);
-    try {
-      const res = await api.get('/events/admin/all');
-      setAdminEvents(res.data.data || []);
-    } catch (err: any) {
-      console.error(err);
-      toastError('Failed to load events for review');
-    } finally {
-      setEventsLoading(false);
-    }
-  };
-
-  const handleVerify = async (appId: string, status: 'APPROVED' | 'REJECTED' | 'UNDER_VERIFICATION') => {
-    setSubmitLoading(true);
-    try {
-      await api.post(`/applications/${appId}/verify`, {
+      await api.post(`/applications/${applicationId}/verify`, {
         status,
-        remarks: remarksInput
+        remarks: applicationRemarks,
       });
-      toastSuccess(`Application updated to ${status}`);
-      await fetchApplications();
-      setSelectedApp(null);
-      setRemarksInput('');
+      toastSuccess(`Application updated to ${status.toLowerCase().replace('_', ' ')}`);
+      setSelectedApplication(null);
+      setApplicationRemarks('');
+      await loadDashboard(true);
     } catch (err: any) {
       console.error(err);
-      toastError(err.response?.data?.message || 'Failed to verify application');
+      toastError(err.response?.data?.message || 'Failed to update application status');
     } finally {
-      setSubmitLoading(false);
+      setApplicationActionLoading(false);
     }
   };
 
-  const handleEventApproval = async (eventId: string, approvalStatus: 'APPROVED' | 'REJECTED') => {
+  const handleEventDecision = async (eventId: string, approvalStatus: 'APPROVED' | 'REJECTED') => {
     setEventActionLoading(true);
     try {
-      await api.post(`/events/${eventId}/${approvalStatus.toLowerCase()}`, {
+      const actionPath = approvalStatus === 'APPROVED' ? 'approve' : 'reject';
+      await api.post(`/events/${eventId}/${actionPath}`, {
         approvalStatus,
-        remarks: eventRemarks
+        remarks: eventRemarks,
       });
-      toastSuccess(`Alumni event has been ${approvalStatus.toLowerCase()}`);
-      await fetchAdminEvents();
+      toastSuccess(`Event ${approvalStatus.toLowerCase()}`);
       setSelectedEvent(null);
       setEventRemarks('');
+      await loadDashboard(true);
     } catch (err: any) {
       console.error(err);
       toastError(err.response?.data?.message || 'Failed to update event review');
@@ -304,884 +561,1582 @@ export default function CdcDashboard() {
     }
   };
 
-  const handleCreateCdcEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setEventsLoading(true);
+  const handleJobDecision = async (jobId: string, approvalStatus: 'APPROVED' | 'REJECTED') => {
+    setJobActionLoading(true);
     try {
-      const payload = {
-        ...formData,
-        keyBenefits: formData.keyBenefits.split(',').map(b => b.trim()).filter(Boolean),
-        requiredDocuments: formData.requiredDocuments.split(',').map(d => d.trim()).filter(Boolean),
-        totalSeats: Number(formData.totalSeats)
-      };
-
-      await api.post('/events/create', payload);
-      toastSuccess('Official CDC event created and published successfully!');
-      
-      // Reset form
-      setFormData({
-        title: '',
-        category: 'Workshop',
-        description: '',
-        mode: 'OFFLINE',
-        eventDate: '',
-        eventTime: '',
-        duration: '',
-        venue: '',
-        googleMapsLocation: '',
-        totalSeats: 100,
-        registrationDeadline: '',
-        agenda: '',
-        keyBenefits: '',
-        eligibilityCriteria: '',
-        requiredDocuments: 'College ID Card',
-        speakerName: '',
-        speakerDesignation: '',
-        speakerCompany: ''
+      const actionPath = approvalStatus === 'APPROVED' ? 'approve' : 'reject';
+      await api.post(`/jobs/${jobId}/${actionPath}`, {
+        approvalStatus,
+        remarks: jobRemarks,
       });
-
-      setCreateEventOpen(false);
-      fetchAdminEvents();
+      toastSuccess(`Job ${approvalStatus.toLowerCase()}`);
+      setSelectedJob(null);
+      setJobRemarks('');
+      await loadDashboard(true);
     } catch (err: any) {
       console.error(err);
-      toastError(err.response?.data?.message || 'Failed to create official event');
+      toastError(err.response?.data?.message || 'Failed to update job review');
     } finally {
-      setEventsLoading(false);
+      setJobActionLoading(false);
     }
   };
 
-  const loadRegistrants = async (event: Event) => {
-    setViewingEventRegistrants(event);
+  const handleCreateEvent = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setCreatingEvent(true);
+    try {
+      const payload = {
+        title: eventForm.title,
+        category: eventForm.category,
+        description: eventForm.description,
+        bannerUrl: eventForm.bannerUrl.trim() || undefined,
+        mode: eventForm.mode,
+        eventDate: eventForm.eventDate,
+        eventTime: eventForm.eventTime,
+        duration: eventForm.duration,
+        venue: eventForm.venue,
+        googleMapsLocation: eventForm.googleMapsLocation.trim() || undefined,
+        totalSeats: Number(eventForm.totalSeats),
+        registrationDeadline: eventForm.registrationDeadline,
+        agenda: eventForm.agenda.trim() || undefined,
+        keyBenefits: splitCsv(eventForm.keyBenefits),
+        eligibilityCriteria: eventForm.eligibilityCriteria.trim() || undefined,
+        requiredDocuments: splitCsv(eventForm.requiredDocuments),
+        speakerName: eventForm.speakerName,
+        speakerDesignation: eventForm.speakerDesignation.trim() || undefined,
+        speakerCompany: eventForm.speakerCompany.trim() || undefined,
+        hostedByAlumniName: eventForm.hostedByAlumniName.trim() || undefined,
+        hostedByAlumniEmail: eventForm.hostedByAlumniEmail.trim() || undefined,
+      };
+
+      await api.post('/events/create', payload);
+      toastSuccess('Event created successfully');
+      setCreateEventOpen(false);
+      setEventForm(buildInitialEventForm());
+      await loadDashboard(true);
+    } catch (err: any) {
+      console.error(err);
+      toastError(
+        err.response?.data?.message ||
+          err.response?.data?.errors?.[0]?.message ||
+          'Failed to create event'
+      );
+    } finally {
+      setCreatingEvent(false);
+    }
+  };
+
+  const loadRegistrants = async (event: CdcEvent) => {
+    setRegistrantsEvent(event);
     setRegistrantsLoading(true);
     try {
       const res = await api.get(`/events/${event.id}/registrations`);
-      setEventRegistrations(res.data.data || []);
+      setRegistrants(res.data.data || []);
     } catch (err) {
       console.error(err);
-      toastError('Failed to fetch event registrants');
+      toastError('Failed to fetch registrants');
     } finally {
       setRegistrantsLoading(false);
     }
   };
 
-  const handleExportRegistrants = (event: Event) => {
-    if (eventRegistrations.length === 0) return;
+  const exportRegistrants = () => {
+    if (!registrantsEvent || registrants.length === 0) return;
+
     let csv = 'Registration ID,Full Name,Enrollment Number,Email,Phone,Status,Registered At\n';
-    eventRegistrations.forEach(r => {
-      csv += `"${r.registrationId}","${r.user.studentProfile?.fullName || ''}","${r.user.studentProfile?.enrollmentNumber || ''}","${r.user.email}","${r.user.studentProfile?.phone || ''}","${r.status}","${new Date(r.createdAt).toLocaleString()}"\n`;
+    registrants.forEach((reg) => {
+      csv += `"${reg.registrationId}","${reg.user.studentProfile?.fullName || ''}","${reg.user.studentProfile?.enrollmentNumber || ''}","${reg.user.email}","${reg.user.studentProfile?.phone || ''}","${reg.status}","${formatDateTime(reg.createdAt)}"\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `CDC_Registrants_${event.title.replace(/\s+/g, '_')}.csv`;
+    link.download = `CDC_Registrants_${registrantsEvent.title.replace(/\s+/g, '_')}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Applications Filter
-  const branches = ['ALL', ...Array.from(new Set(applications.map(app => app.currentBranch || app.diplomaBranch).filter(Boolean) as string[]))];
-  
-  const filteredApps = applications.filter((app) => {
-    const matchesSearch = 
-      app.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.enrollmentNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.email?.toLowerCase().includes(searchTerm.toLowerCase());
+  const renderSidebarItem = (tab: DashboardTab, label: string, Icon: any) => {
+    const active = activeTab === tab;
+    return (
+      <button
+        key={tab}
+        onClick={() => {
+          setActiveTab(tab);
+          setSidebarOpen(false);
+        }}
+        className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${
+          active
+            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+            : 'text-slate-300 hover:bg-slate-900/70 hover:text-white'
+        }`}
+      >
+        <Icon className="h-4.5 w-4.5 shrink-0" />
+        <span>{label}</span>
+        {active && <ChevronRight className="ml-auto h-4 w-4 opacity-80" />}
+      </button>
+    );
+  };
 
-    const matchesStatus = statusFilter === 'ALL' || app.status === statusFilter;
-    const matchesBranch = branchFilter === 'ALL' || app.currentBranch === branchFilter || app.diplomaBranch === branchFilter;
+  const pageTitle =
+    activeTab === 'overview'
+      ? 'CDC Control Room'
+      : activeTab === 'applications'
+        ? 'Student Applications'
+        : activeTab === 'people'
+          ? 'Students, Placements, Alumni'
+          : activeTab === 'events'
+            ? 'Events Console'
+            : 'Jobs Moderation';
 
-    return matchesSearch && matchesStatus && matchesBranch;
-  });
+  const pageSubtitle =
+    activeTab === 'overview'
+      ? 'Approve student profiles, publish campus events, and keep placements visible in one place.'
+      : activeTab === 'applications'
+        ? 'Review student portal applications and update approval status.'
+        : activeTab === 'people'
+          ? 'Quickly see who is studying, who has been placed, and who is already an alumnus.'
+          : activeTab === 'events'
+            ? 'Create events for the college or attach them to a specific alumni portal.'
+            : 'Approve job postings and track candidate traffic.';
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#060a12] via-[#09101f] to-[#04070e] text-slate-100 antialiased font-sans flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-900 bg-slate-950/60 px-8 py-10 shadow-2xl">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+          <p className="text-sm font-semibold text-slate-400">Loading CDC workspace...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#060a12] via-[#09101f] to-[#04070e] text-slate-100 antialiased font-sans flex flex-col">
-      {/* Navbar */}
-      <header className="border-b border-slate-900 bg-slate-950/40 backdrop-blur-xl px-6 lg:px-12 py-4 flex items-center justify-between shadow-md shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30">
-            <GraduationCap className="h-6 w-6" />
-          </div>
-          <span className="text-xl font-bold bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent tracking-wide">
-            AlumniConnect CDC Admin
-          </span>
-        </div>
-        <button 
-          onClick={logout}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-rose-950/20 text-slate-300 hover:text-rose-400 text-sm font-semibold transition-all duration-300 cursor-pointer"
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </button>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 p-6 lg:p-12 max-w-7xl w-full mx-auto space-y-8 overflow-y-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white">CDC Workspace</h1>
-            <p className="text-slate-400 text-sm font-medium mt-1">
-              Verify applications, moderate alumni events, and organize student workshops.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setDashboardTab('applications')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${
-                dashboardTab === 'applications' 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                  : 'bg-slate-900 border border-slate-850 text-slate-300 hover:bg-slate-850'
-              }`}
-            >
-              Portal Approvals
-            </button>
-            <button 
-              onClick={() => setDashboardTab('events')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${
-                dashboardTab === 'events' 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                  : 'bg-slate-900 border border-slate-850 text-slate-300 hover:bg-slate-850'
-              }`}
-            >
-              Events Console
-            </button>
-            <button 
-              onClick={() => setDashboardTab('jobs')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${
-                dashboardTab === 'jobs' 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                  : 'bg-slate-900 border border-slate-850 text-slate-300 hover:bg-slate-850'
-              }`}
-            >
-              Jobs Moderation
-            </button>
-          </div>
-        </div>
-
-        {/* Tab 1: Student Applications */}
-        {dashboardTab === 'applications' ? (
-          <div className="space-y-6">
-            {/* Search & Filter Controls */}
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-4 p-5 rounded-2xl border border-slate-900 bg-slate-950/40 backdrop-blur-md shadow-lg shadow-black/10">
-              <div className="relative md:col-span-2">
-                <Search className="absolute left-3.5 top-3 h-4.5 w-4.5 text-slate-500" />
-                <input 
-                  type="text" 
-                  placeholder="Search by student name, enrollment or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900/40 border border-slate-850 rounded-xl text-sm placeholder-slate-650 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div className="relative">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-900/40 border border-slate-850 rounded-xl text-sm text-slate-300 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="ALL">All Statuses</option>
-                  <option value="SUBMITTED">Submitted</option>
-                  <option value="UNDER_VERIFICATION">Under Verification</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="REJECTED">Rejected</option>
-                  <option value="DRAFT">Drafts</option>
-                </select>
-              </div>
-              <div className="relative">
-                <select
-                  value={branchFilter}
-                  onChange={(e) => setBranchFilter(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-900/40 border border-slate-850 rounded-xl text-sm text-slate-300 focus:outline-none focus:border-blue-500"
-                >
-                  {branches.map(branch => (
-                    <option key={branch} value={branch}>{branch === 'ALL' ? 'All Branches' : branch}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Applications Table */}
-            {appsLoading ? (
-              <div className="flex h-32 flex-col items-center justify-center gap-2">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                <p className="text-slate-500 text-xs">Loading student portal applications...</p>
-              </div>
-            ) : filteredApps.length === 0 ? (
-              <div className="text-center p-16 border border-dashed border-slate-900 rounded-3xl">
-                <AlertCircle className="h-10 w-10 text-slate-700 mx-auto mb-3" />
-                <h3 className="text-sm font-bold text-white">No applications found</h3>
-              </div>
-            ) : (
-              <div className="border border-slate-900 bg-slate-950/40 rounded-2xl overflow-hidden shadow-xl">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-slate-950 border-b border-slate-900 text-slate-500 font-bold uppercase tracking-wider">
-                    <tr>
-                      <th className="px-6 py-4">Student</th>
-                      <th className="px-6 py-4">Enrollment</th>
-                      <th className="px-6 py-4">Course & Branch</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-900/40 font-medium">
-                    {filteredApps.map(app => (
-                      <tr key={app.id} className="hover:bg-slate-900/10">
-                        <td className="px-6 py-4 flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-lg overflow-hidden shrink-0 border border-slate-850">
-                            <img src={app.profileImage} alt="" className="h-full w-full object-cover" />
-                          </div>
-                          <div>
-                            <p className="font-bold text-white">{app.fullName}</p>
-                            <p className="text-[10px] text-slate-500">{app.email}</p>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-slate-200 font-mono">{app.enrollmentNumber}</td>
-                        <td className="px-6 py-4">{app.currentCourse} • {app.currentBranch}</td>
-                        <td className="px-6 py-4">
-                          {app.status === 'APPROVED' && <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded text-[10px] font-bold">Approved</span>}
-                          {app.status === 'REJECTED' && <span className="bg-rose-500/10 text-rose-400 border border-rose-500/25 px-2 py-0.5 rounded text-[10px] font-bold">Rejected</span>}
-                          {app.status === 'UNDER_VERIFICATION' && <span className="bg-amber-500/10 text-amber-400 border border-amber-500/25 px-2 py-0.5 rounded text-[10px] font-bold font-sans">Under Verification</span>}
-                          {app.status === 'SUBMITTED' && <span className="bg-blue-500/10 text-blue-400 border border-blue-500/25 px-2 py-0.5 rounded text-[10px] font-bold">Submitted</span>}
-                          {app.status === 'DRAFT' && <span className="bg-slate-900 text-slate-550 border border-slate-850 px-2 py-0.5 rounded text-[10px] font-bold">Draft</span>}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button 
-                            onClick={() => { setRemarksInput(app.remarks || ''); setSelectedApp(app); }}
-                            className="px-3 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 rounded-xl text-[11px] font-bold text-blue-400 hover:text-white cursor-pointer"
-                          >
-                            Review
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        ) : dashboardTab === 'events' ? (
-          /* Tab 2: Events Console */
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">All Scheduled Events</h3>
-              <button 
-                onClick={() => setCreateEventOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/10 cursor-pointer"
-              >
-                <Plus className="h-4 w-4" /> Create CDC Event
-              </button>
-            </div>
-
-            {eventsLoading ? (
-              <div className="flex h-32 flex-col items-center justify-center gap-2">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                <p className="text-slate-500 text-xs">Loading Events...</p>
-              </div>
-            ) : adminEvents.length === 0 ? (
-              <p className="text-xs text-slate-500 italic py-8 text-center border border-dashed border-slate-900 rounded-3xl">No events scheduled.</p>
-            ) : (
-              <div className="border border-slate-900 bg-slate-950/40 rounded-2xl overflow-hidden shadow-xl">
-                <table className="w-full text-left text-xs text-slate-350">
-                  <thead className="bg-slate-950 border-b border-slate-900 text-slate-500 font-bold uppercase tracking-wider">
-                    <tr>
-                      <th className="px-6 py-4">Event Details</th>
-                      <th className="px-6 py-4">Speaker</th>
-                      <th className="px-6 py-4">Creator</th>
-                      <th className="px-6 py-4">Approval</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-900/40 font-medium">
-                    {adminEvents.map(event => (
-                      <tr key={event.id} className="hover:bg-slate-900/10">
-                        <td className="px-6 py-4">
-                          <p className="font-bold text-white text-sm">{event.title}</p>
-                          <p className="text-[10px] text-slate-550 mt-0.5">{event.category} • {event.mode} • {event.venue}</p>
-                        </td>
-                        <td className="px-6 py-4 text-slate-200">{event.speakerName}</td>
-                        <td className="px-6 py-4 text-slate-400">
-                          {event.createdBy?.alumniProfile?.fullName || 'CDC Admin'}
-                          <span className="block text-[10px] text-slate-550">{event.createdBy?.role}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {event.approvalStatus === 'APPROVED' && <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded text-[10px] font-bold">Approved</span>}
-                          {event.approvalStatus === 'PENDING' && <span className="bg-amber-500/10 text-amber-400 border border-amber-500/25 px-2 py-0.5 rounded text-[10px] font-bold">Pending Review</span>}
-                          {event.approvalStatus === 'REJECTED' && <span className="bg-rose-500/10 text-rose-400 border border-rose-500/25 px-2 py-0.5 rounded text-[10px] font-bold">Rejected</span>}
-                        </td>
-                        <td className="px-6 py-4 text-right space-x-2">
-                          <button 
-                            onClick={() => loadRegistrants(event)}
-                            className="px-2.5 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 rounded-xl text-[10px] text-slate-350 hover:text-white cursor-pointer"
-                          >
-                            Registrations
-                          </button>
-                          
-                          {event.approvalStatus === 'PENDING' && (
-                            <button 
-                              onClick={() => { setEventRemarks(event.remarks || ''); setSelectedEvent(event); }}
-                              className="px-2.5 py-1.5 bg-blue-600/10 border border-blue-500/25 hover:bg-blue-600 rounded-xl text-[10px] text-blue-400 hover:text-white cursor-pointer"
-                            >
-                              Verify
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        ) : (
-          /* Tab 3: Jobs Moderation Console */
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Moderate Alumni Job Postings</h3>
-            </div>
-
-            {jobsLoading ? (
-              <div className="flex h-32 flex-col items-center justify-center gap-2">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                <p className="text-slate-500 text-xs">Loading Job Postings...</p>
-              </div>
-            ) : adminJobs.length === 0 ? (
-              <p className="text-xs text-slate-500 italic py-8 text-center border border-dashed border-slate-900/40 rounded-3xl">No jobs posted yet.</p>
-            ) : (
-              <div className="border border-slate-900 bg-slate-950/40 rounded-2xl overflow-hidden shadow-xl">
-                <table className="w-full text-left text-xs text-slate-350">
-                  <thead className="bg-slate-950 border-b border-slate-900 text-slate-500 font-bold uppercase tracking-wider">
-                    <tr>
-                      <th className="px-6 py-4">Job Details</th>
-                      <th className="px-6 py-4">Required Skills</th>
-                      <th className="px-6 py-4">Creator Alumni</th>
-                      <th className="px-6 py-4">Approval Status</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-900/40 font-medium">
-                    {adminJobs.map(job => (
-                      <tr key={job.id} className="hover:bg-slate-900/10">
-                        <td className="px-6 py-4">
-                          <p className="font-bold text-white text-sm">{job.title}</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">{job.company} • {job.jobType} • {job.location || 'N/A'}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {job.skillsRequired.slice(0, 3).map((s: string, idx: number) => (
-                              <span key={idx} className="bg-slate-900 px-1.5 py-0.5 rounded text-[10px] text-slate-405 font-semibold">{s}</span>
-                            ))}
-                            {job.skillsRequired.length > 3 && <span className="text-[9px] text-slate-550">+{job.skillsRequired.length - 3}</span>}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-slate-400">
-                          {job.postedBy?.alumniProfile?.fullName || 'CDC Admin'}
-                          <span className="block text-[10px] text-slate-550">{job.postedBy?.email}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {job.approvalStatus === 'APPROVED' && <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded text-[10px] font-bold">Approved</span>}
-                          {job.approvalStatus === 'PENDING' && <span className="bg-amber-500/10 text-amber-400 border border-amber-500/25 px-2 py-0.5 rounded text-[10px] font-bold">Pending Review</span>}
-                          {job.approvalStatus === 'REJECTED' && <span className="bg-rose-500/10 text-rose-455 border border-rose-500/25 px-2 py-0.5 rounded text-[10px] font-bold">Rejected</span>}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button 
-                            onClick={() => { setJobRemarks(job.remarks || ''); setSelectedJob(job); }}
-                            className="px-3 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 rounded-xl text-[11px] font-bold text-blue-400 hover:text-white cursor-pointer"
-                          >
-                            Review
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-
-      {/* PORTAL APPLICATION REVIEW MODAL */}
-      {selectedApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setSelectedApp(null)}></div>
-          
-          <div className="relative w-full max-w-4xl rounded-2xl border border-slate-800 bg-slate-950 p-6 md:p-8 shadow-2xl text-slate-200 z-10 max-h-[90vh] flex flex-col">
-            
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-900 pb-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl overflow-hidden shrink-0 border border-slate-800 bg-slate-900">
-                  <img src={selectedApp.profileImage} alt="" className="h-full w-full object-cover" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white">{selectedApp.fullName}</h3>
-                  <p className="text-xs text-slate-400">Enrollment: {selectedApp.enrollmentNumber} | {selectedApp.email}</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedApp(null)}
-                className="w-8 h-8 rounded-lg border border-slate-900 hover:bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Scrollable details */}
-            <div className="flex-1 overflow-y-auto pr-2 my-4 space-y-8 custom-scrollbar text-xs">
-              {/* Section A: Contact Details */}
-              <div className="space-y-2">
-                <h4 className="font-bold text-blue-400 uppercase tracking-wider border-b border-slate-900 pb-1 flex items-center gap-1.5"><Info className="h-4 w-4" /> Contact & Identification</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-semibold text-slate-350">
-                  <p><span className="text-slate-500 uppercase tracking-wider block text-[10px] font-bold">Gender</span> {selectedApp.gender || 'N/A'}</p>
-                  <p><span className="text-slate-500 uppercase tracking-wider block text-[10px] font-bold">Date of Birth</span> {selectedApp.dateOfBirth ? new Date(selectedApp.dateOfBirth).toLocaleDateString() : 'N/A'}</p>
-                  <p><span className="text-slate-500 uppercase tracking-wider block text-[10px] font-bold">Mobile Phone</span> {selectedApp.phone || 'N/A'}</p>
-                  <p><span className="text-slate-500 uppercase tracking-wider block text-[10px] font-bold">Aadhar Card</span> {selectedApp.aadharNumber || 'N/A'}</p>
-                </div>
-              </div>
-
-              {/* Section E: Academic Records */}
-              <div className="space-y-4">
-                <h4 className="font-bold text-blue-400 uppercase tracking-wider border-b border-slate-900 pb-1 flex items-center gap-1.5"><Calendar className="h-4 w-4" /> Academics Breakdown</h4>
-                
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-                  <div className="p-4 rounded-xl border border-slate-900 bg-slate-900/10">
-                    <h5 className="font-bold text-white mb-2 uppercase">Class 10th</h5>
-                    <p><span className="text-slate-500 font-bold">Board:</span> {selectedApp.class10Board}</p>
-                    <p><span className="text-slate-500 font-bold">Percentage:</span> {selectedApp.class10Percentage}%</p>
-                  </div>
-                  {selectedApp.class12Board && (
-                    <div className="p-4 rounded-xl border border-slate-900 bg-slate-900/10">
-                      <h5 className="font-bold text-white mb-2 uppercase">Class 12th</h5>
-                      <p><span className="text-slate-500 font-bold">Board:</span> {selectedApp.class12Board}</p>
-                      <p><span className="text-slate-500 font-bold">Percentage:</span> {selectedApp.class12Percentage}%</p>
-                    </div>
-                  )}
-                  <div className="p-4 rounded-xl border border-slate-900 bg-slate-900/10">
-                    <h5 className="font-bold text-white mb-2 uppercase">Graduation</h5>
-                    <p><span className="text-slate-500 font-bold">Course:</span> {selectedApp.currentCourse}</p>
-                    <p><span className="text-slate-500 font-bold">CGPA:</span> <span className="text-blue-400 font-extrabold">{selectedApp.currentCGPA}</span></p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Resume download */}
-              <div className="p-4 rounded-xl border border-slate-900 bg-slate-900/10 flex items-center justify-between">
-                <span className="font-semibold text-slate-300 flex items-center gap-1.5"><FileText className="h-4 w-4 text-blue-400" /> Resume / CV Document (PDF)</span>
-                <a 
-                  href={selectedApp.resumeUrl}
-                  download 
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg shadow-blue-500/10"
-                >
-                  Download Resume
-                </a>
-              </div>
-            </div>
-
-            {/* Auditor remarks input */}
-            <div className="border-t border-slate-900 pt-4 space-y-4 shrink-0">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">CDC Auditor Remarks</label>
-                <input 
-                  type="text" 
-                  placeholder="Enter remarks or grounds for approval/rejection..."
-                  value={remarksInput}
-                  onChange={(e) => setRemarksInput(e.target.value)}
-                  className="w-full px-4 py-2 bg-slate-900/50 border border-slate-900 rounded-xl text-sm placeholder-slate-700 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <p className="text-[10px] text-slate-500 max-w-sm font-semibold">
-                  Audits are logged. Updating the application will lock the verdict and change the status visible on the student's dashboard immediately.
-                </p>
-
-                <div className="flex gap-2">
-                  <button 
-                    disabled={submitLoading}
-                    onClick={() => handleVerify(selectedApp.id, 'UNDER_VERIFICATION')}
-                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl border border-slate-800 bg-slate-900 text-amber-400 hover:bg-slate-850 hover:text-white transition-colors cursor-pointer select-none"
-                  >
-                    Flag Verification
-                  </button>
-                  <button 
-                    disabled={submitLoading}
-                    onClick={() => handleVerify(selectedApp.id, 'REJECTED')}
-                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl bg-rose-950/30 border border-rose-900/60 hover:bg-rose-600 text-rose-400 hover:text-white transition-all cursor-pointer font-semibold select-none"
-                  >
-                    Reject
-                  </button>
-                  <button 
-                    disabled={submitLoading}
-                    onClick={() => handleVerify(selectedApp.id, 'APPROVED')}
-                    className="px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-xl bg-emerald-950/30 border border-emerald-900/60 hover:bg-emerald-600 text-emerald-400 hover:text-white transition-all cursor-pointer font-semibold select-none"
-                  >
-                    Approve
-                  </button>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#060a12] via-[#09101f] to-[#04070e] text-slate-100 antialiased font-sans">
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* EVENT APPROVAL / MODERATION MODAL */}
-      {selectedEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setSelectedEvent(null)}></div>
-          <div className="relative w-full max-w-md rounded-2xl border border-slate-850 bg-slate-950 p-6 shadow-2xl text-slate-250 z-10 space-y-6">
-            
-            <div className="flex items-start gap-4">
-              <div className="h-10 w-10 items-center justify-center rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-400 flex shrink-0">
-                <Calendar className="h-5 w-5" />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-slate-900/80 bg-slate-950/85 backdrop-blur-xl transition-transform duration-300 lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:block`}
+      >
+        <div className="flex h-full flex-col px-5 py-6">
+          <div className="flex items-center gap-3 px-2">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg shadow-blue-500/30">
+              <GraduationCap className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-lg font-extrabold tracking-tight text-white">AlumniConnect</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-blue-400">CDC Console</p>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-3xl border border-slate-900 bg-slate-900/40 p-4 shadow-xl shadow-black/10">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-500">Workspace</p>
+            <h2 className="mt-2 text-lg font-extrabold text-white">Student approvals, alumni events, placements</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-400">
+              Keep the college portal, event approvals, and placement visibility in one shared control room.
+            </p>
+          </div>
+
+          <nav className="mt-6 space-y-2">
+            {dashboardTabs.map((item) => renderSidebarItem(item.id, item.label, item.icon))}
+          </nav>
+
+          <div className="mt-auto rounded-3xl border border-slate-900 bg-slate-900/40 p-4 shadow-xl shadow-black/10">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-500">Signed in as</p>
+            <p className="mt-2 text-sm font-bold text-white">{user?.role ? `${user.role.toUpperCase()} account` : 'CDC User'}</p>
+            <p className="text-xs text-slate-400">Official workspace access</p>
+            <button
+              onClick={logout}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-300 transition-all hover:bg-rose-500/15 hover:text-rose-200"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div className="flex min-h-screen flex-col lg:pl-[280px]">
+        <header className="sticky top-0 z-30 border-b border-slate-900/70 bg-slate-950/60 backdrop-blur-xl">
+          <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-4 sm:px-6 lg:px-8">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-900 bg-slate-950/60 text-slate-300 transition-colors hover:bg-slate-900 hover:text-white lg:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-2xl font-extrabold tracking-tight text-white">{pageTitle}</h1>
+              <p className="mt-1 max-w-2xl text-sm text-slate-400">{pageSubtitle}</p>
+            </div>
+
+            <div className="hidden min-w-[280px] flex-1 max-w-xl items-center rounded-2xl border border-slate-900 bg-slate-950/60 px-4 py-2.5 shadow-xl shadow-black/10 md:flex">
+              <Search className="h-4.5 w-4.5 text-slate-500" />
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search students, alumni, events, jobs..."
+                className="ml-3 w-full bg-transparent text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+              />
+            </div>
+
+            <button
+              onClick={handleRefresh}
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-900 bg-slate-950/60 px-4 py-2.5 text-sm font-semibold text-slate-300 transition-all hover:border-slate-700 hover:text-white"
+            >
+              <Loader2 className={`h-4 w-4 ${refreshing ? 'animate-spin text-blue-400' : ''}`} />
+              Refresh
+            </button>
+
+            <button
+              onClick={logout}
+              className="hidden items-center gap-2 rounded-2xl border border-slate-900 bg-slate-950/60 px-4 py-2.5 text-sm font-semibold text-slate-300 transition-all hover:border-rose-500/30 hover:text-rose-300 xl:inline-flex"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <main className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          {loadError && (
+            <div className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-5 text-rose-200">
+              <p className="font-bold">Dashboard load error</p>
+              <p className="mt-1 text-sm text-rose-100/80">{loadError}</p>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/15 bg-blue-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.28em] text-blue-300">
+                <Sparkles className="h-3.5 w-3.5" />
+                CDC Workspace
               </div>
-              <div className="space-y-1 flex-1">
-                <h3 className="text-md font-bold text-white">Moderate Alumni Event</h3>
-                <p className="text-xs text-slate-400">Review request and set approval verdict.</p>
+              <h2 className="max-w-4xl text-3xl font-black tracking-tight text-white sm:text-4xl">
+                Know who is a student, who got placed, and which alumni are active.
+              </h2>
+              <p className="max-w-3xl text-sm leading-7 text-slate-400">
+                Verify student profiles, publish events, and attach an event to a specific alumni portal by entering their name and email.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setActiveTab('applications')}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-900 bg-slate-950/60 px-4 py-3 text-sm font-semibold text-slate-200 transition-all hover:bg-slate-900"
+              >
+                <ShieldCheck className="h-4 w-4 text-blue-400" />
+                Review Applications
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('events');
+                  setCreateEventOpen(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500"
+              >
+                <Plus className="h-4 w-4" />
+                Create Event
+              </button>
+            </div>
+          </div>
+
+          {activeTab === 'overview' && (
+            <div className="space-y-8">
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                <MetricCard
+                  title="Student Accounts"
+                  value={stats.studentUsersCount}
+                  hint="Students currently on the portal"
+                  icon={GraduationCap}
+                />
+                <MetricCard
+                  title="Verified Applications"
+                  value={stats.verifiedApplications}
+                  hint="Approved student profiles"
+                  icon={CheckCircle2}
+                />
+                <MetricCard
+                  title="Placed Students"
+                  value={stats.placedStudentsCount}
+                  hint="Students with an offer status"
+                  icon={Briefcase}
+                />
+                <MetricCard
+                  title="Alumni"
+                  value={stats.alumniUsersCount}
+                  hint="Graduated alumni profiles"
+                  icon={Users}
+                />
+                <MetricCard
+                  title="Upcoming Events"
+                  value={stats.upcomingEventsCount}
+                  hint="Approved events visible to students"
+                  icon={CalendarIcon}
+                />
+                <MetricCard
+                  title="Pending Reviews"
+                  value={stats.pendingApplications}
+                  hint="Applications that still need action"
+                  icon={ShieldCheck}
+                />
               </div>
-              <button onClick={() => setSelectedEvent(null)} className="text-slate-400 hover:text-white cursor-pointer">
+
+              <div className="grid gap-8 xl:grid-cols-12">
+                <section className="xl:col-span-5 rounded-3xl border border-slate-900/80 bg-slate-950/50 p-6 shadow-xl shadow-black/10 backdrop-blur-xl">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Applications needing action</h3>
+                      <p className="text-sm text-slate-400">Approve or reject student portal submissions.</p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('applications')}
+                      className="text-xs font-bold uppercase tracking-wider text-blue-400 transition-colors hover:text-blue-300"
+                    >
+                      View all
+                    </button>
+                  </div>
+                  <div className="mt-5 space-y-3">
+                    {(pendingApplications.slice(0, 5)).map((application) => {
+                      const placement = placedLookup.get(application.userId);
+                      return (
+                        <div key={application.id} className="rounded-2xl border border-slate-900 bg-slate-900/35 p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="font-bold text-white">{application.fullName}</p>
+                              <p className="text-xs text-slate-500">
+                                {application.enrollmentNumber} • {application.currentBranch}
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <StatusChip
+                                  label={application.status.replace('_', ' ')}
+                                  tone={
+                                    application.status === 'APPROVED'
+                                      ? 'emerald'
+                                      : application.status === 'REJECTED'
+                                        ? 'rose'
+                                        : application.status === 'UNDER_VERIFICATION'
+                                          ? 'amber'
+                                          : 'blue'
+                                  }
+                                />
+                                {placement && <StatusChip label="PLACED" tone="violet" />}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setApplicationRemarks(application.remarks || '');
+                                setSelectedApplication(application);
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-300 transition-colors hover:bg-blue-500 hover:text-white"
+                            >
+                              Review
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {pendingApplications.length === 0 && (
+                      <div className="rounded-2xl border border-dashed border-slate-900 p-8 text-center text-sm text-slate-500">
+                        No pending student applications.
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <section className="xl:col-span-4 rounded-3xl border border-slate-900/80 bg-slate-950/50 p-6 shadow-xl shadow-black/10 backdrop-blur-xl">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Upcoming events</h3>
+                      <p className="text-sm text-slate-400">Published events that students can register for.</p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('events')}
+                      className="text-xs font-bold uppercase tracking-wider text-blue-400 transition-colors hover:text-blue-300"
+                    >
+                      View all
+                    </button>
+                  </div>
+                  <div className="mt-5 space-y-3">
+                    {upcomingEvents.slice(0, 5).map((event) => (
+                      <div key={event.id} className="rounded-2xl border border-slate-900 bg-slate-900/35 p-4">
+                        <p className="font-bold text-white">{event.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {event.category} • {event.mode} • {event.venue}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <StatusChip label={event.approvalStatus} tone="emerald" />
+                          <StatusChip label={event.createdBy.role} tone="slate" />
+                        </div>
+                      </div>
+                    ))}
+                    {upcomingEvents.length === 0 && (
+                      <div className="rounded-2xl border border-dashed border-slate-900 p-8 text-center text-sm text-slate-500">
+                        No upcoming events yet.
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <section className="xl:col-span-3 rounded-3xl border border-slate-900/80 bg-slate-950/50 p-6 shadow-xl shadow-black/10 backdrop-blur-xl">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Placed students</h3>
+                      <p className="text-sm text-slate-400">Students with an offered role.</p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('people')}
+                      className="text-xs font-bold uppercase tracking-wider text-blue-400 transition-colors hover:text-blue-300"
+                    >
+                      View all
+                    </button>
+                  </div>
+                  <div className="mt-5 space-y-3">
+                    {placedStudents.slice(0, 5).map((placement) => (
+                      <div key={placement.id} className="rounded-2xl border border-slate-900 bg-slate-900/35 p-4">
+                        <p className="font-bold text-white">{placement.name}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {placement.company} • {placement.jobTitle}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <StatusChip label="PLACED" tone="violet" />
+                          <StatusChip label={placement.branch || 'Student'} tone="slate" />
+                        </div>
+                      </div>
+                    ))}
+                    {placedStudents.length === 0 && (
+                      <div className="rounded-2xl border border-dashed border-slate-900 p-8 text-center text-sm text-slate-500">
+                        No placed students recorded yet.
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'applications' && (
+            <section className="space-y-6">
+              <div className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl">
+                <div className="grid gap-4 lg:grid-cols-4">
+                  <div className="lg:col-span-2 rounded-2xl border border-slate-900 bg-slate-900/35 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <Search className="h-4.5 w-4.5 text-slate-500" />
+                      <input
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search by name, enrollment, branch, domain..."
+                        className="w-full bg-transparent text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-900 bg-slate-900/35 px-4 py-3">
+                    <select
+                      value={applicationStatusFilter}
+                      onChange={(e) => setApplicationStatusFilter(e.target.value as ApplicationStatusFilter)}
+                      className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
+                    >
+                      <option value="ALL">All statuses</option>
+                      <option value="SUBMITTED">Submitted</option>
+                      <option value="UNDER_VERIFICATION">Under verification</option>
+                      <option value="APPROVED">Approved</option>
+                      <option value="REJECTED">Rejected</option>
+                      <option value="DRAFT">Draft</option>
+                    </select>
+                  </div>
+                  <div className="rounded-2xl border border-slate-900 bg-slate-900/35 px-4 py-3">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+                      <span>Visible</span>
+                      <span className="text-slate-200">{filteredApplications.length}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {filteredApplications.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-900 p-16 text-center text-sm text-slate-500">
+                  No applications found.
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {filteredApplications.map((application) => {
+                    const placement = placedLookup.get(application.userId);
+                    return (
+                      <article
+                        key={application.id}
+                        className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl"
+                      >
+                        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                          <div className="flex items-start gap-4">
+                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10 text-lg font-black text-blue-300">
+                              {(application.fullName || 'S').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-lg font-bold text-white">{application.fullName}</h3>
+                                <StatusChip
+                                  label={application.status.replace('_', ' ')}
+                                  tone={
+                                    application.status === 'APPROVED'
+                                      ? 'emerald'
+                                      : application.status === 'REJECTED'
+                                        ? 'rose'
+                                        : application.status === 'UNDER_VERIFICATION'
+                                          ? 'amber'
+                                          : 'blue'
+                                  }
+                                />
+                                {placement && <StatusChip label="PLACED" tone="violet" />}
+                              </div>
+                              <p className="mt-1 text-sm text-slate-400">
+                                {application.enrollmentNumber} • {application.currentCourse} • {application.currentBranch}
+                              </p>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <StatusChip label={`CGPA ${application.currentCGPA}`} tone="slate" />
+                                <StatusChip label={`Semester ${application.currentSemester}`} tone="slate" />
+                                {placement && <StatusChip label={placement.company} tone="violet" />}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setApplicationRemarks(application.remarks || '');
+                                setSelectedApplication(application);
+                              }}
+                              className="inline-flex items-center gap-2 rounded-2xl border border-slate-900 bg-slate-900/50 px-4 py-3 text-sm font-semibold text-slate-200 transition-all hover:bg-slate-900"
+                            >
+                              Review
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeTab === 'people' && (
+            <section className="space-y-6">
+              <div className="flex flex-wrap gap-2">
+                {(['students', 'placed', 'alumni'] as PeopleView[]).map((view) => (
+                  <button
+                    key={view}
+                    onClick={() => setPeopleView(view)}
+                    className={`rounded-2xl px-4 py-2.5 text-sm font-bold capitalize transition-all ${
+                      peopleView === view
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                        : 'border border-slate-900 bg-slate-950/60 text-slate-300 hover:bg-slate-900'
+                    }`}
+                  >
+                    {view}
+                  </button>
+                ))}
+              </div>
+
+              {peopleView === 'students' && (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {filteredStudents.map((application) => {
+                    const placement = placedLookup.get(application.userId);
+                    return (
+                      <article
+                        key={application.id}
+                        className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-lg font-bold text-white">{application.fullName}</p>
+                            <p className="text-sm text-slate-400">{application.enrollmentNumber}</p>
+                          </div>
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-300">
+                            <GraduationCap className="h-5 w-5" />
+                          </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <StatusChip
+                            label={application.status.replace('_', ' ')}
+                            tone={
+                              application.status === 'APPROVED'
+                                ? 'emerald'
+                                : application.status === 'REJECTED'
+                                  ? 'rose'
+                                  : application.status === 'UNDER_VERIFICATION'
+                                    ? 'amber'
+                                    : 'blue'
+                            }
+                          />
+                          {placement ? <StatusChip label="PLACED" tone="violet" /> : <StatusChip label="IN COLLEGE" tone="slate" />}
+                        </div>
+                        <div className="mt-4 space-y-2 text-sm text-slate-400">
+                          <p>{application.currentCourse} • {application.currentBranch}</p>
+                          <p>{application.email}</p>
+                          {placement && <p className="text-violet-300">{placement.company} • {placement.jobTitle}</p>}
+                        </div>
+                      </article>
+                    );
+                  })}
+                  {filteredStudents.length === 0 && (
+                    <div className="rounded-3xl border border-dashed border-slate-900 p-12 text-center text-sm text-slate-500 md:col-span-2 xl:col-span-3">
+                      No students match your search.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {peopleView === 'placed' && (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {placedStudents
+                    .filter((placement) =>
+                      !normalizedSearch ||
+                      [placement.name, placement.email, placement.company, placement.jobTitle, placement.branch].some((value) =>
+                        String(value || '').toLowerCase().includes(normalizedSearch)
+                      )
+                    )
+                    .map((placement) => (
+                      <article
+                        key={placement.id}
+                        className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-lg font-bold text-white">{placement.name}</p>
+                            <p className="text-sm text-slate-400">{placement.email}</p>
+                          </div>
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-300">
+                            <Briefcase className="h-5 w-5" />
+                          </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <StatusChip label="PLACED" tone="violet" />
+                          <StatusChip label={placement.branch || 'Student'} tone="slate" />
+                        </div>
+                        <div className="mt-4 space-y-2 text-sm text-slate-400">
+                          <p>{placement.company}</p>
+                          <p>{placement.jobTitle}</p>
+                          <p>{placement.enrollmentNumber}</p>
+                        </div>
+                      </article>
+                    ))}
+                  {placedStudents.length === 0 && (
+                    <div className="rounded-3xl border border-dashed border-slate-900 p-12 text-center text-sm text-slate-500 md:col-span-2 xl:col-span-3">
+                      No placed students yet.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {peopleView === 'alumni' && (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {filteredAlumni.map((alumnus) => (
+                    <article
+                      key={alumnus.id}
+                      className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-lg font-bold text-white">{alumnus.fullName}</p>
+                          <p className="text-sm text-slate-400">{alumnus.designation || 'Alumni'}</p>
+                        </div>
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-300">
+                          <Users className="h-5 w-5" />
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <StatusChip label="ALUMNI" tone="emerald" />
+                        <StatusChip label={`Batch ${alumnus.passingYear}`} tone="slate" />
+                      </div>
+                      <div className="mt-4 space-y-2 text-sm text-slate-400">
+                        <p>{alumnus.currentCompany || 'Company not added'}</p>
+                        <p>{alumnus.email}</p>
+                        <p>{alumnus.location || 'Location not added'}</p>
+                      </div>
+                    </article>
+                  ))}
+                  {filteredAlumni.length === 0 && (
+                    <div className="rounded-3xl border border-dashed border-slate-900 p-12 text-center text-sm text-slate-500 md:col-span-2 xl:col-span-3">
+                      No alumni match your search.
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeTab === 'events' && (
+            <section className="space-y-6">
+              <div className="flex flex-col gap-4 rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+                <div className="grid w-full gap-3 md:max-w-3xl md:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-900 bg-slate-900/35 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <Search className="h-4.5 w-4.5 text-slate-500" />
+                      <input
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search events..."
+                        className="w-full bg-transparent text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-900 bg-slate-900/35 px-4 py-3">
+                    <select
+                      value={eventStatusFilter}
+                      onChange={(e) => setEventStatusFilter(e.target.value as EventStatusFilter)}
+                      className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
+                    >
+                      <option value="ALL">All events</option>
+                      <option value="PENDING">Pending review</option>
+                      <option value="APPROVED">Approved</option>
+                      <option value="REJECTED">Rejected</option>
+                    </select>
+                  </div>
+                  <div className="rounded-2xl border border-slate-900 bg-slate-900/35 px-4 py-3">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+                      <span>Visible</span>
+                      <span className="text-slate-200">{filteredEvents.length}</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setCreateEventOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Event
+                </button>
+              </div>
+
+              {filteredEvents.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-900 p-16 text-center text-sm text-slate-500">
+                  No events found.
+                </div>
+              ) : (
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {filteredEvents.map((event) => (
+                    <article
+                      key={event.id}
+                      className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl"
+                    >
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-lg font-bold text-white">{event.title}</h3>
+                            <StatusChip
+                              label={event.approvalStatus}
+                              tone={
+                                event.approvalStatus === 'APPROVED'
+                                  ? 'emerald'
+                                  : event.approvalStatus === 'REJECTED'
+                                    ? 'rose'
+                                    : 'amber'
+                              }
+                            />
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-slate-400">{event.description}</p>
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <StatusChip label={event.category} tone="blue" />
+                            <StatusChip label={event.mode} tone="slate" />
+                            <StatusChip label={`Seats ${event.availableSeats}/${event.totalSeats}`} tone="violet" />
+                          </div>
+                        </div>
+
+                        <div className="flex min-w-[180px] flex-col gap-2 rounded-2xl border border-slate-900 bg-slate-900/35 p-4 text-xs text-slate-400">
+                          <p className="font-bold text-white">{event.speakerName}</p>
+                          <p>{event.speakerDesignation || 'Speaker / Alumni host'}</p>
+                          <p>{event.speakerCompany || 'AlumniConnect'}</p>
+                          <p className="flex items-center gap-2">
+                            <CalendarIcon className="h-3.5 w-3.5" />
+                            {formatDate(event.eventDate)} at {event.eventTime}
+                          </p>
+                          <p className="flex items-center gap-2">
+                            <Clock3 className="h-3.5 w-3.5" />
+                            Deadline {formatDate(event.registrationDeadline)}
+                          </p>
+                          <p className="flex items-center gap-2">
+                            <MapPin className="h-3.5 w-3.5" />
+                            {event.venue}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                        <div className="text-xs text-slate-500">
+                          Created by{' '}
+                          <span className="font-semibold text-slate-300">
+                            {event.createdBy.role === 'ALUMNI'
+                              ? event.createdBy.alumniProfile?.fullName || event.createdBy.email
+                              : event.createdBy.cdcProfile?.collegeName || 'CDC'}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => loadRegistrants(event)}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-slate-900 bg-slate-900/50 px-4 py-2.5 text-sm font-semibold text-slate-200 transition-all hover:bg-slate-900"
+                          >
+                            Registrations
+                            <BadgeCheck className="h-4 w-4 text-blue-400" />
+                          </button>
+                          {event.approvalStatus === 'PENDING' && (
+                            <button
+                              onClick={() => {
+                                setEventRemarks(event.remarks || '');
+                                setSelectedEvent(event);
+                              }}
+                              className="inline-flex items-center gap-2 rounded-2xl border border-blue-500/20 bg-blue-500/10 px-4 py-2.5 text-sm font-semibold text-blue-300 transition-all hover:bg-blue-500 hover:text-white"
+                            >
+                              Review
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeTab === 'jobs' && (
+            <section className="space-y-6">
+              <div className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl">
+                <div className="grid gap-4 lg:grid-cols-4">
+                  <div className="lg:col-span-2 rounded-2xl border border-slate-900 bg-slate-900/35 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <Search className="h-4.5 w-4.5 text-slate-500" />
+                      <input
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search jobs..."
+                        className="w-full bg-transparent text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-900 bg-slate-900/35 px-4 py-3">
+                    <select
+                      value={jobStatusFilter}
+                      onChange={(e) => setJobStatusFilter(e.target.value as JobStatusFilter)}
+                      className="w-full bg-transparent text-sm text-slate-200 focus:outline-none"
+                    >
+                      <option value="ALL">All jobs</option>
+                      <option value="PENDING">Pending review</option>
+                      <option value="APPROVED">Approved</option>
+                      <option value="REJECTED">Rejected</option>
+                    </select>
+                  </div>
+                  <div className="rounded-2xl border border-slate-900 bg-slate-900/35 px-4 py-3">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+                      <span>Visible</span>
+                      <span className="text-slate-200">{filteredJobs.length}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {filteredJobs.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-900 p-16 text-center text-sm text-slate-500">
+                  No jobs found.
+                </div>
+              ) : (
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {filteredJobs.map((job) => (
+                    <article
+                      key={job.id}
+                      className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl"
+                    >
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-lg font-bold text-white">{job.title}</h3>
+                            <StatusChip
+                              label={job.approvalStatus}
+                              tone={
+                                job.approvalStatus === 'APPROVED'
+                                  ? 'emerald'
+                                  : job.approvalStatus === 'REJECTED'
+                                    ? 'rose'
+                                    : 'amber'
+                              }
+                            />
+                            <StatusChip label={job.jobType} tone="slate" />
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-slate-400">{job.description}</p>
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {job.skillsRequired.slice(0, 4).map((skill) => (
+                              <StatusChip key={skill} label={skill} tone="blue" />
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex min-w-[190px] flex-col gap-2 rounded-2xl border border-slate-900 bg-slate-900/35 p-4 text-xs text-slate-400">
+                          <p className="font-bold text-white">{job.company}</p>
+                          <p>{job.postedBy.role === 'ALUMNI' ? job.postedBy.alumniProfile?.fullName || job.postedBy.email : job.postedBy.cdcProfile?.collegeName || 'CDC'}</p>
+                          <p>{job.location || 'Location not added'}</p>
+                          <p>{job.salary || 'Salary not shared'}</p>
+                          <p className="flex items-center gap-2">
+                            <CalendarIcon className="h-3.5 w-3.5" />
+                            {job.deadline ? formatDate(job.deadline) : 'No deadline'}
+                          </p>
+                          <p className="flex items-center gap-2">
+                            <Briefcase className="h-3.5 w-3.5" />
+                            Applications {job._count.applications}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 flex flex-wrap justify-end gap-2">
+                        {job.applicationLink && (
+                          <a
+                            href={job.applicationLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 rounded-2xl border border-slate-900 bg-slate-900/50 px-4 py-2.5 text-sm font-semibold text-slate-200 transition-all hover:bg-slate-900"
+                          >
+                            Open Link
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        )}
+                        {job.approvalStatus === 'PENDING' && (
+                          <button
+                            onClick={() => {
+                              setJobRemarks(job.remarks || '');
+                              setSelectedJob(job);
+                            }}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-blue-500/20 bg-blue-500/10 px-4 py-2.5 text-sm font-semibold text-blue-300 transition-all hover:bg-blue-500 hover:text-white"
+                          >
+                            Review
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+        </main>
+      </div>
+
+      {selectedApplication && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedApplication(null)} />
+          <div className="relative z-10 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-900 px-6 py-4">
+              <div>
+                <h3 className="text-xl font-bold text-white">{selectedApplication.fullName}</h3>
+                <p className="text-sm text-slate-400">
+                  {selectedApplication.enrollmentNumber} • {selectedApplication.email}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedApplication(null)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-800 text-slate-400 transition-colors hover:bg-slate-900 hover:text-white"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="bg-slate-900/50 p-4 border border-slate-900 rounded-xl space-y-1 text-xs">
-              <p className="font-bold text-white">{selectedEvent.title}</p>
-              <p className="text-slate-500">Category: {selectedEvent.category} | Mode: {selectedEvent.mode}</p>
-              <p className="text-slate-550 leading-relaxed mt-2">{selectedEvent.description}</p>
-              <p className="text-slate-500 mt-2 font-bold">Speaker: {selectedEvent.speakerName} ({selectedEvent.speakerCompany})</p>
+            <div className="max-h-[calc(90vh-170px)] overflow-y-auto px-6 py-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-slate-900 bg-slate-900/30 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-500">Profile</p>
+                  <div className="mt-3 space-y-2 text-sm text-slate-300">
+                    <p>Phone: {selectedApplication.phone || 'N/A'}</p>
+                    <p>Course: {selectedApplication.currentCourse}</p>
+                    <p>Branch: {selectedApplication.currentBranch}</p>
+                    <p>Semester: {selectedApplication.currentSemester}</p>
+                    <p>CGPA: {selectedApplication.currentCGPA}</p>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-900 bg-slate-900/30 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-500">Academic</p>
+                  <div className="mt-3 space-y-2 text-sm text-slate-300">
+                    <p>Primary domain: {selectedApplication.primaryDomain}</p>
+                    <p>Secondary domain: {selectedApplication.secondaryDomain || 'N/A'}</p>
+                    <p>Skills: {selectedApplication.skills?.length ? selectedApplication.skills.join(', ') : 'N/A'}</p>
+                    <p>Submitted: {formatDateTime(selectedApplication.submittedAt)}</p>
+                    <p>Verified: {formatDateTime(selectedApplication.verifiedAt)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-900 bg-slate-900/30 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-500">Resume</p>
+                    <p className="mt-1 text-sm text-slate-300">Open the student resume before approving the profile.</p>
+                  </div>
+                  <a
+                    href={selectedApplication.resumeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
+                  >
+                    Download
+                    <Download className="h-4 w-4" />
+                  </a>
+                </div>
+              </div>
+
+              {selectedApplication.certifications?.length > 0 && (
+                <div className="mt-4 rounded-2xl border border-slate-900 bg-slate-900/30 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-500">Certifications</p>
+                  <div className="mt-3 space-y-2">
+                    {selectedApplication.certifications.map((cert) => (
+                      <div key={`${cert.name}-${cert.issueDate}`} className="rounded-2xl border border-slate-900 bg-slate-950/60 p-3 text-sm text-slate-300">
+                        <p className="font-semibold text-white">{cert.name}</p>
+                        <p className="text-slate-400">{cert.issuingOrganization}</p>
+                        <a
+                          href={cert.certificateUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-300 hover:text-blue-200"
+                        >
+                          View certificate
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">CDC Remarks</label>
-              <input 
-                type="text" 
-                placeholder="Enter approval/rejection remarks..."
-                value={eventRemarks}
-                onChange={(e) => setEventRemarks(e.target.value)}
-                className="w-full px-4 py-2 bg-slate-900/50 border border-slate-900 rounded-xl text-xs placeholder-slate-700 focus:outline-none focus:border-blue-500"
+            <div className="flex flex-col gap-4 border-t border-slate-900 px-6 py-4 md:flex-row md:items-center md:justify-between">
+              <input
+                value={applicationRemarks}
+                onChange={(e) => setApplicationRemarks(e.target.value)}
+                placeholder="Add CDC remarks before approving or rejecting"
+                className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none md:max-w-md"
               />
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  disabled={applicationActionLoading}
+                  onClick={() => handleApplicationDecision(selectedApplication.id, 'UNDER_VERIFICATION')}
+                  className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-amber-300 transition-colors hover:bg-slate-800 disabled:opacity-50"
+                >
+                  Under verification
+                </button>
+                <button
+                  disabled={applicationActionLoading}
+                  onClick={() => handleApplicationDecision(selectedApplication.id, 'REJECTED')}
+                  className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-semibold text-rose-300 transition-colors hover:bg-rose-500 hover:text-white disabled:opacity-50"
+                >
+                  Reject
+                </button>
+                <button
+                  disabled={applicationActionLoading}
+                  onClick={() => handleApplicationDecision(selectedApplication.id, 'APPROVED')}
+                  className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-2.5 text-sm font-semibold text-emerald-300 transition-colors hover:bg-emerald-500 hover:text-white disabled:opacity-50"
+                >
+                  Approve
+                </button>
+              </div>
             </div>
-
-            <div className="flex gap-2 justify-end pt-2">
-              <button 
-                onClick={() => handleEventApproval(selectedEvent.id, 'REJECTED')}
-                disabled={eventActionLoading}
-                className="px-4 py-2 bg-rose-950/20 border border-rose-900/30 hover:bg-rose-900 text-rose-400 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
-              >
-                Reject Event
-              </button>
-              <button 
-                onClick={() => handleEventApproval(selectedEvent.id, 'APPROVED')}
-                disabled={eventActionLoading}
-                className="px-4 py-2 bg-emerald-950/20 border border-emerald-900/30 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
-              >
-                Approve & Publish
-              </button>
-            </div>
-
           </div>
         </div>
       )}
 
-      {/* CDC OFFICIAL EVENT CREATION MODAL */}
-      {createEventOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setCreateEventOpen(false)}></div>
-          <div className="relative w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-950 p-6 md:p-8 shadow-2xl text-slate-200 z-10 max-h-[90vh] flex flex-col">
-            
-            <div className="flex items-center justify-between border-b border-slate-900 pb-4 shrink-0">
-              <h3 className="text-lg font-bold text-white">Create Official CDC Event</h3>
-              <button onClick={() => setCreateEventOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
-                <X className="w-4 h-4" />
+      {selectedEvent && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedEvent(null)} />
+          <div className="relative z-10 w-full max-w-2xl rounded-3xl border border-slate-800 bg-slate-950 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-900 px-6 py-4">
+              <div>
+                <h3 className="text-xl font-bold text-white">Review event</h3>
+                <p className="text-sm text-slate-400">Approve or reject the event before it reaches students.</p>
+              </div>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-800 text-slate-400 transition-colors hover:bg-slate-900 hover:text-white"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateCdcEvent} className="flex-1 overflow-y-auto pr-2 my-4 space-y-4 custom-scrollbar text-xs">
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Event Title *</label>
-                  <input 
-                    type="text" required
-                    placeholder="e.g. Resume Building Bootcamp"
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-850 rounded-xl placeholder-slate-700 text-slate-200 focus:outline-none"
+            <div className="space-y-4 px-6 py-5">
+              <div className="rounded-2xl border border-slate-900 bg-slate-900/30 p-4">
+                <p className="text-lg font-bold text-white">{selectedEvent.title}</p>
+                <p className="mt-1 text-sm text-slate-400">{selectedEvent.category} • {selectedEvent.mode}</p>
+                <p className="mt-3 text-sm leading-6 text-slate-300">{selectedEvent.description}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <StatusChip label={selectedEvent.approvalStatus} tone={selectedEvent.approvalStatus === 'APPROVED' ? 'emerald' : selectedEvent.approvalStatus === 'REJECTED' ? 'rose' : 'amber'} />
+                  <StatusChip label={`Seats ${selectedEvent.availableSeats}/${selectedEvent.totalSeats}`} tone="slate" />
+                  <StatusChip label={selectedEvent.createdBy.role} tone="blue" />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-slate-900 bg-slate-900/30 p-4 text-sm text-slate-300">
+                  <p className="font-semibold text-white">Speaker</p>
+                  <p className="mt-1">{selectedEvent.speakerName}</p>
+                  <p>{selectedEvent.speakerDesignation || 'N/A'}</p>
+                  <p>{selectedEvent.speakerCompany || 'N/A'}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-900 bg-slate-900/30 p-4 text-sm text-slate-300">
+                  <p className="font-semibold text-white">Schedule</p>
+                  <p className="mt-1">{formatDate(selectedEvent.eventDate)}</p>
+                  <p>{selectedEvent.eventTime}</p>
+                  <p>Deadline: {formatDate(selectedEvent.registrationDeadline)}</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-900 bg-slate-900/30 p-4">
+                <input
+                  value={eventRemarks}
+                  onChange={(e) => setEventRemarks(e.target.value)}
+                  placeholder="Add CDC remarks"
+                  className="w-full rounded-2xl border border-slate-900 bg-slate-950/60 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-slate-900 px-6 py-4">
+              <button
+                disabled={eventActionLoading}
+                onClick={() => handleEventDecision(selectedEvent.id, 'REJECTED')}
+                className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-semibold text-rose-300 transition-colors hover:bg-rose-500 hover:text-white disabled:opacity-50"
+              >
+                Reject
+              </button>
+              <button
+                disabled={eventActionLoading}
+                onClick={() => handleEventDecision(selectedEvent.id, 'APPROVED')}
+                className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-2.5 text-sm font-semibold text-emerald-300 transition-colors hover:bg-emerald-500 hover:text-white disabled:opacity-50"
+              >
+                Approve
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedJob && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedJob(null)} />
+          <div className="relative z-10 w-full max-w-2xl rounded-3xl border border-slate-800 bg-slate-950 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-900 px-6 py-4">
+              <div>
+                <h3 className="text-xl font-bold text-white">Review job posting</h3>
+                <p className="text-sm text-slate-400">Approve or reject alumni job posts.</p>
+              </div>
+              <button
+                onClick={() => setSelectedJob(null)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-800 text-slate-400 transition-colors hover:bg-slate-900 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div className="rounded-2xl border border-slate-900 bg-slate-900/30 p-4">
+                <p className="text-lg font-bold text-white">{selectedJob.title}</p>
+                <p className="mt-1 text-sm text-slate-400">{selectedJob.company} • {selectedJob.jobType}</p>
+                <p className="mt-3 text-sm leading-6 text-slate-300">{selectedJob.description}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <StatusChip label={selectedJob.approvalStatus} tone={selectedJob.approvalStatus === 'APPROVED' ? 'emerald' : selectedJob.approvalStatus === 'REJECTED' ? 'rose' : 'amber'} />
+                  <StatusChip label={`Applications ${selectedJob._count.applications}`} tone="slate" />
+                  <StatusChip label={selectedJob.postedBy.role} tone="blue" />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-slate-900 bg-slate-900/30 p-4 text-sm text-slate-300">
+                  <p className="font-semibold text-white">Creator</p>
+                  <p className="mt-1">{selectedJob.postedBy.role === 'ALUMNI' ? selectedJob.postedBy.alumniProfile?.fullName || selectedJob.postedBy.email : selectedJob.postedBy.cdcProfile?.collegeName || 'CDC'}</p>
+                  <p>{selectedJob.postedBy.email}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-900 bg-slate-900/30 p-4 text-sm text-slate-300">
+                  <p className="font-semibold text-white">Details</p>
+                  <p className="mt-1">{selectedJob.location || 'Location not added'}</p>
+                  <p>{selectedJob.salary || 'Salary not shared'}</p>
+                  <p>{selectedJob.deadline ? formatDate(selectedJob.deadline) : 'No deadline'}</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-900 bg-slate-900/30 p-4">
+                <input
+                  value={jobRemarks}
+                  onChange={(e) => setJobRemarks(e.target.value)}
+                  placeholder="Add CDC remarks"
+                  className="w-full rounded-2xl border border-slate-900 bg-slate-950/60 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-slate-900 px-6 py-4">
+              <button
+                disabled={jobActionLoading}
+                onClick={() => handleJobDecision(selectedJob.id, 'REJECTED')}
+                className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-2.5 text-sm font-semibold text-rose-300 transition-colors hover:bg-rose-500 hover:text-white disabled:opacity-50"
+              >
+                Reject
+              </button>
+              <button
+                disabled={jobActionLoading}
+                onClick={() => handleJobDecision(selectedJob.id, 'APPROVED')}
+                className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-2.5 text-sm font-semibold text-emerald-300 transition-colors hover:bg-emerald-500 hover:text-white disabled:opacity-50"
+              >
+                Approve
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {registrantsEvent && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setRegistrantsEvent(null)} />
+          <div className="relative z-10 max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-900 px-6 py-4">
+              <div>
+                <h3 className="text-xl font-bold text-white">{registrantsEvent.title} Registrations</h3>
+                <p className="text-sm text-slate-400">Total registrations: {registrants.length}</p>
+              </div>
+              <button
+                onClick={() => setRegistrantsEvent(null)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-800 text-slate-400 transition-colors hover:bg-slate-900 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="max-h-[calc(90vh-170px)] overflow-y-auto px-6 py-5">
+              {registrantsLoading ? (
+                <div className="flex min-h-[180px] items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+                </div>
+              ) : registrants.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-900 p-12 text-center text-sm text-slate-500">
+                  No registrants found.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {registrants.map((registration) => (
+                    <div
+                      key={registration.id}
+                      className="rounded-2xl border border-slate-900 bg-slate-900/35 p-4"
+                    >
+                      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="font-bold text-white">
+                            {registration.user.studentProfile?.fullName || 'N/A'}
+                          </p>
+                          <p className="text-sm text-slate-400">
+                            {registration.user.studentProfile?.enrollmentNumber || 'N/A'} • {registration.user.email}
+                          </p>
+                        </div>
+                        <StatusChip
+                          label={registration.status}
+                          tone={registration.status === 'ATTENDED' ? 'emerald' : registration.status === 'CANCELLED' ? 'rose' : 'blue'}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-900 px-6 py-4">
+              <button
+                onClick={exportRegistrants}
+                disabled={registrants.length === 0}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-900 bg-slate-900/50 px-4 py-2.5 text-sm font-semibold text-slate-200 transition-all hover:bg-slate-900 disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </button>
+              <button
+                onClick={() => setRegistrantsEvent(null)}
+                className="rounded-2xl border border-slate-900 bg-slate-900/50 px-4 py-2.5 text-sm font-semibold text-slate-200 transition-all hover:bg-slate-900"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {createEventOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setCreateEventOpen(false)} />
+          <div className="relative z-10 flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-900 px-6 py-4">
+              <div>
+                <h3 className="text-xl font-bold text-white">Create event</h3>
+                <p className="text-sm text-slate-400">
+                  Fill the alumni host name and email only when the event should appear on that alumni portal.
+                </p>
+              </div>
+              <button
+                onClick={() => setCreateEventOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-800 text-slate-400 transition-colors hover:bg-slate-900 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form id="cdc-create-event-form" onSubmit={handleCreateEvent} className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Title *</label>
+                  <input
+                    required
+                    value={eventForm.title}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, title: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="Resume Building Bootcamp"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Category *</label>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Category *</label>
                   <select
-                    value={formData.category}
-                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-850 rounded-xl text-slate-300 focus:outline-none"
+                    value={eventForm.category}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, category: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 focus:outline-none"
                   >
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
+                    {eventCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
                     ))}
                   </select>
                 </div>
-                
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Description *</label>
-                  <textarea 
-                    required rows={3}
-                    placeholder="Provide details about registration eligibility..."
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-850 rounded-xl placeholder-slate-700 text-slate-200 focus:outline-none"
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Description *</label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={eventForm.description}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, description: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="Describe the event, goals, and participation details..."
                   />
                 </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Venue *</label>
-                  <input 
-                    type="text" required
-                    placeholder="e.g. Lab 3, AITR / Teams Link"
-                    value={formData.venue}
-                    onChange={(e) => setFormData(prev => ({ ...prev, venue: e.target.value }))}
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-850 rounded-xl placeholder-slate-700 text-slate-200 focus:outline-none"
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Banner URL</label>
+                  <input
+                    value={eventForm.bannerUrl}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, bannerUrl: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="https://..."
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date *</label>
-                  <input 
-                    type="date" required
-                    value={formData.eventDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, eventDate: e.target.value }))}
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-850 rounded-xl text-slate-300 focus:outline-none"
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Mode *</label>
+                  <select
+                    value={eventForm.mode}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, mode: e.target.value as any }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 focus:outline-none"
+                  >
+                    <option value="OFFLINE">OFFLINE</option>
+                    <option value="ONLINE">ONLINE</option>
+                    <option value="HYBRID">HYBRID</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Event Date *</label>
+                  <input
+                    required
+                    type="date"
+                    value={eventForm.eventDate}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, eventDate: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 focus:outline-none"
                   />
                 </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Time *</label>
-                  <input 
-                    type="text" required
-                    placeholder="e.g. 11:00 AM - 01:00 PM"
-                    value={formData.eventTime}
-                    onChange={(e) => setFormData(prev => ({ ...prev, eventTime: e.target.value }))}
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-850 rounded-xl placeholder-slate-700 text-slate-200 focus:outline-none"
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Time *</label>
+                  <input
+                    required
+                    value={eventForm.eventTime}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, eventTime: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="11:00 AM - 1:00 PM"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Duration *</label>
-                  <input 
-                    type="text" required
-                    placeholder="e.g. 2 hours"
-                    value={formData.duration}
-                    onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-850 rounded-xl placeholder-slate-700 text-slate-200 focus:outline-none"
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Duration *</label>
+                  <input
+                    required
+                    value={eventForm.duration}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, duration: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="2 hours"
                   />
                 </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Registration Deadline *</label>
-                  <input 
-                    type="date" required
-                    value={formData.registrationDeadline}
-                    onChange={(e) => setFormData(prev => ({ ...prev, registrationDeadline: e.target.value }))}
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-850 rounded-xl text-slate-300 focus:outline-none"
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Venue *</label>
+                  <input
+                    required
+                    value={eventForm.venue}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, venue: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="Seminar Hall / Google Meet"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Seats *</label>
-                  <input 
-                    type="number" required
-                    value={formData.totalSeats}
-                    onChange={(e) => setFormData(prev => ({ ...prev, totalSeats: Number(e.target.value) }))}
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-850 rounded-xl text-slate-200 focus:outline-none"
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Google Maps URL</label>
+                  <input
+                    value={eventForm.googleMapsLocation}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, googleMapsLocation: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="https://maps.google.com/..."
                   />
                 </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Speaker Name *</label>
-                  <input 
-                    type="text" required
-                    placeholder="Speaker Name"
-                    value={formData.speakerName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, speakerName: e.target.value }))}
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-850 rounded-xl placeholder-slate-700 text-slate-200 focus:outline-none"
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Registration Deadline *</label>
+                  <input
+                    required
+                    type="date"
+                    value={eventForm.registrationDeadline}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, registrationDeadline: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 focus:outline-none"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Designation / Company</label>
-                  <input 
-                    type="text"
-                    placeholder="e.g. SDE II at Microsoft"
-                    value={formData.speakerDesignation}
-                    onChange={(e) => setFormData(prev => ({ ...prev, speakerDesignation: e.target.value }))}
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-850 rounded-xl placeholder-slate-700 text-slate-200 focus:outline-none"
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Seats *</label>
+                  <input
+                    required
+                    type="number"
+                    min={1}
+                    value={eventForm.totalSeats}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, totalSeats: Number(e.target.value) }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Speaker / Host Name *</label>
+                  <input
+                    required
+                    value={eventForm.speakerName}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, speakerName: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="Guest speaker or alumni host"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Speaker Designation</label>
+                  <input
+                    value={eventForm.speakerDesignation}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, speakerDesignation: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="Senior Engineer / Founder"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Speaker Company</label>
+                  <input
+                    value={eventForm.speakerCompany}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, speakerCompany: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="Company / Organization"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Hosted Alumni Name</label>
+                  <input
+                    value={eventForm.hostedByAlumniName}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, hostedByAlumniName: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="Leave blank for CDC-only event"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Hosted Alumni Email</label>
+                  <input
+                    value={eventForm.hostedByAlumniEmail}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, hostedByAlumniEmail: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="alumni@example.com"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Agenda</label>
+                  <textarea
+                    rows={3}
+                    value={eventForm.agenda}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, agenda: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="Agenda / schedule"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Key Benefits</label>
+                  <textarea
+                    rows={3}
+                    value={eventForm.keyBenefits}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, keyBenefits: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="Comma separated benefits"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Eligibility Criteria</label>
+                  <textarea
+                    rows={3}
+                    value={eventForm.eligibilityCriteria}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, eligibilityCriteria: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="Who can attend?"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Required Documents</label>
+                  <textarea
+                    rows={3}
+                    value={eventForm.requiredDocuments}
+                    onChange={(e) => setEventForm((prev) => ({ ...prev, requiredDocuments: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-900 bg-slate-900/40 px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                    placeholder="College ID Card, Resume, Registration form..."
                   />
                 </div>
               </div>
             </form>
 
-            <div className="border-t border-slate-900 pt-4 flex justify-end gap-2 shrink-0">
-              <button 
+            <div className="flex items-center justify-end gap-2 border-t border-slate-900 px-6 py-4">
+              <button
                 onClick={() => setCreateEventOpen(false)}
-                className="px-4 py-2 border border-slate-850 hover:bg-slate-900 rounded-xl text-xs font-semibold cursor-pointer"
+                className="rounded-2xl border border-slate-900 bg-slate-900/50 px-4 py-2.5 text-sm font-semibold text-slate-200 transition-all hover:bg-slate-900"
               >
                 Cancel
               </button>
-              <button 
-                onClick={handleCreateCdcEvent}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold cursor-pointer"
+              <button
+                type="submit"
+                form="cdc-create-event-form"
+                disabled={creatingEvent}
+                className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 disabled:opacity-50"
               >
-                Create and Publish
+                {creatingEvent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Create event
               </button>
             </div>
-
           </div>
         </div>
       )}
 
-      {/* VIEW EVENT REGISTRANTS LIST MODAL */}
-      {viewingEventRegistrants && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setViewingEventRegistrants(null)}></div>
-          <div className="relative w-full max-w-4xl rounded-2xl border border-slate-800 bg-slate-950 p-6 md:p-8 shadow-2xl text-slate-200 z-10 max-h-[90vh] flex flex-col">
-            
-            <div className="flex items-center justify-between border-b border-slate-900 pb-4 shrink-0">
-              <div>
-                <h3 className="text-lg font-bold text-white">{viewingEventRegistrants.title} Registrants</h3>
-                <p className="text-xs text-slate-400">Total Registered: {eventRegistrations.length}</p>
-              </div>
-              <button onClick={() => setViewingEventRegistrants(null)} className="text-slate-400 hover:text-white cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
+      {loadError && (
+        <div className="fixed bottom-4 right-4 z-[70] max-w-sm rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100 shadow-2xl">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-4.5 w-4.5 shrink-0 text-rose-300" />
+            <div>
+              <p className="font-bold">CDC dashboard issue</p>
+              <p className="mt-1 text-rose-100/80">{loadError}</p>
             </div>
-
-            <div className="flex-1 overflow-y-auto pr-2 my-4 custom-scrollbar">
-              {registrantsLoading ? (
-                <div className="flex h-32 flex-col items-center justify-center gap-2">
-                  <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                  <p className="text-slate-500 text-xs">Loading...</p>
-                </div>
-              ) : eventRegistrations.length === 0 ? (
-                <p className="text-xs text-slate-500 italic py-8 text-center">No registrants found.</p>
-              ) : (
-                <div className="border border-slate-900 rounded-xl overflow-hidden text-xs">
-                  <table className="w-full text-left text-slate-350">
-                    <thead className="bg-slate-950 border-b border-slate-900 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      <tr>
-                        <th className="px-4 py-3">Student Name</th>
-                        <th className="px-4 py-3">Enrollment</th>
-                        <th className="px-4 py-3">Branch</th>
-                        <th className="px-4 py-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-900/40 text-slate-300 font-medium">
-                      {eventRegistrations.map(reg => (
-                        <tr key={reg.id} className="hover:bg-slate-900/20">
-                          <td className="px-4 py-3">{reg.user.studentProfile?.fullName || 'N/A'}</td>
-                          <td className="px-4 py-3 font-mono">{reg.user.studentProfile?.enrollmentNumber || 'N/A'}</td>
-                          <td className="px-4 py-3">{reg.user.studentProfile?.branch || 'N/A'}</td>
-                          <td className="px-4 py-3">
-                            {reg.status === 'ATTENDED' && <span className="text-emerald-400">Attended</span>}
-                            {reg.status === 'REGISTERED' && <span className="text-blue-400">Registered</span>}
-                            {reg.status === 'CANCELLED' && <span className="text-slate-500">Cancelled</span>}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <div className="border-t border-slate-900 pt-4 flex justify-between shrink-0">
-              <button 
-                onClick={() => handleExportRegistrants(viewingEventRegistrants)}
-                disabled={eventRegistrations.length === 0}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 border border-slate-850 hover:bg-slate-800 rounded-xl text-xs font-bold text-slate-350 hover:text-white cursor-pointer disabled:opacity-50"
-              >
-                <Download className="h-4 w-4" /> Export Report (CSV)
-              </button>
-              <button 
-                onClick={() => setViewingEventRegistrants(null)}
-                className="px-4 py-2 border border-slate-850 hover:bg-slate-900 rounded-xl text-xs font-semibold cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-
           </div>
         </div>
       )}
-
-      {/* CDC JOB APPROVAL / MODERATION MODAL */}
-      {selectedJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setSelectedJob(null)}></div>
-          <div className="relative w-full max-w-lg rounded-2xl border border-slate-850 bg-slate-950 p-6 shadow-2xl text-slate-200 z-10 space-y-6">
-            
-            <div className="flex items-start gap-4">
-              <div className="h-10 w-10 items-center justify-center rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-400 flex shrink-0">
-                <Briefcase className="h-5 w-5" />
-              </div>
-              <div className="space-y-1 flex-1">
-                <h3 className="text-md font-bold text-white">Moderate Alumni Job Posting</h3>
-                <p className="text-xs text-slate-400">Review request and set approval verdict.</p>
-              </div>
-              <button onClick={() => setSelectedJob(null)} className="text-slate-400 hover:text-white cursor-pointer">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="bg-slate-900/50 p-4 border border-slate-900 rounded-xl space-y-1 text-xs max-h-[30vh] overflow-y-auto custom-scrollbar">
-              <p className="font-bold text-white text-sm">{selectedJob.title}</p>
-              <p className="text-slate-400 font-semibold">{selectedJob.company} • {selectedJob.jobType}</p>
-              <p className="text-slate-500">Location: {selectedJob.location || 'N/A'} | Salary: {selectedJob.salary || 'N/A'}</p>
-              <p className="text-slate-405 leading-relaxed mt-2.5 whitespace-pre-wrap">{selectedJob.description}</p>
-              
-              {selectedJob.responsibilities && (
-                <div className="mt-3.5 border-t border-slate-900/60 pt-2.5">
-                  <p className="font-bold text-white">Responsibilities:</p>
-                  <p className="text-slate-405 mt-1 whitespace-pre-wrap">{selectedJob.responsibilities}</p>
-                </div>
-              )}
-              {selectedJob.eligibility && (
-                <div className="mt-2.5">
-                  <p className="font-bold text-white">Eligibility Criteria:</p>
-                  <p className="text-slate-405 mt-1 whitespace-pre-wrap">{selectedJob.eligibility}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">CDC Remarks</label>
-              <input 
-                type="text" 
-                placeholder="Enter approval/rejection remarks..."
-                value={jobRemarks}
-                onChange={(e) => setJobRemarks(e.target.value)}
-                className="w-full px-4 py-2 bg-slate-900/50 border border-slate-900 rounded-xl text-xs placeholder-slate-700 focus:outline-none focus:border-blue-500 text-slate-200"
-              />
-            </div>
-
-            <div className="flex gap-2 justify-end pt-2">
-              <button 
-                onClick={() => handleJobApproval(selectedJob.id, 'REJECTED')}
-                disabled={jobActionLoading}
-                className="px-4 py-2 bg-rose-950/20 border border-rose-900/30 hover:bg-rose-900 text-rose-400 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
-              >
-                Reject Posting
-              </button>
-              <button 
-                onClick={() => handleJobApproval(selectedJob.id, 'APPROVED')}
-                disabled={jobActionLoading}
-                className="px-4 py-2 bg-emerald-950/20 border border-emerald-900/30 hover:bg-emerald-600 text-emerald-450 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
-              >
-                Approve & Publish
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

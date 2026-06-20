@@ -61,6 +61,7 @@ export default function StudentDashboard() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedCertificateId, setSelectedCertificateId] = useState<string | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJobAction, setSelectedJobAction] = useState<'view' | 'apply'>('view');
   const [selectedAlumniId, setSelectedAlumniId] = useState<string | null>(null);
   const [preselectedPartnerId, setPreselectedPartnerId] = useState<string | null>(null);
 
@@ -127,6 +128,13 @@ export default function StudentDashboard() {
 
   const handleSelectJob = useCallback((jobId: string) => {
     setSelectedJobId(jobId);
+    setSelectedJobAction('view');
+    setActiveMenu('JobDetails');
+  }, []);
+
+  const handleApplyJob = useCallback((jobId: string) => {
+    setSelectedJobId(jobId);
+    setSelectedJobAction('apply');
     setActiveMenu('JobDetails');
   }, []);
 
@@ -270,7 +278,7 @@ export default function StudentDashboard() {
                   exit={{ opacity: 0, y: -15 }}
                   transition={{ duration: 0.35, ease: 'easeOut' }}
                 >
-                  <JobsPage onSelectJob={handleSelectJob} />
+                  <JobsPage onSelectJob={handleSelectJob} onApplyJob={handleApplyJob} />
                 </motion.div>
               ) : activeMenu === 'Alumni Directory' ? (
                 <motion.div
@@ -313,7 +321,11 @@ export default function StudentDashboard() {
                   exit={{ opacity: 0, y: -15 }}
                   transition={{ duration: 0.35, ease: 'easeOut' }}
                 >
-                  <JobDetails jobId={selectedJobId} onGoBack={handleGoBackToJobs} />
+                  <JobDetails
+                    jobId={selectedJobId}
+                    onGoBack={handleGoBackToJobs}
+                    autoOpenApplyModal={selectedJobAction === 'apply'}
+                  />
                 </motion.div>
               ) : activeMenu === 'EventDetails' && selectedEventId ? (
                 <motion.div

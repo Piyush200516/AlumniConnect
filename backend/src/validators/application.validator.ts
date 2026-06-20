@@ -1,5 +1,29 @@
 import { z } from 'zod';
 
+const normalizeNumberInput = (value: unknown) => {
+  if (value === '' || value === null || value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed === '') {
+      return undefined;
+    }
+
+    const parsed = Number(trimmed);
+    return Number.isNaN(parsed) ? value : parsed;
+  }
+
+  return value;
+};
+
+const numberFromInput = (schema: z.ZodNumber) =>
+  z.preprocess(normalizeNumberInput, schema);
+
+const optionalNumberFromInput = (schema: z.ZodNumber) =>
+  z.preprocess(normalizeNumberInput, schema.optional().nullable());
+
 // Certification validation schema
 const certificationSchema = z.object({
   name: z.string().min(1, 'Certification Name is required'),
@@ -43,30 +67,30 @@ export const saveDraftSchema = z.object({
 
   class10Board: z.string().optional().nullable(),
   class10School: z.string().optional().nullable(),
-  class10Percentage: z.number().optional().nullable(),
-  class10PassingYear: z.number().int().optional().nullable(),
+  class10Percentage: optionalNumberFromInput(z.number()),
+  class10PassingYear: optionalNumberFromInput(z.number().int()),
   class12Board: z.string().optional().nullable(),
   class12School: z.string().optional().nullable(),
-  class12Percentage: z.number().optional().nullable(),
-  class12PassingYear: z.number().int().optional().nullable(),
+  class12Percentage: optionalNumberFromInput(z.number()),
+  class12PassingYear: optionalNumberFromInput(z.number().int()),
   diplomaCollege: z.string().optional().nullable(),
   diplomaBranch: z.string().optional().nullable(),
-  diplomaCGPA: z.number().optional().nullable(),
-  diplomaPassingYear: z.number().int().optional().nullable(),
+  diplomaCGPA: optionalNumberFromInput(z.number()),
+  diplomaPassingYear: optionalNumberFromInput(z.number().int()),
 
   currentCourse: z.string().optional().nullable(),
   currentBranch: z.string().optional().nullable(),
-  currentSemester: z.number().int().optional().nullable(),
-  currentCGPA: z.number().optional().nullable(),
+  currentSemester: optionalNumberFromInput(z.number().int()),
+  currentCGPA: optionalNumberFromInput(z.number()),
   
-  sgpaSemester1: z.number().optional().nullable(),
-  sgpaSemester2: z.number().optional().nullable(),
-  sgpaSemester3: z.number().optional().nullable(),
-  sgpaSemester4: z.number().optional().nullable(),
-  sgpaSemester5: z.number().optional().nullable(),
-  sgpaSemester6: z.number().optional().nullable(),
-  sgpaSemester7: z.number().optional().nullable(),
-  sgpaSemester8: z.number().optional().nullable(),
+  sgpaSemester1: optionalNumberFromInput(z.number()),
+  sgpaSemester2: optionalNumberFromInput(z.number()),
+  sgpaSemester3: optionalNumberFromInput(z.number()),
+  sgpaSemester4: optionalNumberFromInput(z.number()),
+  sgpaSemester5: optionalNumberFromInput(z.number()),
+  sgpaSemester6: optionalNumberFromInput(z.number()),
+  sgpaSemester7: optionalNumberFromInput(z.number()),
+  sgpaSemester8: optionalNumberFromInput(z.number()),
 
   careerPreference: z.string().optional().nullable(),
   primaryDomain: z.string().optional().nullable(),
@@ -115,32 +139,32 @@ export const submitApplicationSchema = z.object({
 
   class10Board: z.string().min(2, '10th Board Name is required'),
   class10School: z.string().min(2, '10th School Name is required'),
-  class10Percentage: z.number().min(0).max(100, '10th Percentage must be between 0 and 100'),
-  class10PassingYear: z.number().int().min(2010).max(2028),
+  class10Percentage: numberFromInput(z.number().min(0).max(100, '10th Percentage must be between 0 and 100')),
+  class10PassingYear: numberFromInput(z.number().int().min(2010).max(2028)),
   
   // Accept either 12th details OR Diploma details
   class12Board: z.string().optional().nullable(),
   class12School: z.string().optional().nullable(),
-  class12Percentage: z.number().optional().nullable(),
-  class12PassingYear: z.number().int().optional().nullable(),
+  class12Percentage: optionalNumberFromInput(z.number()),
+  class12PassingYear: optionalNumberFromInput(z.number().int()),
   diplomaCollege: z.string().optional().nullable(),
   diplomaBranch: z.string().optional().nullable(),
-  diplomaCGPA: z.number().optional().nullable(),
-  diplomaPassingYear: z.number().int().optional().nullable(),
+  diplomaCGPA: optionalNumberFromInput(z.number()),
+  diplomaPassingYear: optionalNumberFromInput(z.number().int()),
 
   currentCourse: z.string().min(2, 'Current Course is required'),
   currentBranch: z.string().min(2, 'Current Branch is required'),
-  currentSemester: z.number().int().min(1).max(8, 'Current Semester must be between 1 and 8'),
-  currentCGPA: z.number().min(0).max(10, 'CGPA must be between 0 and 10'),
+  currentSemester: numberFromInput(z.number().int().min(1).max(8, 'Current Semester must be between 1 and 8')),
+  currentCGPA: numberFromInput(z.number().min(0).max(10, 'CGPA must be between 0 and 10')),
   
-  sgpaSemester1: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester2: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester3: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester4: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester5: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester6: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester7: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester8: z.number().min(0).max(10).optional().nullable(),
+  sgpaSemester1: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester2: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester3: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester4: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester5: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester6: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester7: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester8: optionalNumberFromInput(z.number().min(0).max(10)),
 
   careerPreference: z.enum(['Job', 'Higher Studies', 'Startup', 'Government Job']),
   primaryDomain: z.string().min(1, 'Primary Domain is required'),
@@ -167,13 +191,13 @@ export const allowedUpdatesSchema = z.object({
   resumeUrl: z.string().url('Valid Resume URL is required').optional(),
   primaryDomain: z.string().min(1, 'Primary Domain is required').optional(),
   secondaryDomain: z.string().optional().nullable(),
-  currentCGPA: z.number().min(0).max(10, 'CGPA must be between 0 and 10').optional(),
-  sgpaSemester1: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester2: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester3: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester4: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester5: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester6: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester7: z.number().min(0).max(10).optional().nullable(),
-  sgpaSemester8: z.number().min(0).max(10).optional().nullable(),
+  currentCGPA: optionalNumberFromInput(z.number().min(0).max(10, 'CGPA must be between 0 and 10')),
+  sgpaSemester1: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester2: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester3: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester4: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester5: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester6: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester7: optionalNumberFromInput(z.number().min(0).max(10)),
+  sgpaSemester8: optionalNumberFromInput(z.number().min(0).max(10)),
 });

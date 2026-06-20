@@ -123,7 +123,12 @@ export class JobService {
         } : false,
         applications: userId ? {
           where: { applicantId: userId }
-        } : false
+        } : false,
+        _count: {
+          select: {
+            applications: true
+          }
+        }
       }
     });
 
@@ -305,7 +310,7 @@ export class JobService {
       throw new ApiError(404, 'Job not found');
     }
 
-    if (job.approvalStatus !== JobApprovalStatus.APPROVED || !job.isActive) {
+    if (!job.isActive || !studentVisibleJobStatusSet.has(job.approvalStatus)) {
       throw new ApiError(400, 'Applications are not open for this job opportunity');
     }
 

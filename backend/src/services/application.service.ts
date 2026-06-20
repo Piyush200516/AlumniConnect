@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/error';
 import { saveDraftSchema, submitApplicationSchema, allowedUpdatesSchema } from '../validators/application.validator';
-import { PortalApplicationStatus } from '@prisma/client';
+import { PortalApplicationStatus, VerificationStatus } from '@prisma/client';
 
 export class ApplicationService {
   /**
@@ -460,21 +460,40 @@ export class ApplicationService {
       throw new ApiError(404, 'Application not found');
     }
 
-    const updated = await prisma.studentApplication.update({
-      where: { id: applicationId },
-      data: {
-        status,
-        remarks: remarks ?? null,
-        verifiedAt: new Date(),
-      },
-      include: {
-        certifications: true,
-        user: {
-          select: {
-            email: true,
+    const updated = await prisma.$transaction(async (tx) => {
+      const updatedApplication = await tx.studentApplication.update({
+        where: { id: applicationId },
+        data: {
+          status,
+          remarks: remarks ?? null,
+          verifiedAt: new Date(),
+        },
+        include: {
+          certifications: true,
+          user: {
+            select: {
+              email: true,
+            },
           },
         },
-      },
+      });
+
+      const verificationStatus =
+        status === PortalApplicationStatus.APPROVED
+          ? VerificationStatus.VERIFIED
+          : status === PortalApplicationStatus.REJECTED
+            ? VerificationStatus.REJECTED
+            : VerificationStatus.PENDING;
+
+      await tx.studentProfile.updateMany({
+        where: { userId: updatedApplication.userId },
+        data: {
+          isVerified: verificationStatus === VerificationStatus.VERIFIED,
+          verificationStatus,
+        },
+      });
+
+      return updatedApplication;
     });
 
     return updated;

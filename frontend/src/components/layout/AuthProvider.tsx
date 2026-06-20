@@ -223,6 +223,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loadProfile();
   }, [user]);
 
+  useEffect(() => {
+    if (!user || user.role !== 'student') {
+      return;
+    }
+
+    const syncProfile = () => {
+      void refreshProfile();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncProfile();
+      }
+    };
+
+    window.addEventListener('focus', syncProfile);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', syncProfile);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user]);
+
   return (
     <AuthContext.Provider
       value={{

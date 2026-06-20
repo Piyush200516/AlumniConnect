@@ -825,10 +825,14 @@ export default function AlumniDashboard() {
                       <span className="bg-slate-900 border border-slate-850 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase text-slate-400">
                         {job.jobType === 'FULL_TIME' ? 'Full Time' : job.jobType === 'INTERNSHIP' ? 'Internship' : job.jobType}
                       </span>
-                      
-                      {job.approvalStatus === 'APPROVED' && <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase">Approved</span>}
-                      {job.approvalStatus === 'PENDING' && <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase">Pending Review</span>}
-                      {job.approvalStatus === 'REJECTED' && <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase">Rejected</span>}
+                      <div className="flex flex-wrap gap-1.5 justify-end">
+                        {job.approvalStatus === 'APPROVED' && <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase">Approved</span>}
+                        {job.approvalStatus === 'PENDING' && <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase">Pending Review</span>}
+                        {job.approvalStatus === 'REJECTED' && <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase">Rejected</span>}
+                        <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase">
+                          {job._count?.applications || 0} Applicant{(job._count?.applications || 0) === 1 ? '' : 's'}
+                        </span>
+                      </div>
                     </div>
                     
                     <div>

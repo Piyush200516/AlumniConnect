@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ArrowLeft, 
@@ -23,15 +23,22 @@ import { toastSuccess, toastError } from '../../utils/toast';
 interface JobDetailsProps {
   jobId: string;
   onGoBack: () => void;
+  autoOpenApplyModal?: boolean;
 }
 
-export default function JobDetails({ jobId, onGoBack }: JobDetailsProps) {
+export default function JobDetails({ jobId, onGoBack, autoOpenApplyModal = false }: JobDetailsProps) {
   const { profile } = useAuthContext();
   const queryClient = useQueryClient();
 
-  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(autoOpenApplyModal);
   const [coverLetter, setCoverLetter] = useState('');
   const [customResumeUrl, setCustomResumeUrl] = useState(profile?.resumeUrl || '');
+
+  useEffect(() => {
+    if (autoOpenApplyModal) {
+      setIsApplyModalOpen(true);
+    }
+  }, [autoOpenApplyModal, jobId]);
 
   // Fetch job details by ID
   const { data: job, isLoading, error } = useQuery({
@@ -95,7 +102,7 @@ export default function JobDetails({ jobId, onGoBack }: JobDetailsProps) {
 
   const hasApplied = job.applications && job.applications.length > 0;
   const appStatus = hasApplied ? job.applications[0].status : null;
-  const isApplicationOpen = job.isActive && job.approvalStatus === 'APPROVED';
+  const isApplicationOpen = job.isActive && (job.approvalStatus === 'APPROVED' || job.approvalStatus === 'PENDING');
   const isProfileComplete = !!(profile && profile.phone && profile.profileImage);
   const isCdcApproved = profile?.verificationStatus === 'VERIFIED';
   const isEligible = isProfileComplete && isCdcApproved;
@@ -152,7 +159,7 @@ export default function JobDetails({ jobId, onGoBack }: JobDetailsProps) {
               )}
               {job.approvalStatus === 'PENDING' && (
                 <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/25 px-2 py-0.5 rounded text-[9px] font-extrabold uppercase">
-                  <Clock className="h-3.5 w-3.5" /> Awaiting CDC approval
+                  <Clock className="h-3.5 w-3.5" /> CDC review pending
                 </span>
               )}
             </div>
@@ -189,10 +196,10 @@ export default function JobDetails({ jobId, onGoBack }: JobDetailsProps) {
           ) : !isApplicationOpen ? (
             <div className="flex flex-col gap-1 items-stretch md:items-end">
               <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-6 py-3 rounded-2xl text-xs font-black uppercase text-center select-none shadow-md">
-                Awaiting CDC Approval
+                Applications Closed
               </span>
               <p className="text-[10px] text-slate-500 font-semibold text-center md:text-right mt-1">
-                This opportunity is visible now, but applications open after CDC approval.
+                This opportunity is not accepting applications right now.
               </p>
             </div>
           ) : job.applicationLink ? (

@@ -39,6 +39,9 @@ const baseEventObjectSchema = z.object({
   speakerName: z.string().min(2, 'Speaker Name is required'),
   speakerDesignation: z.string().optional().nullable(),
   speakerCompany: z.string().optional().nullable(),
+  // Optional CDC hosting target - when provided, the event is attached to that alumni's portal
+  hostedByAlumniName: z.string().optional().nullable(),
+  hostedByAlumniEmail: z.string().email('Invalid alumni email').optional().nullable().or(z.literal('')),
   status: z.nativeEnum(EventStatus).optional().default(EventStatus.PUBLISHED),
 });
 

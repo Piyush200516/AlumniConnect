@@ -54,9 +54,10 @@ interface Job {
 
 interface JobsPageProps {
   onSelectJob: (jobId: string) => void;
+  onApplyJob: (jobId: string) => void;
 }
 
-export default function JobsPage({ onSelectJob }: JobsPageProps) {
+export default function JobsPage({ onSelectJob, onApplyJob }: JobsPageProps) {
   const queryClient = useQueryClient();
 
   // Filters State
@@ -558,11 +559,29 @@ export default function JobsPage({ onSelectJob }: JobsPageProps) {
                           Status: {appStatus}
                         </span>
                       )}
-                      
-                      <button className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/15 cursor-pointer flex items-center gap-1">
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectJob(job.id);
+                        }}
+                        className="px-4 py-2 border border-slate-800 bg-slate-900/40 hover:bg-slate-900 text-slate-200 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1 transition-colors"
+                      >
                         View Details
                         <ChevronRight className="h-3.5 w-3.5" />
                       </button>
+
+                      {!hasApplied && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onApplyJob(job.id);
+                          }}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/15 cursor-pointer flex items-center gap-1 transition-colors"
+                        >
+                          Apply Now
+                        </button>
+                      )}
                     </div>
                   </div>
                 </motion.div>

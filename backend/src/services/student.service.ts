@@ -5,7 +5,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { Readable } from 'stream';
 import fs from 'fs';
 import path from 'path';
-import { JobApprovalStatus } from '@prisma/client';
+import { JobApprovalStatus, PortalApplicationStatus, VerificationStatus } from '@prisma/client';
 
 // Configure Cloudinary if environment variables exist
 const isCloudinaryConfigured =
@@ -20,6 +20,71 @@ if (isCloudinaryConfigured) {
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
 }
+
+const resolveVerificationStatus = (
+  profileStatus: VerificationStatus,
+  applicationStatus?: PortalApplicationStatus | null
+) => {
+  if (applicationStatus === PortalApplicationStatus.APPROVED) {
+    return VerificationStatus.VERIFIED;
+  }
+
+  if (applicationStatus === PortalApplicationStatus.REJECTED) {
+    return VerificationStatus.REJECTED;
+  }
+
+  if (
+    applicationStatus === PortalApplicationStatus.SUBMITTED ||
+    applicationStatus === PortalApplicationStatus.UNDER_VERIFICATION
+  ) {
+    return VerificationStatus.PENDING;
+  }
+
+  return profileStatus;
+};
+
+const mapProfileResponse = (
+  profile: {
+    id: string;
+    fullName: string;
+    enrollmentNumber: string;
+    branch: string;
+    course: string;
+    graduationYear: number;
+    phone: string | null;
+    bio: string | null;
+    skills: string[];
+    linkedinUrl: string | null;
+    githubUrl: string | null;
+    resumeUrl: string | null;
+    profileImage: string | null;
+    isVerified: boolean;
+    verificationStatus: VerificationStatus;
+    user: { email: string };
+  },
+  applicationStatus?: PortalApplicationStatus | null
+) => {
+  const verificationStatus = resolveVerificationStatus(profile.verificationStatus, applicationStatus);
+
+  return {
+    id: profile.id,
+    fullName: profile.fullName,
+    email: profile.user.email,
+    enrollmentNumber: profile.enrollmentNumber,
+    branch: profile.branch,
+    course: profile.course,
+    graduationYear: profile.graduationYear,
+    phone: profile.phone,
+    bio: profile.bio,
+    skills: profile.skills,
+    linkedinUrl: profile.linkedinUrl,
+    githubUrl: profile.githubUrl,
+    resumeUrl: profile.resumeUrl,
+    profileImage: profile.profileImage,
+    isVerified: verificationStatus === VerificationStatus.VERIFIED,
+    verificationStatus,
+  };
+};
 
 export const uploadFile = async (file: Express.Multer.File, folder: string): Promise<string> => {
   if (isCloudinaryConfigured) {
@@ -56,39 +121,30 @@ export const uploadFile = async (file: Express.Multer.File, folder: string): Pro
 
 export class StudentService {
   async getProfileByUserId(userId: string) {
-    const profile = await prisma.studentProfile.findUnique({
-      where: { userId },
-      include: {
-        user: {
-          select: {
-            email: true,
+    const [profile, application] = await Promise.all([
+      prisma.studentProfile.findUnique({
+        where: { userId },
+        include: {
+          user: {
+            select: {
+              email: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.studentApplication.findUnique({
+        where: { userId },
+        select: {
+          status: true,
+        },
+      }),
+    ]);
 
     if (!profile) {
       throw new ApiError(404, 'Student profile not found');
     }
 
-    return {
-      id: profile.id,
-      fullName: profile.fullName,
-      email: profile.user.email,
-      enrollmentNumber: profile.enrollmentNumber,
-      branch: profile.branch,
-      course: profile.course,
-      graduationYear: profile.graduationYear,
-      phone: profile.phone,
-      bio: profile.bio,
-      skills: profile.skills,
-      linkedinUrl: profile.linkedinUrl,
-      githubUrl: profile.githubUrl,
-      resumeUrl: profile.resumeUrl,
-      profileImage: profile.profileImage,
-      isVerified: profile.isVerified,
-      verificationStatus: profile.verificationStatus,
-    };
+    return mapProfileResponse(profile, application?.status);
   }
 
   async updateProfile(
@@ -128,50 +184,49 @@ export class StudentService {
       updateData.resumeUrl = await uploadFile(files.resume[0], 'resumes');
     }
 
-    const updatedProfile = await prisma.studentProfile.update({
-      where: { userId },
-      data: updateData,
-      include: {
-        user: {
-          select: {
-            email: true,
+    const [updatedProfile, application] = await Promise.all([
+      prisma.studentProfile.update({
+        where: { userId },
+        data: updateData,
+        include: {
+          user: {
+            select: {
+              email: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.studentApplication.findUnique({
+        where: { userId },
+        select: {
+          status: true,
+        },
+      }),
+    ]);
 
-    return {
-      id: updatedProfile.id,
-      fullName: updatedProfile.fullName,
-      email: updatedProfile.user.email,
-      enrollmentNumber: updatedProfile.enrollmentNumber,
-      branch: updatedProfile.branch,
-      course: updatedProfile.course,
-      graduationYear: updatedProfile.graduationYear,
-      phone: updatedProfile.phone,
-      bio: updatedProfile.bio,
-      skills: updatedProfile.skills,
-      linkedinUrl: updatedProfile.linkedinUrl,
-      githubUrl: updatedProfile.githubUrl,
-      resumeUrl: updatedProfile.resumeUrl,
-      profileImage: updatedProfile.profileImage,
-      isVerified: updatedProfile.isVerified,
-      verificationStatus: updatedProfile.verificationStatus,
-    };
+    return mapProfileResponse(updatedProfile, application?.status);
   }
 
   async getDashboardData(userId: string) {
     // 1. Fetch profile details first (for completion percentage)
-    const profile = await prisma.studentProfile.findUnique({
-      where: { userId },
-      include: {
-        user: {
-          select: {
-            email: true,
+    const [profile, application] = await Promise.all([
+      prisma.studentProfile.findUnique({
+        where: { userId },
+        include: {
+          user: {
+            select: {
+              email: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.studentApplication.findUnique({
+        where: { userId },
+        select: {
+          status: true,
+        },
+      }),
+    ]);
 
     if (!profile) {
       throw new ApiError(404, 'Student profile not found');
@@ -322,22 +377,7 @@ export class StudentService {
 
     return {
       profileSummary: {
-        id: profile.id,
-        fullName: profile.fullName,
-        email: profile.user.email,
-        enrollmentNumber: profile.enrollmentNumber,
-        branch: profile.branch,
-        course: profile.course,
-        graduationYear: profile.graduationYear,
-        phone: profile.phone,
-        bio: profile.bio,
-        skills: profile.skills,
-        linkedinUrl: profile.linkedinUrl,
-        githubUrl: profile.githubUrl,
-        resumeUrl: profile.resumeUrl,
-        profileImage: profile.profileImage,
-        isVerified: profile.isVerified,
-        verificationStatus: profile.verificationStatus,
+        ...mapProfileResponse(profile, application?.status),
       },
       profileCompletion: completionPercentage,
       dashboardStats: {

@@ -154,13 +154,49 @@ export class EventService {
     }
 
     const validated = createEventSchema.parse(payload);
+    const hostedByAlumniName = validated.hostedByAlumniName?.trim() || '';
+    const hostedByAlumniEmail = validated.hostedByAlumniEmail?.trim().toLowerCase() || '';
+
+    let eventOwnerId = creatorId;
+    let hostedAlumni: { id: string; email: string; alumniProfile: { fullName: string } | null } | null = null;
+
+    if (hostedByAlumniName || hostedByAlumniEmail) {
+      if (!hostedByAlumniName || !hostedByAlumniEmail) {
+        throw new ApiError(400, 'Both alumni name and email are required when assigning an event to an alumni');
+      }
+
+      const alumniUser = await prisma.user.findUnique({
+        where: { email: hostedByAlumniEmail },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          alumniProfile: {
+            select: {
+              fullName: true
+            }
+          }
+        }
+      });
+
+      if (!alumniUser || alumniUser.role !== Role.ALUMNI || !alumniUser.alumniProfile) {
+        throw new ApiError(404, 'Alumni user not found for the provided email');
+      }
+
+      if (alumniUser.alumniProfile.fullName.trim().toLowerCase() !== hostedByAlumniName.toLowerCase()) {
+        throw new ApiError(400, 'Alumni name and email do not match the selected alumni profile');
+      }
+
+      eventOwnerId = alumniUser.id;
+      hostedAlumni = alumniUser;
+    }
 
     // CDC events auto-approved.
     const approvalStatus = EventApprovalStatus.APPROVED;
 
     const event = await prisma.event.create({
       data: {
-        createdById: creatorId,
+        createdById: eventOwnerId,
         title: validated.title,
         description: validated.description,
         bannerUrl: validated.bannerUrl || null,
@@ -190,6 +226,23 @@ export class EventService {
     // Notify students when CDC creates it (since it's auto-approved)
     if (approvalStatus === EventApprovalStatus.APPROVED && event.status === EventStatus.PUBLISHED) {
       await this.notifyStudentsOfNewEvent(event);
+    }
+
+    // If CDC attached the event to an alumni portal, notify that alumni as well.
+    if (hostedAlumni) {
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: hostedAlumni.id,
+            type: 'EVENT_CREATED',
+            title: `Event created for your portal: ${event.title}`,
+            message: `The CDC has published "${event.title}" under your alumni portal. Students can now view and register for it.`,
+            linkUrl: '/alumni/dashboard'
+          }
+        });
+      } catch (err) {
+        console.error('Failed to notify alumni about event creation:', err);
+      }
     }
 
     return event;
