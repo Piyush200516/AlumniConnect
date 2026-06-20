@@ -7,9 +7,6 @@ import {
   Calendar as CalendarIcon, 
   MapPin, 
   Clock, 
-  LogOut,
-  GraduationCap,
-  Sparkles,
   Download,
   Briefcase,
   DollarSign,
@@ -18,6 +15,10 @@ import {
 import { useAuthContext } from '../../components/layout/AuthProvider';
 import api from '../../services/api';
 import { toastSuccess, toastError } from '../../utils/toast';
+import AlumniSidebar from '../../components/alumni/AlumniSidebar';
+import AlumniNavbar from '../../components/alumni/AlumniNavbar';
+import AlumniProfile from './AlumniProfile';
+import AlumniSettings from './AlumniSettings';
 
 const Mentorship = lazy(() => import('../student/Mentorship'));
 const MessagesSection = lazy(() => import('../../components/dashboard/lazy/MessagesSection'));
@@ -64,8 +65,10 @@ interface Registrant {
 }
 
 export default function AlumniDashboard() {
-  const { profile: authProfile, logout } = useAuthContext();
+  const { alumniProfile: authProfile, logout } = useAuthContext();
   const profile = authProfile as any;
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activePage, setActivePage] = useState<'main' | 'profile' | 'settings'>('main');
   
   // Dashboard view selection
   const [activeTab, setActiveTab] = useState<'events' | 'create' | 'jobs' | 'create_job' | 'mentorship' | 'messages'>('events');
@@ -107,6 +110,48 @@ export default function AlumniDashboard() {
     applicationLink: ''
   });
 
+  useEffect(() => {
+    fetchMyEvents();
+    fetchMyJobs();
+  }, []);
+
+  useEffect(() => {
+    if (profile) {
+      fetchMyEvents();
+    }
+  }, [profile]);
+
+  const handleSelectSidebarItem = (item: string) => {
+    if (item === 'Logout') {
+      logout();
+      return;
+    }
+
+    if (item === 'Profile') {
+      setActivePage('profile');
+      return;
+    }
+
+    if (item === 'Settings') {
+      setActivePage('settings');
+      return;
+    }
+
+    setActivePage('main');
+
+    if (item === 'Dashboard' || item === 'Events') {
+      setActiveTab('events');
+    } else if (item === 'Jobs') {
+      setActiveTab('jobs');
+    } else if (item === 'Post Job') {
+      setActiveTab('create_job');
+    } else if (item === 'Mentorship') {
+      setActiveTab('mentorship');
+    } else if (item === 'Messages') {
+      setActiveTab('messages');
+    }
+  };
+
   const categories = [
     'Alumni Talk',
     'Workshop',
@@ -121,11 +166,6 @@ export default function AlumniDashboard() {
     'Hackathon',
     'Career Guidance Session'
   ];
-
-  useEffect(() => {
-    fetchMyEvents();
-    fetchMyJobs();
-  }, []);
 
   const fetchMyEvents = async () => {
     setLoading(true);
@@ -355,17 +395,6 @@ export default function AlumniDashboard() {
     }
   };
 
-  const handleToggleJobActive = async (jobId: string, currentActive: boolean) => {
-    try {
-      await api.put(`/jobs/${jobId}`, { isActive: !currentActive });
-      toastSuccess(`Job posting ${!currentActive ? 'activated' : 'paused'} successfully!`);
-      fetchMyJobs();
-    } catch (err: any) {
-      console.error(err);
-      toastError('Failed to toggle job status');
-    }
-  };
-
   // Re-declared form state for event validation
   const [formData, setFormData] = useState({
     title: '',
@@ -389,41 +418,49 @@ export default function AlumniDashboard() {
     status: 'PUBLISHED'
   });
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#060a12] via-[#09101f] to-[#04070e] text-slate-100 antialiased font-sans flex flex-col">
-      
-      {/* Top Navbar */}
-      <header className="border-b border-slate-900 bg-slate-950/40 backdrop-blur-xl px-6 lg:px-12 py-4 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30">
-            <GraduationCap className="h-6 w-6" />
-          </div>
-          <span className="text-xl font-bold bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent tracking-wide">
-            AlumniConnect Console
-          </span>
-        </div>
-        
-        <div className="flex items-center gap-6">
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md">
-            <Sparkles className="h-3.5 w-3.5" /> Alumni Host
-          </span>
-          <button 
-            onClick={logout}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-rose-950/20 text-slate-300 hover:text-rose-400 text-sm font-semibold transition-all duration-300 cursor-pointer"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </button>
-        </div>
-      </header>
+  const handleToggleJobActive = async (jobId: string, currentActive: boolean) => {
+    try {
+      await api.put(`/jobs/${jobId}`, { isActive: !currentActive });
+      toastSuccess(`Job posting ${!currentActive ? 'activated' : 'paused'} successfully!`);
+      fetchMyJobs();
+    } catch (err: any) {
+      console.error(err);
+      toastError('Failed to toggle job status');
+    }
+  };
 
-      {/* Main Content */}
-      <main className="flex-1 p-6 lg:p-12 max-w-7xl w-full mx-auto space-y-8">
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#060a12] via-[#09101f] to-[#04070e] text-slate-100 antialiased font-sans">
+      <AlumniSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        activeItem={activePage === 'profile' ? 'Profile' : activePage === 'settings' ? 'Settings' : activeTab === 'create_job' ? 'Post Job' : activeTab === 'jobs' ? 'Jobs' : activeTab === 'messages' ? 'Messages' : activeTab === 'mentorship' ? 'Mentorship' : 'Events'}
+        onSelect={handleSelectSidebarItem}
+      />
+
+      <div className="flex flex-col min-h-screen lg:pl-[280px]">
+        <AlumniNavbar
+          onMenuToggle={() => setSidebarOpen(prev => !prev)}
+          onLogout={logout}
+          onProfileClick={() => setActivePage('profile')}
+          onSettingsClick={() => setActivePage('settings')}
+        />
+
+        {activePage === 'profile' ? (
+          <main className="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-8">
+            <AlumniProfile />
+          </main>
+        ) : activePage === 'settings' ? (
+          <main className="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-8">
+            <AlumniSettings />
+          </main>
+        ) : (
+          <main className="flex-1 p-6 lg:p-12 max-w-7xl w-full mx-auto space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-white">Alumni Events Portal</h1>
             <p className="text-slate-400 text-sm font-medium mt-1">
-              Create events, track registrations, and coordinate student attendance.
+              Manage events, track registrations, and coordinate student attendance.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -436,16 +473,6 @@ export default function AlumniDashboard() {
               }`}
             >
               My Created Events
-            </button>
-            <button 
-              onClick={() => setActiveTab('create')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${
-                activeTab === 'create' 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                  : 'bg-slate-900 border border-slate-850 text-slate-300 hover:bg-slate-850'
-              }`}
-            >
-              Create New Event
             </button>
             <button 
               onClick={() => setActiveTab('jobs')}
@@ -553,6 +580,7 @@ export default function AlumniDashboard() {
             </div>
           )
         ) : activeTab === 'create' ? (
+          profile?.role === 'CDC' ? (
           /* Create Event Form */
           <div className="rounded-2xl border border-slate-900 bg-slate-950/40 p-6 md:p-8 shadow-xl shadow-black/10 backdrop-blur-md">
             <h2 className="text-lg font-bold text-white mb-6 uppercase tracking-wider border-b border-slate-900 pb-2">Event Registration Form</h2>
@@ -769,6 +797,12 @@ export default function AlumniDashboard() {
               </div>
             </form>
           </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-900 bg-slate-950/30 p-10 text-center">
+              <h2 className="text-lg font-bold text-white">Event creation is restricted to CDC</h2>
+              <p className="mt-2 text-sm text-slate-400">Alumni can manage existing events, but only CDC can create new ones.</p>
+            </div>
+          )
         ) : activeTab === 'jobs' ? (
           /* Jobs List view */
           jobsLoading ? (
@@ -1036,7 +1070,9 @@ export default function AlumniDashboard() {
             <Mentorship />
           </Suspense>
         )}
-      </main>
+          </main>
+        )}
+      </div>
 
       {/* VIEW REGISTRANTS / ATTENDANCE MODAL */}
       {selectedEvent && (

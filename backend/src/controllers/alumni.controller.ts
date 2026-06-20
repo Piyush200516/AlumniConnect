@@ -24,6 +24,16 @@ export const getAlumni = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
+export const getMyProfile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user.id;
+    const profile = await alumniService.getMyProfile(userId);
+    responseSuccess(res, 'Alumni profile fetched successfully', profile);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getAlumniDetails = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const currentUserId = (req as any).user.id;

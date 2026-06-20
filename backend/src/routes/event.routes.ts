@@ -56,7 +56,7 @@ router.get(
 router.post(
   '/create',
   authenticateUser as any,
-  authorizeRoles('CDC', 'ALUMNI') as any,
+  authorizeRoles('CDC') as any,
   createEvent as any
 );
 

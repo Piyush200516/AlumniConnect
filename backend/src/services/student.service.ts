@@ -5,6 +5,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { Readable } from 'stream';
 import fs from 'fs';
 import path from 'path';
+import { JobApprovalStatus } from '@prisma/client';
 
 // Configure Cloudinary if environment variables exist
 const isCloudinaryConfigured =
@@ -187,9 +188,14 @@ export class StudentService {
       recentNotifications,
       suggestedMentors
     ] = await Promise.all([
-      // Count active jobs
+      // Count visible job opportunities for students
       prisma.job.count({
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          approvalStatus: {
+            in: [JobApprovalStatus.APPROVED, JobApprovalStatus.PENDING]
+          }
+        },
       }),
       // Count upcoming events
       prisma.event.count({
@@ -220,7 +226,12 @@ export class StudentService {
       }),
       // Recent Jobs (limit 5)
       prisma.job.findMany({
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          approvalStatus: {
+            in: [JobApprovalStatus.APPROVED, JobApprovalStatus.PENDING]
+          }
+        },
         orderBy: { createdAt: 'desc' },
         take: 5,
         select: {

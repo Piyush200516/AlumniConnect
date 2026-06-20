@@ -4,6 +4,85 @@ import { ConnectionStatus, Role } from '@prisma/client';
 
 export class AlumniService {
   /**
+   * Fetch current alumni profile by logged-in user ID
+   */
+  async getMyProfile(userId: string) {
+    const alumni = await prisma.alumniProfile.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+          }
+        },
+        skillsList: true,
+        company: true,
+        workExperiences: {
+          orderBy: { startDate: 'desc' },
+          include: { company: true }
+        },
+        education: {
+          orderBy: { startDate: 'desc' }
+        }
+      }
+    });
+
+    if (!alumni) {
+      throw new ApiError(404, 'Alumni profile not found');
+    }
+
+    return {
+      id: alumni.id,
+      userId: alumni.userId,
+      email: alumni.user.email,
+      fullName: alumni.fullName,
+      passingYear: alumni.passingYear,
+      branch: alumni.branch || 'CSIT',
+      course: alumni.course || 'B.Tech',
+      currentCompany: alumni.currentCompany,
+      designation: alumni.designation,
+      industry: alumni.industry,
+      experience: alumni.experience || 0,
+      skills: alumni.skillsList.map(s => s.name).concat(alumni.skills),
+      bio: alumni.bio,
+      profileImageUrl: alumni.profileImageUrl,
+      linkedinUrl: alumni.linkedinUrl,
+      location: alumni.location,
+      phone: alumni.phone,
+      portfolioUrl: alumni.portfolioUrl,
+      currentCtc: alumni.currentCtc,
+      privacySetting: alumni.privacySetting,
+      achievements: alumni.achievements,
+      company: alumni.company ? {
+        id: alumni.company.id,
+        name: alumni.company.name,
+        logoUrl: alumni.company.logoUrl,
+        location: alumni.company.location,
+      } : null,
+      workHistory: alumni.workExperiences.map(w => ({
+        id: w.id,
+        companyName: w.companyName,
+        logoUrl: w.company?.logoUrl || null,
+        role: w.role,
+        startDate: w.startDate,
+        endDate: w.endDate,
+        description: w.description,
+        location: w.location,
+      })),
+      education: alumni.education.map(e => ({
+        id: e.id,
+        institution: e.institution,
+        degree: e.degree,
+        fieldOfStudy: e.fieldOfStudy,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        description: e.description,
+      })),
+    };
+  }
+
+  /**
    * Fetch Alumni List with search, filters, pagination, and sorting
    * Also computes sidebar statistics, top companies, and recently joined alumni
    */

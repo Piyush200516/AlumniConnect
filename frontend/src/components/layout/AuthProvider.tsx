@@ -22,15 +22,68 @@ export interface StudentProfile {
   verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
 }
 
+export type AlumniProfile = {
+  id: string;
+  userId: string;
+  email: string;
+  fullName: string;
+  passingYear: number;
+  branch: string;
+  course: string;
+  currentCompany: string | null;
+  designation: string | null;
+  industry: string | null;
+  experience: number;
+  skills: string[];
+  bio: string | null;
+  profileImageUrl: string | null;
+  linkedinUrl: string | null;
+  location: string | null;
+  phone: string | null;
+  portfolioUrl: string | null;
+  currentCtc: string | null;
+  privacySetting: 'PUBLIC' | 'PRIVATE' | 'HIDDEN';
+  achievements: string[];
+  company: {
+    id: string;
+    name: string;
+    logoUrl: string | null;
+    location: string | null;
+  } | null;
+  workHistory: Array<{
+    id: string;
+    companyName: string;
+    logoUrl: string | null;
+    role: string;
+    startDate: string;
+    endDate: string | null;
+    description: string | null;
+    location: string | null;
+  }>;
+  education: Array<{
+    id: string;
+    institution: string;
+    degree: string;
+    fieldOfStudy: string | null;
+    startDate: string;
+    endDate: string | null;
+    description: string | null;
+  }>;
+};
+
 interface AuthContextProps {
   user: User | null;
   setUser: (user: User | null) => void;
   profile: StudentProfile | null;
   setProfile: (profile: StudentProfile | null) => void;
+  alumniProfile: AlumniProfile | null;
+  setAlumniProfile: (profile: AlumniProfile | null) => void;
   loading: boolean;
   logout: () => void;
   refreshProfile: () => Promise<void>;
+  refreshAlumniProfile: () => Promise<void>;
   completionPercentage: number;
+  alumniCompletionPercentage: number;
 }
 
 export const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -54,7 +107,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const [profile, setProfile] = useState<StudentProfile | null>(null);
-  const [loading, setLoading] = useState<boolean>(!!(user && user.role === 'student'));
+  const [alumniProfile, setAlumniProfile] = useState<AlumniProfile | null>(null);
+  const [loading, setLoading] = useState<boolean>(!!(user && (user.role === 'student' || user.role === 'alumni')));
 
   const setUser = (newUser: User | null) => {
     setUserState(newUser);
@@ -93,6 +147,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refreshAlumniProfile = async () => {
+    if (!user || user.role !== 'alumni') {
+      setAlumniProfile(null);
+      return;
+    }
+    try {
+      const res = await api.get('/alumni/me');
+      setAlumniProfile(res.data.data);
+    } catch (err: any) {
+      console.error('Failed to fetch alumni profile:', err);
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        logout();
+      }
+    }
+  };
+
   const calculateCompletionPercentage = (p: StudentProfile) => {
     let basic = 0;
     if (p.fullName) basic += 10;
@@ -116,6 +186,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const completionPercentage = profile ? calculateCompletionPercentage(profile) : 0;
+  const alumniCompletionPercentage = alumniProfile
+    ? (() => {
+        let score = 0;
+        if (alumniProfile.fullName) score += 10;
+        if (alumniProfile.designation) score += 10;
+        if (alumniProfile.currentCompany) score += 10;
+        if (alumniProfile.experience !== undefined && alumniProfile.experience !== null) score += 10;
+        if (alumniProfile.bio) score += 15;
+        if (alumniProfile.profileImageUrl) score += 15;
+        if (alumniProfile.linkedinUrl) score += 10;
+        if (alumniProfile.location) score += 5;
+        if (alumniProfile.skills && alumniProfile.skills.length > 0) score += 10;
+        if (alumniProfile.portfolioUrl) score += 5;
+        if (alumniProfile.achievements && alumniProfile.achievements.length > 0) score += 10;
+        return Math.min(score, 100);
+      })()
+    : 0;
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -123,8 +210,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(true);
         await refreshProfile();
         setLoading(false);
+      } else if (user && user.role === 'alumni') {
+        setLoading(true);
+        await refreshAlumniProfile();
+        setLoading(false);
       } else {
         setProfile(null);
+        setAlumniProfile(null);
         setLoading(false);
       }
     };
@@ -138,10 +230,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser,
         profile,
         setProfile,
+        alumniProfile,
+        setAlumniProfile,
         loading,
         logout,
         refreshProfile,
+        refreshAlumniProfile,
         completionPercentage,
+        alumniCompletionPercentage,
       }}
     >
       {children}

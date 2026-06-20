@@ -142,23 +142,21 @@ export class EventService {
   }
 
   /**
-   * CDC / Alumni: Create Event
+   * CDC: Create Event
    */
   async createEvent(creatorId: string, payload: any) {
     const creator = await prisma.user.findUnique({
       where: { id: creatorId }
     });
 
-    if (!creator || creator.role === Role.STUDENT) {
-      throw new ApiError(403, 'Students are not authorized to create events');
+    if (!creator || creator.role !== Role.CDC) {
+      throw new ApiError(403, 'Only CDC can create events');
     }
 
     const validated = createEventSchema.parse(payload);
 
-    // Business rule: CDC events auto-approved. Alumni events require review.
-    const approvalStatus = creator.role === Role.CDC 
-      ? EventApprovalStatus.APPROVED 
-      : EventApprovalStatus.PENDING;
+    // CDC events auto-approved.
+    const approvalStatus = EventApprovalStatus.APPROVED;
 
     const event = await prisma.event.create({
       data: {
@@ -189,7 +187,7 @@ export class EventService {
       }
     });
 
-    // Notify students if CDC creates it (since it's auto-approved)
+    // Notify students when CDC creates it (since it's auto-approved)
     if (approvalStatus === EventApprovalStatus.APPROVED && event.status === EventStatus.PUBLISHED) {
       await this.notifyStudentsOfNewEvent(event);
     }

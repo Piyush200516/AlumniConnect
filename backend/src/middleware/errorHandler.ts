@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ApiError } from '../utils/error';
 import { logger } from '../utils/logger';
 import { responseError } from '../utils/response';
+import { ZodError } from 'zod';
 
 export const errorHandler = (err: any, _req: Request, res: Response, _next: NextFunction) => {
   // Log the error
@@ -12,6 +13,19 @@ export const errorHandler = (err: any, _req: Request, res: Response, _next: Next
     // Structured API error
     const { statusCode, message, details } = err;
     return responseError(res, { success: false, message, errors: details }, statusCode);
+  }
+
+  if (err instanceof ZodError) {
+    const message = err.issues[0]?.message || 'Validation failed';
+    return responseError(
+      res,
+      {
+        success: false,
+        message,
+        errors: err.issues,
+      },
+      400
+    );
   }
 
   // Fallback for unexpected errors

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticateUser } from '../middleware/auth.middleware';
 import {
   getAlumni,
+  getMyProfile,
   getAlumniDetails,
   searchAlumni,
   sendConnection,
@@ -16,6 +17,7 @@ const router = Router();
 // Route mappings
 router.get('/', authenticateUser as any, getAlumni as any);
 router.get('/search', authenticateUser as any, searchAlumni as any);
+router.get('/me', authenticateUser as any, getMyProfile as any);
 router.get('/:id', authenticateUser as any, getAlumniDetails as any);
 
 router.post('/connections/send', authenticateUser as any, sendConnection as any);

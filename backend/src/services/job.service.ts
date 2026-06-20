@@ -15,6 +15,12 @@ import {
   PortalApplicationStatus 
 } from '@prisma/client';
 
+const studentVisibleJobStatuses: JobApprovalStatus[] = [
+  JobApprovalStatus.APPROVED,
+  JobApprovalStatus.PENDING,
+];
+const studentVisibleJobStatusSet = new Set<JobApprovalStatus>(studentVisibleJobStatuses);
+
 export class JobService {
   /**
    * Fetch list of jobs based on roles and filters
@@ -33,8 +39,8 @@ export class JobService {
 
     // Role-based visibility
     if (!user || user.role === Role.STUDENT) {
-      // Students see only approved and active jobs
-      whereClause.approvalStatus = JobApprovalStatus.APPROVED;
+      // Students can browse approved jobs and alumni posts that are still pending CDC review
+      whereClause.approvalStatus = { in: studentVisibleJobStatuses };
       whereClause.isActive = true;
     } else if (user.role === Role.ALUMNI) {
       // Alumni see jobs they posted
@@ -46,10 +52,15 @@ export class JobService {
 
     // Apply Search filters
     if (filters.search) {
-      whereClause.OR = [
-        { title: { contains: filters.search, mode: 'insensitive' } },
-        { company: { contains: filters.search, mode: 'insensitive' } },
-        { description: { contains: filters.search, mode: 'insensitive' } },
+      whereClause.AND = [
+        ...(whereClause.AND ?? []),
+        {
+          OR: [
+            { title: { contains: filters.search, mode: 'insensitive' } },
+            { company: { contains: filters.search, mode: 'insensitive' } },
+            { description: { contains: filters.search, mode: 'insensitive' } },
+          ]
+        }
       ];
     }
 
@@ -159,6 +170,15 @@ export class JobService {
 
     if (!job) {
       throw new ApiError(404, 'Job opportunity not found');
+    }
+
+    const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
+    const isVisibleToStudents = job.isActive && studentVisibleJobStatusSet.has(job.approvalStatus);
+
+    if (!user || user.role === Role.STUDENT) {
+      if (!isVisibleToStudents) {
+        throw new ApiError(404, 'Job opportunity not found');
+      }
     }
 
     return job;
