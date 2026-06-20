@@ -105,9 +105,9 @@ model AlumniProfile {
   workExperiences WorkExperience[]
   education       Education[]
   skillsList      Skill[]          @relation("AlumniSkills")
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   // Mentorship Extensions
   phone           String?
@@ -115,11 +115,17 @@ model AlumniProfile {
   currentCtc      String?
   privacySetting  PrivacySetting   @default(PUBLIC)
   achievements    String[]         @default([])
+  // New fields
+  degree          String?          // e.g., B.Tech, M.Tech, MBA
+  githubUrl       String?          // GitHub profile link
+  interests       String[] @default([]) // tag based interests
+  shortBio        String? @db.VarChar(500) // max 500 chars
 
   @@index([passingYear])
   @@index([industry])
-  @@index([currentCompany])
-  @@index([companyId])
+  @@index([degree])
+  @@index([skills])
+  @@index([interests])
   @@map("alumni_profiles")
 }
 
