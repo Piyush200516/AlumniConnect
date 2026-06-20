@@ -1,4 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   Edit, 
   X, 
@@ -64,16 +65,42 @@ interface Registrant {
   };
 }
 
+interface ConnectionRequest {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  createdAt: string;
+  updatedAt: string;
+  sender: {
+    id: string;
+    email: string;
+    role: 'STUDENT' | 'ALUMNI' | 'CDC';
+    fullName: string;
+    branch: string | null;
+    course: string | null;
+    graduationYear: number | null;
+    currentCompany: string | null;
+    designation: string | null;
+    phone: string | null;
+    profileImageUrl: string | null;
+  };
+}
+
 export default function AlumniDashboard() {
   const { alumniProfile: authProfile, logout } = useAuthContext();
+  const location = useLocation();
   const profile = authProfile as any;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activePage, setActivePage] = useState<'main' | 'profile' | 'settings'>('main');
   
   // Dashboard view selection
-  const [activeTab, setActiveTab] = useState<'events' | 'create' | 'jobs' | 'create_job' | 'mentorship' | 'messages'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'create' | 'jobs' | 'create_job' | 'connections' | 'mentorship' | 'messages'>('events');
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [connectionRequests, setConnectionRequests] = useState<ConnectionRequest[]>([]);
+  const [connectionsLoading, setConnectionsLoading] = useState(false);
+  const [updatingConnectionId, setUpdatingConnectionId] = useState<string | null>(null);
 
   // Selected event for registrant details / editing
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -113,6 +140,7 @@ export default function AlumniDashboard() {
   useEffect(() => {
     fetchMyEvents();
     fetchMyJobs();
+    fetchConnectionRequests();
   }, []);
 
   useEffect(() => {
@@ -120,6 +148,21 @@ export default function AlumniDashboard() {
       fetchMyEvents();
     }
   }, [profile]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === 'connections') {
+      setActiveTab('connections');
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      fetchConnectionRequests({ silent: true });
+    }, 15000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const handleSelectSidebarItem = (item: string) => {
     if (item === 'Logout') {
@@ -145,6 +188,8 @@ export default function AlumniDashboard() {
       setActiveTab('jobs');
     } else if (item === 'Post Job') {
       setActiveTab('create_job');
+    } else if (item === 'Connections') {
+      setActiveTab('connections');
     } else if (item === 'Mentorship') {
       setActiveTab('mentorship');
     } else if (item === 'Messages') {
@@ -324,6 +369,49 @@ export default function AlumniDashboard() {
     }
   };
 
+  const fetchConnectionRequests = async (opts?: { silent?: boolean }) => {
+    setConnectionsLoading(true);
+    try {
+      const res = await api.get('/alumni/connections/incoming');
+      setConnectionRequests(res.data.data || []);
+    } catch (err: any) {
+      console.error(err);
+      if (!opts?.silent) {
+        toastError(err.response?.data?.message || 'Failed to fetch connection requests');
+      }
+    } finally {
+      setConnectionsLoading(false);
+    }
+  };
+
+  const handleAcceptConnection = async (connectionId: string) => {
+    setUpdatingConnectionId(connectionId);
+    try {
+      await api.patch('/alumni/connections/accept', { connectionId });
+      toastSuccess('Connection request accepted!');
+      fetchConnectionRequests();
+    } catch (err: any) {
+      console.error(err);
+      toastError(err.response?.data?.message || 'Failed to accept connection request');
+    } finally {
+      setUpdatingConnectionId(null);
+    }
+  };
+
+  const handleRejectConnection = async (connectionId: string) => {
+    setUpdatingConnectionId(connectionId);
+    try {
+      await api.patch('/alumni/connections/reject', { connectionId });
+      toastSuccess('Connection request rejected');
+      fetchConnectionRequests();
+    } catch (err: any) {
+      console.error(err);
+      toastError(err.response?.data?.message || 'Failed to reject connection request');
+    } finally {
+      setUpdatingConnectionId(null);
+    }
+  };
+
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
     setJobsLoading(true);
@@ -431,12 +519,12 @@ export default function AlumniDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#060a12] via-[#09101f] to-[#04070e] text-slate-100 antialiased font-sans">
-      <AlumniSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        activeItem={activePage === 'profile' ? 'Profile' : activePage === 'settings' ? 'Settings' : activeTab === 'create_job' ? 'Post Job' : activeTab === 'jobs' ? 'Jobs' : activeTab === 'messages' ? 'Messages' : activeTab === 'mentorship' ? 'Mentorship' : 'Events'}
-        onSelect={handleSelectSidebarItem}
-      />
+        <AlumniSidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          activeItem={activePage === 'profile' ? 'Profile' : activePage === 'settings' ? 'Settings' : activeTab === 'create_job' ? 'Post Job' : activeTab === 'connections' ? 'Connections' : activeTab === 'jobs' ? 'Jobs' : activeTab === 'messages' ? 'Messages' : activeTab === 'mentorship' ? 'Mentorship' : 'Events'}
+          onSelect={handleSelectSidebarItem}
+        />
 
       <div className="flex flex-col min-h-screen lg:pl-[280px]">
         <AlumniNavbar
@@ -495,6 +583,21 @@ export default function AlumniDashboard() {
               Post a Job
             </button>
             <button 
+              onClick={() => setActiveTab('connections')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all relative ${
+                activeTab === 'connections' 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+                  : 'bg-slate-900 border border-slate-850 text-slate-300 hover:bg-slate-850'
+              }`}
+            >
+              Connections
+              {connectionRequests.length > 0 && (
+                <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-black text-white">
+                  {connectionRequests.length}
+                </span>
+              )}
+            </button>
+            <button 
               onClick={() => setActiveTab('mentorship')}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${
                 activeTab === 'mentorship' 
@@ -516,6 +619,21 @@ export default function AlumniDashboard() {
             </button>
           </div>
         </div>
+
+        {activeTab !== 'connections' && connectionRequests.length > 0 && (
+          <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-white">{connectionRequests.length} pending connection request{connectionRequests.length === 1 ? '' : 's'}</p>
+              <p className="text-xs text-blue-100/80">Students who want to connect with you are waiting in the Connections tab.</p>
+            </div>
+            <button
+              onClick={() => setActiveTab('connections')}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase tracking-wider cursor-pointer"
+            >
+              Review Requests
+            </button>
+          </div>
+        )}
 
         {/* Dynamic Views */}
         {activeTab === 'events' ? (
@@ -803,6 +921,87 @@ export default function AlumniDashboard() {
               <p className="mt-2 text-sm text-slate-400">Alumni can manage existing events, but only CDC can create new ones.</p>
             </div>
           )
+        ) : activeTab === 'connections' ? (
+          <div className="rounded-2xl border border-slate-900 bg-slate-950/40 p-6 md:p-8 shadow-xl shadow-black/10 backdrop-blur-md space-y-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-white uppercase tracking-wider border-b border-slate-900 pb-2">Connection Requests</h2>
+                <p className="mt-2 text-sm text-slate-400">Review students who asked to connect with you.</p>
+              </div>
+              <span className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-300">
+                <Users className="h-3.5 w-3.5" />
+                {connectionRequests.length} Pending
+              </span>
+            </div>
+
+            {connectionsLoading ? (
+              <div className="flex h-[30vh] flex-col items-center justify-center gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                <p className="text-slate-400 text-xs font-semibold">Loading connection requests...</p>
+              </div>
+            ) : connectionRequests.length === 0 ? (
+              <div className="text-center p-12 border border-dashed border-slate-900 rounded-3xl">
+                <Users className="h-10 w-10 text-slate-700 mx-auto mb-3" />
+                <h3 className="text-sm font-bold text-white">No pending connection requests</h3>
+                <p className="text-slate-500 text-xs mt-1">When a student sends you a connect request, it will appear here.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+                {connectionRequests.map((request) => (
+                  <div key={request.id} className="rounded-2xl border border-slate-900 bg-slate-950/20 p-5 space-y-4 hover:border-slate-800 transition-all">
+                    <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 flex items-center justify-center">
+                        {request.sender.profileImageUrl ? (
+                          <img src={request.sender.profileImageUrl} alt={request.sender.fullName} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-black text-white">
+                            {request.sender.fullName?.charAt(0).toUpperCase() || 'S'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-bold text-white truncate">{request.sender.fullName}</h3>
+                          <span className="inline-flex rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-300">
+                            {request.sender.role}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">{request.sender.email}</p>
+                        <p className="text-xs text-slate-500 mt-2">
+                          {request.sender.role === 'STUDENT'
+                            ? `${request.sender.course || 'Course'} • ${request.sender.branch || 'Branch'}${request.sender.graduationYear ? ` • Batch ${request.sender.graduationYear}` : ''}`
+                            : `${request.sender.designation || 'Alumni'}${request.sender.currentCompany ? ` at ${request.sender.currentCompany}` : ''}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-slate-300 leading-6 bg-slate-900/30 border border-slate-900 rounded-xl p-4">
+                      Connection request received on {new Date(request.createdAt).toLocaleString()}
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        onClick={() => handleAcceptConnection(request.id)}
+                        disabled={updatingConnectionId === request.id}
+                        className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600/15 border border-emerald-500/20 px-4 py-2.5 text-sm font-bold text-emerald-300 hover:bg-emerald-600/25 hover:text-emerald-200 transition-all cursor-pointer disabled:opacity-60"
+                      >
+                        {updatingConnectionId === request.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleRejectConnection(request.id)}
+                        disabled={updatingConnectionId === request.id}
+                        className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600/15 border border-rose-500/20 px-4 py-2.5 text-sm font-bold text-rose-300 hover:bg-rose-600/25 hover:text-rose-200 transition-all cursor-pointer disabled:opacity-60"
+                      >
+                        {updatingConnectionId === request.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         ) : activeTab === 'jobs' ? (
           /* Jobs List view */
           jobsLoading ? (

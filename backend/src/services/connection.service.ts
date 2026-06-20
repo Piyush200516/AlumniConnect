@@ -1,8 +1,91 @@
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/error';
-import { ConnectionStatus } from '@prisma/client';
+import { ConnectionStatus, Role } from '@prisma/client';
+import { emitToUser } from '../socket';
+
+const getDashboardLink = (role: Role) => {
+  if (role === Role.ALUMNI) {
+    return '/alumni/dashboard?tab=connections';
+  }
+
+  if (role === Role.CDC) {
+    return '/cdc/dashboard';
+  }
+
+  return '/student/dashboard';
+};
+
+const getDisplayName = (user: {
+  studentProfile?: { fullName?: string | null } | null;
+  alumniProfile?: { fullName?: string | null } | null;
+}) => {
+  return user.studentProfile?.fullName || user.alumniProfile?.fullName || 'A member';
+};
 
 export class ConnectionService {
+  async getIncomingConnectionRequests(userId: string) {
+    const requests = await prisma.connection.findMany({
+      where: {
+        receiverId: userId,
+        status: ConnectionStatus.PENDING,
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            studentProfile: {
+              select: {
+                fullName: true,
+                branch: true,
+                course: true,
+                graduationYear: true,
+                phone: true,
+                profileImage: true,
+              },
+            },
+            alumniProfile: {
+              select: {
+                fullName: true,
+                branch: true,
+                course: true,
+                passingYear: true,
+                currentCompany: true,
+                designation: true,
+                phone: true,
+                profileImageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return requests.map((request) => ({
+      id: request.id,
+      senderId: request.senderId,
+      receiverId: request.receiverId,
+      status: request.status,
+      createdAt: request.createdAt,
+      updatedAt: request.updatedAt,
+      sender: {
+        id: request.sender.id,
+        email: request.sender.email,
+        role: request.sender.role,
+        fullName: getDisplayName(request.sender),
+        branch: request.sender.studentProfile?.branch || request.sender.alumniProfile?.branch || null,
+        course: request.sender.studentProfile?.course || request.sender.alumniProfile?.course || null,
+        graduationYear: request.sender.studentProfile?.graduationYear || request.sender.alumniProfile?.passingYear || null,
+        currentCompany: request.sender.alumniProfile?.currentCompany || null,
+        designation: request.sender.alumniProfile?.designation || null,
+        phone: request.sender.studentProfile?.phone || request.sender.alumniProfile?.phone || null,
+        profileImageUrl: request.sender.studentProfile?.profileImage || request.sender.alumniProfile?.profileImageUrl || null,
+      },
+    }));
+  }
+
   /**
    * Send Connection Request
    */
@@ -43,6 +126,30 @@ export class ConnectionService {
             where: { id: existing.id },
             data: { status: ConnectionStatus.ACCEPTED }
           });
+
+          try {
+            const accepterProfile = await prisma.user.findUnique({
+              where: { id: senderId },
+              include: { studentProfile: true, alumniProfile: true }
+            });
+            const originalSenderProfile = await prisma.user.findUnique({
+              where: { id: existing.senderId },
+              select: { role: true }
+            });
+            const autoAcceptNotification = await prisma.notification.create({
+              data: {
+                userId: existing.senderId,
+                type: 'MENTORSHIP_ACCEPTED',
+                title: 'Connection Request Accepted',
+                message: `${getDisplayName(accepterProfile || {})} accepted your connection request. You can now chat in messages.`,
+                linkUrl: getDashboardLink(originalSenderProfile?.role || Role.STUDENT),
+              }
+            });
+            emitToUser(existing.senderId, 'notification', autoAcceptNotification);
+          } catch (err) {
+            console.error('Failed to notify auto-accepted connection:', err);
+          }
+
           return { connection: accepted, message: 'Auto-accepted pending connection request' };
         }
       } else {
@@ -51,6 +158,30 @@ export class ConnectionService {
           where: { id: existing.id },
           data: { status: ConnectionStatus.PENDING, senderId, receiverId }
         });
+
+        try {
+          const senderProfile = await prisma.user.findUnique({
+            where: { id: senderId },
+            include: { studentProfile: true, alumniProfile: true }
+          });
+          const receiverProfile = await prisma.user.findUnique({
+            where: { id: receiverId },
+            select: { role: true }
+          });
+          const notification = await prisma.notification.create({
+            data: {
+              userId: receiverId,
+              type: 'MENTORSHIP_REQUEST',
+              title: 'New Connection Request',
+              message: `${getDisplayName(senderProfile || {})} wants to connect with you in the networking directory.`,
+              linkUrl: getDashboardLink(receiverProfile?.role || Role.STUDENT),
+            }
+          });
+          emitToUser(receiverId, 'notification', notification);
+        } catch (err) {
+          console.error('Failed to re-notify connection request:', err);
+        }
+
         return { connection: updated, message: 'Connection request sent successfully' };
       }
     }
@@ -70,17 +201,21 @@ export class ConnectionService {
         where: { id: senderId },
         include: { studentProfile: true, alumniProfile: true }
       });
-      const senderName = senderProfile?.studentProfile?.fullName || senderProfile?.alumniProfile?.fullName || 'A member';
-
-      await prisma.notification.create({
+      const receiverProfile = await prisma.user.findUnique({
+        where: { id: receiverId },
+        select: { role: true },
+      });
+      const senderName = getDisplayName(senderProfile || {});
+      const notification = await prisma.notification.create({
         data: {
           userId: receiverId,
           type: 'MENTORSHIP_REQUEST', // fits nicely, or we can use SYSTEM
           title: `New Connection Request`,
           message: `${senderName} wants to connect with you in the networking directory.`,
-          linkUrl: `/student/dashboard` // or messages / networks tab
+          linkUrl: getDashboardLink(receiverProfile?.role || Role.STUDENT),
         }
       });
+      emitToUser(receiverId, 'notification', notification);
     } catch (err) {
       console.error('Failed to create connection notification:', err);
     }
@@ -115,21 +250,27 @@ export class ConnectionService {
 
     // Notify sender
     try {
-      const receiverProfile = await prisma.user.findUnique({
-        where: { id: receiverId },
-        include: { studentProfile: true, alumniProfile: true }
-      });
-      const receiverName = receiverProfile?.studentProfile?.fullName || receiverProfile?.alumniProfile?.fullName || 'A member';
+      const [receiverProfile, senderProfile] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: receiverId },
+          include: { studentProfile: true, alumniProfile: true }
+        }),
+        prisma.user.findUnique({
+          where: { id: connection.senderId },
+          select: { role: true }
+        }),
+      ]);
 
-      await prisma.notification.create({
+      const senderNotification = await prisma.notification.create({
         data: {
           userId: connection.senderId,
           type: 'MENTORSHIP_ACCEPTED',
           title: 'Connection Request Accepted',
-          message: `${receiverName} accepted your connection request. You can now chat in messages.`,
-          linkUrl: `/student/dashboard` // or messages view
+          message: `${getDisplayName(receiverProfile || {})} accepted your connection request. You can now chat in messages.`,
+          linkUrl: getDashboardLink(senderProfile?.role || Role.STUDENT),
         }
       });
+      emitToUser(connection.senderId, 'notification', senderNotification);
     } catch (err) {
       console.error('Failed to notify accepted connection:', err);
     }
@@ -158,6 +299,31 @@ export class ConnectionService {
       where: { id: connectionId },
       data: { status: ConnectionStatus.REJECTED }
     });
+
+    try {
+      const [receiverProfile, senderProfile] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: receiverId },
+          include: { studentProfile: true, alumniProfile: true }
+        }),
+        prisma.user.findUnique({
+          where: { id: connection.senderId },
+          select: { role: true }
+        }),
+      ]);
+      const rejectionNotification = await prisma.notification.create({
+        data: {
+          userId: connection.senderId,
+          type: 'SYSTEM',
+          title: 'Connection Request Declined',
+          message: `${getDisplayName(receiverProfile || {})} declined your connection request.`,
+          linkUrl: getDashboardLink(senderProfile?.role || Role.STUDENT),
+        }
+      });
+      emitToUser(connection.senderId, 'notification', rejectionNotification);
+    } catch (err) {
+      console.error('Failed to notify rejected connection:', err);
+    }
 
     return updated;
   }

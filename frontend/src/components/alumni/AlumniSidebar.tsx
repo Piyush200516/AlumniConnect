@@ -25,6 +25,7 @@ const menuItems = [
   { name: 'Events', icon: Calendar },
   { name: 'Jobs', icon: Briefcase },
   { name: 'Post Job', icon: Briefcase },
+  { name: 'Connections', icon: Users },
   { name: 'Mentorship', icon: Users },
   { name: 'Messages', icon: MessageSquare },
   { name: 'Profile', icon: User },

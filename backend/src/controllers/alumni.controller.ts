@@ -67,12 +67,33 @@ export const sendConnection = async (req: Request, res: Response, next: NextFunc
   }
 };
 
+export const getIncomingConnections = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user.id;
+    const requests = await connectionService.getIncomingConnectionRequests(userId);
+    responseSuccess(res, 'Incoming connection requests fetched successfully', requests);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const acceptConnection = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const receiverId = (req as any).user.id;
     const validated = acceptConnectionSchema.parse(req.body);
     const connection = await connectionService.acceptConnectionRequest(receiverId, validated.connectionId);
     responseSuccess(res, 'Connection request accepted successfully', connection);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const rejectConnection = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const receiverId = (req as any).user.id;
+    const validated = acceptConnectionSchema.parse(req.body);
+    const connection = await connectionService.rejectConnectionRequest(receiverId, validated.connectionId);
+    responseSuccess(res, 'Connection request rejected successfully', connection);
   } catch (err) {
     next(err);
   }
