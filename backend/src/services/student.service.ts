@@ -6,6 +6,7 @@ import { Readable } from 'stream';
 import fs from 'fs';
 import path from 'path';
 import { JobApprovalStatus, PortalApplicationStatus, VerificationStatus } from '@prisma/client';
+import { logger } from '../utils/logger';
 
 // Configure Cloudinary if environment variables exist
 const isCloudinaryConfigured =
@@ -121,6 +122,7 @@ export const uploadFile = async (file: Express.Multer.File, folder: string): Pro
 
 export class StudentService {
   async getProfileByUserId(userId: string) {
+  logger.debug(`Fetching profile and application for userId=${userId}`);
     const [profile, application] = await Promise.all([
       prisma.studentProfile.findUnique({
         where: { userId },
@@ -144,7 +146,9 @@ export class StudentService {
       throw new ApiError(404, 'Student profile not found');
     }
 
-    return mapProfileResponse(profile, application?.status);
+    const result = mapProfileResponse(profile, application?.status);
+  logger.debug(`Fetched profile result: ${JSON.stringify(result)}`);
+  return result;
   }
 
   async updateProfile(
@@ -184,7 +188,8 @@ export class StudentService {
       updateData.resumeUrl = await uploadFile(files.resume[0], 'resumes');
     }
 
-    const [updatedProfile, application] = await Promise.all([
+    logger.debug(`Executing profile update and fetching application for userId=${userId}`);
+  const [updatedProfile, application] = await Promise.all([
       prisma.studentProfile.update({
         where: { userId },
         data: updateData,
@@ -204,10 +209,13 @@ export class StudentService {
       }),
     ]);
 
-    return mapProfileResponse(updatedProfile, application?.status);
+    const updatedResult = mapProfileResponse(updatedProfile, application?.status);
+  logger.debug(`Updated profile result: ${JSON.stringify(updatedResult)}`);
+  return updatedResult;
   }
 
   async getDashboardData(userId: string) {
+  logger.debug(`Fetching dashboard data for userId=${userId}`);
     // 1. Fetch profile details first (for completion percentage)
     const [profile, application] = await Promise.all([
       prisma.studentProfile.findUnique({
@@ -375,21 +383,23 @@ export class StudentService {
 
     completionPercentage = basic + contact + social + skills + resume;
 
-    return {
-      profileSummary: {
-        ...mapProfileResponse(profile, application?.status),
-      },
-      profileCompletion: completionPercentage,
-      dashboardStats: {
-        jobsCount,
-        eventsCount,
-        mentorsCount,
-        unreadMessagesCount,
-      },
-      recentJobs,
-      upcomingEvents,
-      recentNotifications,
-      suggestedMentors,
-    };
+    const dashboardResponse = {
+        profileSummary: {
+          ...mapProfileResponse(profile, application?.status),
+        },
+        profileCompletion: completionPercentage,
+        dashboardStats: {
+          jobsCount,
+          eventsCount,
+          mentorsCount,
+          unreadMessagesCount,
+        },
+        recentJobs,
+        upcomingEvents,
+        recentNotifications,
+        suggestedMentors,
+      };
+      logger.debug(`Dashboard data assembled: ${JSON.stringify(dashboardResponse)}`);
+      return dashboardResponse;
   }
 }

@@ -4,6 +4,17 @@ import multer from 'multer';
 import { getStudentProfile, updateStudentProfile, getStudentDashboard } from '../controllers/student.controller';
 import { authenticateUser } from '../middleware/auth.middleware';
 import { authorizeRoles } from '../middleware/role.middleware';
+import { logger } from '../utils/logger';
+
+// Log incoming student route requests
+const logRequest = (req: any, _res: any, next: any) => {
+  logger.info(`[Student Route] ${req.method} ${req.originalUrl}`);
+  logger.debug(`Headers: ${JSON.stringify(req.headers)}`);
+  if (req.user) {
+    logger.debug(`Authenticated user: ${JSON.stringify(req.user)}`);
+  }
+  next();
+};
 
 const router = Router();
 const upload = multer({
@@ -12,6 +23,8 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
 });
+
+router.use(logRequest);
 
 router.get('/profile', authenticateUser as any, authorizeRoles('STUDENT') as any, getStudentProfile);
 router.get('/dashboard', authenticateUser as any, authorizeRoles('STUDENT') as any, getStudentDashboard);

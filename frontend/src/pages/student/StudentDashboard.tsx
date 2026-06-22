@@ -75,12 +75,12 @@ export default function StudentDashboard() {
     return res.data.data;
   }, []);
 
-  // React Query fetch hook with 15s cache / stale values
+  // React Query fetch hook with 5 minutes cache / stale values
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['studentDashboard'],
     queryFn: fetchDashboardData,
-    staleTime: 15000, // Stale time of 15 seconds
-    gcTime: 60000,    // Cache time of 60 seconds
+    staleTime: 5 * 60 * 1000, // Stale time of 5 minutes
+    gcTime: 10 * 60 * 1000,   // Cache time of 10 minutes
   });
 
   // Sync profile details if API returns updated profile information

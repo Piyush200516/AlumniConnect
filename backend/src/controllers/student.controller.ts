@@ -3,6 +3,8 @@ import { Request, Response, NextFunction } from 'express';
 import { StudentService } from '../services/student.service';
 import { responseSuccess } from '../utils/response';
 import { localCache } from '../utils/cache';
+import { logger } from '../utils/logger';
+
 
 const studentService = new StudentService();
 
@@ -30,15 +32,17 @@ export const getStudentDashboard = async (
 
     console.timeEnd(logLabel);
 
-    // Cache the response for 15 seconds
-    localCache.set(cacheKey, dashboardData, 15);
+    // Cache the response for 5 minutes (300 seconds)
+    localCache.set(cacheKey, dashboardData, 300);
 
     responseSuccess(res, 'Dashboard data fetched successfully', dashboardData);
   } catch (err) {
+    logger.error(`Error in getStudentDashboard: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     next(err);
   }
 };
 
+// src/controllers/student.controller.ts
 export const getStudentProfile = async (
   req: Request,
   res: Response,
@@ -46,9 +50,11 @@ export const getStudentProfile = async (
 ) => {
   try {
     const userId = (req as any).user!.id;
+    logger.info(`Fetching student profile for userId=${userId}`);
     const profile = await studentService.getProfileByUserId(userId);
     responseSuccess(res, 'Profile fetched successfully', profile);
   } catch (err) {
+    logger.error(`Error in getStudentProfile: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     next(err);
   }
 };
@@ -64,6 +70,7 @@ export const updateStudentProfile = async (
     const profile = await studentService.updateProfile(userId, req.body, files);
     responseSuccess(res, 'Profile updated successfully', profile);
   } catch (err) {
+    logger.error(`Error in updateStudentProfile: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     next(err);
   }
 };

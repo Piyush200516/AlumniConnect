@@ -138,14 +138,8 @@ class AuthService {
       // Log DATABASE_URL status
       logger.info(`Login service check: DATABASE_URL exists = ${!!process.env.DATABASE_URL}`);
 
-      // Log Prisma connection status
-      try {
-        await prisma.$connect();
-        logger.info("Database connection active and verified.");
-      } catch (connError) {
-        logger.error(`Database connection verification failed: ${connError instanceof Error ? connError.message : connError}`);
-        throw new ApiError(500, 'Database connection error');
-      }
+      // Removed explicit prisma.$connect() to rely on existing connection established at server start.
+      // This prevents opening a new connection per request which can cause timeouts.
 
       // Log User lookup
       logger.info(`Attempting user lookup for email: ${email}`);
