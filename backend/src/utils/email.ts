@@ -7,13 +7,26 @@ const FRONTEND_URL =
   process.env.FRONTEND_URL || "http://localhost:5173";
 
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || "smtp.ethereal.email",
+  host: process.env.EMAIL_HOST || "sandbox.smtp.mailtrap.io",
   port: parseInt(process.env.EMAIL_PORT || "587"),
   secure: parseInt(process.env.EMAIL_PORT || "587") === 465,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  tls: {
+    // Require TLS explicitly if secure is true
+    rejectUnauthorized: process.env.NODE_ENV === "production",
+  }
+});
+
+// Verify connection configuration
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Nodemailer connection error:", error);
+  } else {
+    console.log("✅ Nodemailer transporter is ready to take our messages");
+  }
 });
 
 export const sendVerificationEmail = async (
