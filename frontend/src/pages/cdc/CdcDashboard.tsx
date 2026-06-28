@@ -318,7 +318,7 @@ function MetricCard({
   icon: any;
 }) {
   return (
-    <div className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl">
+    <div className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-7 shadow-xl shadow-black/10 backdrop-blur-xl">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-500">{title}</p>
@@ -329,6 +329,126 @@ function MetricCard({
         </div>
       </div>
       <p className="text-xs font-medium text-slate-400">{hint}</p>
+    </div>
+  );
+}
+
+function PlacementTrendsChart({ placedStudents }: { placedStudents: CdcPlacedStudent[] }) {
+  const branchCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    placedStudents.forEach(p => {
+      const branch = p.branch || 'Other';
+      counts[branch] = (counts[branch] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4);
+  }, [placedStudents]);
+
+  const maxCount = Math.max(...branchCounts.map(b => b[1]), 1);
+
+  return (
+    <div className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-7 shadow-xl shadow-black/10 backdrop-blur-xl flex flex-col justify-between min-h-[220px]">
+      <div>
+        <h3 className="text-sm font-bold text-white">Placement Trends</h3>
+        <p className="text-xs text-slate-400">By top branches</p>
+      </div>
+      <div className="mt-6 flex h-32 items-end gap-4">
+        {branchCounts.length === 0 ? (
+          <div className="w-full flex h-full items-center justify-center text-xs text-slate-600">No data available</div>
+        ) : (
+          branchCounts.map(([branch, count]) => (
+            <div key={branch} className="flex flex-1 flex-col items-center gap-2 group">
+              <div className="w-full relative flex justify-center h-[100px] items-end">
+                <div 
+                  className="w-full max-w-[40px] rounded-t-lg bg-gradient-to-t from-blue-600/20 to-blue-500/80 transition-all group-hover:to-blue-400"
+                  style={{ height: `${(count / maxCount) * 100}%` }}
+                ></div>
+                <span className="absolute -top-6 text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">{count}</span>
+              </div>
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase truncate w-full text-center" title={branch}>
+                {branch.substring(0, 4)}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StudentGrowthChart({ applications }: { applications: CdcApplication[] }) {
+  const verifiedCount = applications.filter(a => a.status === 'APPROVED').length;
+  const pendingCount = applications.filter(a => a.status === 'UNDER_VERIFICATION').length;
+  const draftCount = applications.length - verifiedCount - pendingCount;
+
+  return (
+    <div className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-7 shadow-xl shadow-black/10 backdrop-blur-xl flex flex-col justify-between min-h-[220px]">
+      <div>
+        <h3 className="text-sm font-bold text-white">Student Funnel</h3>
+        <p className="text-xs text-slate-400">Applications status</p>
+      </div>
+      <div className="mt-6 flex flex-col gap-5 justify-end h-32">
+        <div className="flex items-center gap-4">
+          <div className="w-16 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">Verified</div>
+          <div className="flex-1 h-2 rounded-full bg-slate-900 overflow-hidden">
+            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${applications.length ? (verifiedCount / applications.length) * 100 : 0}%` }}></div>
+          </div>
+          <div className="w-8 text-[10px] font-bold text-white">{verifiedCount}</div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="w-16 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">Pending</div>
+          <div className="flex-1 h-2 rounded-full bg-slate-900 overflow-hidden">
+            <div className="h-full bg-amber-500 rounded-full" style={{ width: `${applications.length ? (pendingCount / applications.length) * 100 : 0}%` }}></div>
+          </div>
+          <div className="w-8 text-[10px] font-bold text-white">{pendingCount}</div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="w-16 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">Draft</div>
+          <div className="flex-1 h-2 rounded-full bg-slate-900 overflow-hidden">
+            <div className="h-full bg-slate-600 rounded-full" style={{ width: `${applications.length ? (draftCount / applications.length) * 100 : 0}%` }}></div>
+          </div>
+          <div className="w-8 text-[10px] font-bold text-white">{draftCount}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EventStatsChart({ events }: { events: CdcEvent[] }) {
+  const topEvents = useMemo(() => {
+    return [...events]
+      .sort((a, b) => (b._count?.registrations || 0) - (a._count?.registrations || 0))
+      .slice(0, 3);
+  }, [events]);
+
+  return (
+    <div className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-7 shadow-xl shadow-black/10 backdrop-blur-xl flex flex-col justify-between min-h-[220px]">
+      <div>
+        <h3 className="text-sm font-bold text-white">Top Events</h3>
+        <p className="text-xs text-slate-400">By registrations</p>
+      </div>
+      <div className="mt-6 flex flex-col gap-4 justify-end h-32">
+        {topEvents.length === 0 ? (
+          <div className="w-full flex h-full items-center justify-center text-xs text-slate-600">No events</div>
+        ) : (
+          topEvents.map(event => {
+            const regCount = event._count?.registrations || 0;
+            const percent = event.totalSeats ? (regCount / event.totalSeats) * 100 : 0;
+            return (
+              <div key={event.id} className="group relative">
+                <div className="flex justify-between items-end text-[10px] font-bold text-slate-400 mb-2">
+                  <span className="truncate max-w-[150px]">{event.title}</span>
+                  <span>{regCount} / {event.totalSeats}</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-violet-600 to-fuchsia-500 rounded-full transition-all group-hover:brightness-125" style={{ width: `${Math.min(percent, 100)}%` }}></div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }
@@ -666,14 +786,15 @@ export default function CdcDashboard() {
           setActiveTab(tab);
           setSidebarOpen(false);
         }}
-        className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${active
-            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-            : 'text-slate-300 hover:bg-slate-900/70 hover:text-white'
-          }`}
+        className={`group flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-300 ease-out ${
+          active
+            ? 'bg-gradient-to-br from-blue-500/10 to-blue-600/5 text-blue-400 ring-1 ring-blue-500/20 shadow-[0_0_20px_-5px_rgba(59,130,246,0.15)]'
+            : 'text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+        }`}
       >
-        <Icon className="h-4.5 w-4.5 shrink-0" />
+        <Icon className={`h-4.5 w-4.5 shrink-0 transition-colors duration-300 ${active ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
         <span>{label}</span>
-        {active && <ChevronRight className="ml-auto h-4 w-4 opacity-80" />}
+        {active && <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-80" />}
       </button>
     );
   };
@@ -718,48 +839,62 @@ export default function CdcDashboard() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-slate-900/80 bg-slate-950/85 backdrop-blur-xl transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-50 w-[260px] border-r border-slate-900/80 bg-[#060a12]/95 backdrop-blur-xl transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           } lg:block`}
       >
-        <div className="flex h-full flex-col px-5 py-6">
+        <div className="flex h-full flex-col overflow-y-auto px-4 py-6 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-800 [&::-webkit-scrollbar-thumb]:rounded-full">
+          {/* Elegant Logo Section */}
           <div className="flex items-center gap-3 px-2">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg shadow-blue-500/30">
-              <GraduationCap className="h-6 w-6" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg shadow-blue-500/20">
+              <GraduationCap className="h-4.5 w-4.5" />
             </div>
-            <div>
-              <p className="text-lg font-extrabold tracking-tight text-white">AlumniConnect</p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-blue-400">CDC Console</p>
+            <div className="flex flex-col">
+              <p className="text-sm font-bold tracking-tight text-white">AlumniConnect</p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-blue-400/80">CDC Console</p>
             </div>
           </div>
 
-          <div className="mt-6 rounded-3xl border border-slate-900 bg-slate-900/40 p-4 shadow-xl shadow-black/10">
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-500">Workspace</p>
-            <h2 className="mt-2 text-lg font-extrabold text-white">Student approvals, alumni events, placements</h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-400">
-              Keep the college portal, event approvals, and placement visibility in one shared control room.
-            </p>
+          {/* Navigation Group */}
+          <div className="mt-10 px-2">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">Menu</p>
+            <nav className="space-y-1.5">
+              {dashboardTabs.map((item) => renderSidebarItem(item.id, item.label, item.icon))}
+            </nav>
           </div>
 
-          <nav className="mt-6 space-y-2">
-            {dashboardTabs.map((item) => renderSidebarItem(item.id, item.label, item.icon))}
-          </nav>
+          {/* Spacer */}
+          <div className="flex-1"></div>
 
-          <div className="mt-auto rounded-3xl border border-slate-900 bg-slate-900/40 p-4 shadow-xl shadow-black/10">
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-500">Signed in as</p>
-            <p className="mt-2 text-sm font-bold text-white">{user?.role ? `${user.role.toUpperCase()} account` : 'CDC User'}</p>
-            <p className="text-xs text-slate-400">Official workspace access</p>
-            <button
-              onClick={logout}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-300 transition-all hover:bg-rose-500/15 hover:text-rose-200"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </button>
+          {/* Thin Divider */}
+          <div className="my-4 h-px w-full bg-slate-900/80" />
+
+          {/* Compact User Profile & Logout */}
+          <div className="px-2 pb-2">
+            <div className="flex items-center justify-between rounded-xl p-2 transition-colors hover:bg-slate-900/40">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-slate-300">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div className="flex flex-col">
+                  <p className="text-xs font-semibold text-white truncate max-w-[100px]">
+                    {user?.role ? `${user.role.toUpperCase()}` : 'CDC User'}
+                  </p>
+                  <p className="text-[10px] text-slate-500">Workspace</p>
+                </div>
+              </div>
+              <button
+                onClick={logout}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+                title="Logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-col lg:pl-[280px]">
+      <div className="flex min-h-screen flex-col lg:pl-[260px]">
         <header className="sticky top-0 z-30 border-b border-slate-900/70 bg-slate-950/60 backdrop-blur-xl">
           <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-4 sm:px-6 lg:px-8">
             <button
@@ -774,7 +909,7 @@ export default function CdcDashboard() {
               <p className="mt-1 max-w-2xl text-sm text-slate-400">{pageSubtitle}</p>
             </div>
 
-            <div className="hidden min-w-[280px] flex-1 max-w-xl items-center rounded-2xl border border-slate-900 bg-slate-950/60 px-4 py-2.5 shadow-xl shadow-black/10 md:flex">
+            <div className="hidden min-w-[260px] flex-1 max-w-xl items-center rounded-2xl border border-slate-900 bg-slate-950/60 px-4 py-2.5 shadow-xl shadow-black/10 md:flex">
               <Search className="h-4.5 w-4.5 text-slate-500" />
               <input
                 value={searchTerm}
@@ -802,7 +937,7 @@ export default function CdcDashboard() {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main className="mx-auto w-full max-w-7xl flex-1 space-y-10 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           {loadError && (
             <div className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-5 text-rose-200">
               <p className="font-bold">Dashboard load error</p>
@@ -810,24 +945,24 @@ export default function CdcDashboard() {
             </div>
           )}
 
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div className="space-y-3">
+          <div className="flex flex-col gap-6 md:h-[130px] md:flex-row md:items-center md:justify-between rounded-3xl border border-slate-900/80 bg-slate-950/50 p-8 shadow-xl shadow-black/10 backdrop-blur-xl">
+            <div className="space-y-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/15 bg-blue-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.28em] text-blue-300">
                 <Sparkles className="h-3.5 w-3.5" />
                 CDC Workspace
               </div>
-              <h2 className="max-w-4xl text-3xl font-black tracking-tight text-white sm:text-4xl">
-                Know who is a student, who got placed, and which alumni are active.
+              <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                CDC Command Center
               </h2>
-              <p className="max-w-3xl text-sm leading-7 text-slate-400">
-                Verify student profiles, publish events, and attach an event to a specific alumni portal by entering their name and email.
+              <p className="text-sm text-slate-400">
+                Verify profiles, approve events, and monitor student placements.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-row items-center gap-4">
               <button
                 onClick={() => setActiveTab('applications')}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-900 bg-slate-950/60 px-4 py-3 text-sm font-semibold text-slate-200 transition-all hover:bg-slate-900"
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-900 bg-slate-900/50 px-5 py-3 text-sm font-semibold text-slate-200 transition-all hover:bg-slate-900"
               >
                 <ShieldCheck className="h-4 w-4 text-blue-400" />
                 Review Applications
@@ -837,7 +972,7 @@ export default function CdcDashboard() {
                   setActiveTab('events');
                   setCreateEventOpen(true);
                 }}
-                className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500"
+                className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500"
               >
                 <Plus className="h-4 w-4" />
                 Create Event
@@ -846,52 +981,80 @@ export default function CdcDashboard() {
           </div>
 
           {activeTab === 'overview' && (
-            <div className="space-y-8">
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="space-y-10">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 <MetricCard
                   title="Student Accounts"
                   value={stats.studentUsersCount}
-                  hint="Students currently on the portal"
+                  hint="Total registered students"
                   icon={GraduationCap}
-                />
-                <MetricCard
-                  title="Verified Applications"
-                  value={stats.verifiedApplications}
-                  hint="Approved student profiles"
-                  icon={CheckCircle2}
                 />
                 <MetricCard
                   title="Placed Students"
                   value={stats.placedStudentsCount}
-                  hint="Students with an offer status"
+                  hint="Students with an offer"
                   icon={Briefcase}
                 />
                 <MetricCard
-                  title="Alumni"
+                  title="Active Alumni"
                   value={stats.alumniUsersCount}
-                  hint="Graduated alumni profiles"
+                  hint="Graduated profiles"
                   icon={Users}
-                />
-                <MetricCard
-                  title="Upcoming Events"
-                  value={stats.upcomingEventsCount}
-                  hint="Approved events visible to students"
-                  icon={CalendarIcon}
                 />
                 <MetricCard
                   title="Pending Reviews"
                   value={stats.pendingApplications}
-                  hint="Applications that still need action"
+                  hint="Action required"
                   icon={ShieldCheck}
                 />
               </div>
 
-              <div className="grid gap-8 xl:grid-cols-12">
-                <section className="xl:col-span-5 rounded-3xl border border-slate-900/80 bg-slate-950/50 p-6 shadow-xl shadow-black/10 backdrop-blur-xl">
+              {/* Secondary Metrics Row */}
+              <div className="flex flex-wrap items-center gap-8 rounded-3xl border border-slate-900/80 bg-slate-950/50 p-6 shadow-xl shadow-black/10 backdrop-blur-xl">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900/50 text-slate-400">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Verified Profiles</p>
+                    <p className="text-xl font-bold text-white">{stats.verifiedApplications}</p>
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-slate-900/80 hidden sm:block"></div>
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900/50 text-slate-400">
+                    <CalendarIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Upcoming Events</p>
+                    <p className="text-xl font-bold text-white">{stats.upcomingEventsCount}</p>
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-slate-900/80 hidden sm:block"></div>
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900/50 text-slate-400">
+                    <Briefcase className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Active Jobs</p>
+                    <p className="text-xl font-bold text-white">{stats.activeJobsCount}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Analytics & Trends Section */}
+              <div className="grid gap-6 lg:grid-cols-3">
+                <PlacementTrendsChart placedStudents={placedStudents} />
+                <StudentGrowthChart applications={applications} />
+                <EventStatsChart events={events} />
+              </div>
+
+              <div className="grid gap-8 lg:grid-cols-2">
+                <section className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-8 shadow-xl shadow-black/10 backdrop-blur-xl">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-lg font-bold text-white">Applications needing action</h3>
-                      <p className="text-sm text-slate-400">Approve or reject student portal submissions.</p>
+                      <h3 className="text-xl font-bold text-white">Pending Actions</h3>
+                      <p className="mt-1 text-sm text-slate-400">Applications requiring verification.</p>
                     </div>
                     <button
                       onClick={() => setActiveTab('applications')}
@@ -900,18 +1063,18 @@ export default function CdcDashboard() {
                       View all
                     </button>
                   </div>
-                  <div className="mt-5 space-y-3">
+                  <div className="mt-6 space-y-4">
                     {(pendingApplications.slice(0, 5)).map((application) => {
                       const placement = placedLookup.get(application.userId);
                       return (
-                        <div key={application.id} className="rounded-2xl border border-slate-900 bg-slate-900/35 p-4">
+                        <div key={application.id} className="rounded-2xl border border-slate-900 bg-slate-900/35 p-5 transition-all hover:bg-slate-900/50">
                           <div className="flex items-start justify-between gap-4">
                             <div>
-                              <p className="font-bold text-white">{application.fullName}</p>
-                              <p className="text-xs text-slate-500">
+                              <p className="text-base font-bold text-white">{application.fullName}</p>
+                              <p className="mt-1 text-sm text-slate-500">
                                 {application.enrollmentNumber} • {application.currentBranch}
                               </p>
-                              <div className="mt-2 flex flex-wrap gap-2">
+                              <div className="mt-3 flex flex-wrap gap-2">
                                 <StatusChip
                                   label={application.status.replace('_', ' ')}
                                   tone={
@@ -932,10 +1095,10 @@ export default function CdcDashboard() {
                                 setApplicationRemarks(application.remarks || '');
                                 setSelectedApplication(application);
                               }}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-300 transition-colors hover:bg-blue-500 hover:text-white"
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-2.5 text-xs font-bold text-blue-300 transition-colors hover:bg-blue-500 hover:text-white"
                             >
                               Review
-                              <ChevronRight className="h-3.5 w-3.5" />
+                              <ChevronRight className="h-4 w-4" />
                             </button>
                           </div>
                         </div>
@@ -949,11 +1112,11 @@ export default function CdcDashboard() {
                   </div>
                 </section>
 
-                <section className="xl:col-span-4 rounded-3xl border border-slate-900/80 bg-slate-950/50 p-6 shadow-xl shadow-black/10 backdrop-blur-xl">
+                <section className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-8 shadow-xl shadow-black/10 backdrop-blur-xl">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-lg font-bold text-white">Upcoming events</h3>
-                      <p className="text-sm text-slate-400">Published events that students can register for.</p>
+                      <h3 className="text-xl font-bold text-white">Upcoming Events</h3>
+                      <p className="mt-1 text-sm text-slate-400">Published events open for registration.</p>
                     </div>
                     <button
                       onClick={() => setActiveTab('events')}
@@ -962,11 +1125,11 @@ export default function CdcDashboard() {
                       View all
                     </button>
                   </div>
-                  <div className="mt-5 space-y-3">
+                  <div className="mt-6 space-y-4">
                     {upcomingEvents.slice(0, 5).map((event) => (
-                      <div key={event.id} className="rounded-2xl border border-slate-900 bg-slate-900/35 p-4">
-                        <p className="font-bold text-white">{event.title}</p>
-                        <p className="mt-1 text-xs text-slate-500">
+                      <div key={event.id} className="rounded-2xl border border-slate-900 bg-slate-900/35 p-5 transition-all hover:bg-slate-900/50">
+                        <p className="text-base font-bold text-white">{event.title}</p>
+                        <p className="mt-1 text-sm text-slate-500">
                           {event.category} • {event.mode} • {event.venue}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
@@ -978,40 +1141,6 @@ export default function CdcDashboard() {
                     {upcomingEvents.length === 0 && (
                       <div className="rounded-2xl border border-dashed border-slate-900 p-8 text-center text-sm text-slate-500">
                         No upcoming events yet.
-                      </div>
-                    )}
-                  </div>
-                </section>
-
-                <section className="xl:col-span-3 rounded-3xl border border-slate-900/80 bg-slate-950/50 p-6 shadow-xl shadow-black/10 backdrop-blur-xl">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">Placed students</h3>
-                      <p className="text-sm text-slate-400">Students with an offered role.</p>
-                    </div>
-                    <button
-                      onClick={() => setActiveTab('people')}
-                      className="text-xs font-bold uppercase tracking-wider text-blue-400 transition-colors hover:text-blue-300"
-                    >
-                      View all
-                    </button>
-                  </div>
-                  <div className="mt-5 space-y-3">
-                    {placedStudents.slice(0, 5).map((placement) => (
-                      <div key={placement.id} className="rounded-2xl border border-slate-900 bg-slate-900/35 p-4">
-                        <p className="font-bold text-white">{placement.name}</p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {placement.company} • {placement.jobTitle}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <StatusChip label="PLACED" tone="violet" />
-                          <StatusChip label={placement.branch || 'Student'} tone="slate" />
-                        </div>
-                      </div>
-                    ))}
-                    {placedStudents.length === 0 && (
-                      <div className="rounded-2xl border border-dashed border-slate-900 p-8 text-center text-sm text-slate-500">
-                        No placed students recorded yet.
                       </div>
                     )}
                   </div>
