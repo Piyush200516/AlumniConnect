@@ -58,6 +58,7 @@ const mapProfileResponse = (
     linkedinUrl: string | null;
     githubUrl: string | null;
     resumeUrl: string | null;
+    profilePhotoUrl: string | null;
     profileImage: string | null;
     isVerified: boolean;
     verificationStatus: VerificationStatus;
@@ -81,7 +82,7 @@ const mapProfileResponse = (
     linkedinUrl: profile.linkedinUrl,
     githubUrl: profile.githubUrl,
     resumeUrl: profile.resumeUrl,
-    profileImage: profile.profileImage,
+    profilePhotoUrl: profile.profilePhotoUrl || profile.profileImage,
     isVerified: verificationStatus === VerificationStatus.VERIFIED,
     verificationStatus,
   };
@@ -182,7 +183,8 @@ export class StudentService {
 
     // Handle file uploads
     if (files?.profileImage?.[0]) {
-      updateData.profileImage = await uploadFile(files.profileImage[0], 'profiles');
+      // Store the uploaded image URL in the new profilePhotoUrl field
+      updateData.profilePhotoUrl = await uploadFile(files.profileImage[0], 'profiles');
     }
     if (files?.resume?.[0]) {
       updateData.resumeUrl = await uploadFile(files.resume[0], 'resumes');

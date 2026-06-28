@@ -21,6 +21,7 @@ model User {
   lastLoginAt                DateTime?
   createdAt                  DateTime               @default(now())
   updatedAt                  DateTime               @updatedAt
+  profilePhotoUrl            String?
   alumniProfile              AlumniProfile?
   cdcProfile                 CdcProfile?
   comments                   Comment[]

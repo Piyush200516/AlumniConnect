@@ -23,16 +23,23 @@ export const authenticateUser = async (
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      logger.error('Auth Error: Missing or malformed Authorization header');
       throw new ApiError(401, 'Authorization header missing or malformed');
     }
     const token = authHeader.split(' ')[1];
     const payload = verifyAccessToken(token);
+    logger.info('User ID from JWT payload:', payload.userId);
     // optional: fetch fresh user from DB to ensure still active
     const user = await prisma.user.findUnique({ where: { id: payload.userId } });
-    logger.info(`Auth Middleware: Fetched user ${payload.userId}`, { user });
-    if (!user) throw new ApiError(401, 'User not found');
-    if (user.status !== 'ACTIVE') throw new ApiError(403, 'Account is not active');
-
+    logger.info('Fetched user from DB:', user);
+    if (!user) {
+      logger.error('Auth Error: User not found for ID', payload.userId);
+      throw new ApiError(401, 'User not found');
+    }
+    if (user.status !== 'ACTIVE') {
+      logger.error('Auth Error: Inactive account for user', user.id);
+      throw new ApiError(403, 'Account is not active');
+    }
     req.user = { id: user.id, email: user.email, role: user.role };
     logger.info('Auth Middleware: Authenticated user', { userId: user.id, role: user.role });
     next();

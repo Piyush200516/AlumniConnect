@@ -208,12 +208,12 @@ const dashboardTabs: Array<{
   label: string;
   icon: any;
 }> = [
-  { id: 'overview', label: 'Overview', icon: Sparkles },
-  { id: 'applications', label: 'Applications', icon: ShieldCheck },
-  { id: 'people', label: 'People', icon: Users },
-  { id: 'events', label: 'Events', icon: CalendarIcon },
-  { id: 'jobs', label: 'Jobs', icon: Briefcase },
-];
+    { id: 'overview', label: 'Overview', icon: Sparkles },
+    { id: 'applications', label: 'Applications', icon: ShieldCheck },
+    { id: 'people', label: 'People', icon: Users },
+    { id: 'events', label: 'Events', icon: CalendarIcon },
+    { id: 'jobs', label: 'Jobs', icon: Briefcase },
+  ];
 
 const eventCategories = [
   'Alumni Talk',
@@ -618,8 +618,8 @@ export default function CdcDashboard() {
       console.error(err);
       toastError(
         err.response?.data?.message ||
-          err.response?.data?.errors?.[0]?.message ||
-          'Failed to create event'
+        err.response?.data?.errors?.[0]?.message ||
+        'Failed to create event'
       );
     } finally {
       setCreatingEvent(false);
@@ -666,11 +666,10 @@ export default function CdcDashboard() {
           setActiveTab(tab);
           setSidebarOpen(false);
         }}
-        className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${
-          active
+        className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${active
             ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
             : 'text-slate-300 hover:bg-slate-900/70 hover:text-white'
-        }`}
+          }`}
       >
         <Icon className="h-4.5 w-4.5 shrink-0" />
         <span>{label}</span>
@@ -692,7 +691,7 @@ export default function CdcDashboard() {
 
   const pageSubtitle =
     activeTab === 'overview'
-      ? 'Approve student profiles, publish campus events, and keep placements visible in one place.'
+      ? 'Manage students, events, and placements.'
       : activeTab === 'applications'
         ? 'Review student portal applications and update approval status.'
         : activeTab === 'people'
@@ -719,9 +718,8 @@ export default function CdcDashboard() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-slate-900/80 bg-slate-950/85 backdrop-blur-xl transition-transform duration-300 lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:block`}
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] border-r border-slate-900/80 bg-slate-950/85 backdrop-blur-xl transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:block`}
       >
         <div className="flex h-full flex-col px-5 py-6">
           <div className="flex items-center gap-3 px-2">
@@ -1134,11 +1132,10 @@ export default function CdcDashboard() {
                   <button
                     key={view}
                     onClick={() => setPeopleView(view)}
-                    className={`rounded-2xl px-4 py-2.5 text-sm font-bold capitalize transition-all ${
-                      peopleView === view
+                    className={`rounded-2xl px-4 py-2.5 text-sm font-bold capitalize transition-all ${peopleView === view
                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
                         : 'border border-slate-900 bg-slate-950/60 text-slate-300 hover:bg-slate-900'
-                    }`}
+                      }`}
                   >
                     {view}
                   </button>
