@@ -49,7 +49,7 @@ export const StudentLogin = () => {
             error={errors.password}
           />
           <div className="flex justify-between items-center mb-4">
-            <Link to="#" className="text-sm text-primary-light hover:underline">
+            <Link to="/auth/student/forgot-password" className="text-sm text-primary-light hover:underline">
               Forgot Password?
             </Link>
           </div>
