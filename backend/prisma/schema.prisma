@@ -45,8 +45,8 @@ model User {
   savedJobs                  SavedJob[]
   studentApplication         StudentApplication?
   studentProfile             StudentProfile?
-  users_A                    User[]                 @relation("UserFollows")
-  users_B                    User[]                 @relation("UserFollows")
+  followers                  User[]                 @relation("UserFollows")
+  following                  User[]                 @relation("UserFollows")
 
   @@index([role])
   @@index([status])

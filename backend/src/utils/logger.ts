@@ -1,9 +1,11 @@
 // src/utils/logger.ts
-// src/utils/logger.ts
-// Simple console logger to avoid external dependencies
+// Enhanced console logger with timestamps and multi-arg support
+const ts = () => new Date().toISOString();
+
 export const logger = {
-  info: (msg: string) => console.log(`INFO: ${msg}`),
-  error: (msg: string) => console.error(`ERROR: ${msg}`),
-  warn: (msg: string) => console.warn(`WARN: ${msg}`),
-  debug: (msg: string) => console.debug(`DEBUG: ${msg}`),
+  info: (msg: string, ...args: any[]) => console.log(`[${ts()}] INFO: ${msg}`, ...args),
+  error: (msg: string, ...args: any[]) => console.error(`[${ts()}] ERROR: ${msg}`, ...args),
+  warn: (msg: string, ...args: any[]) => console.warn(`[${ts()}] WARN: ${msg}`, ...args),
+  debug: (msg: string, ...args: any[]) => console.debug(`[${ts()}] DEBUG: ${msg}`, ...args),
 };
+

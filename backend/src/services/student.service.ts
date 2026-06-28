@@ -5,7 +5,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { Readable } from 'stream';
 import fs from 'fs';
 import path from 'path';
-import { JobApprovalStatus, PortalApplicationStatus, VerificationStatus } from '@prisma/client';
+import { JobApprovalStatus, PortalApplicationStatus, VerificationStatus, Prisma } from '@prisma/client';
 import { logger } from '../utils/logger';
 
 // Configure Cloudinary if environment variables exist
@@ -58,7 +58,6 @@ const mapProfileResponse = (
     linkedinUrl: string | null;
     githubUrl: string | null;
     resumeUrl: string | null;
-    profilePhotoUrl: string | null;
     profileImage: string | null;
     isVerified: boolean;
     verificationStatus: VerificationStatus;
@@ -82,7 +81,7 @@ const mapProfileResponse = (
     linkedinUrl: profile.linkedinUrl,
     githubUrl: profile.githubUrl,
     resumeUrl: profile.resumeUrl,
-    profilePhotoUrl: profile.profilePhotoUrl || profile.profileImage,
+    profilePhotoUrl: profile.profileImage,
     isVerified: verificationStatus === VerificationStatus.VERIFIED,
     verificationStatus,
   };
@@ -123,33 +122,46 @@ export const uploadFile = async (file: Express.Multer.File, folder: string): Pro
 
 export class StudentService {
   async getProfileByUserId(userId: string) {
-  logger.debug(`Fetching profile and application for userId=${userId}`);
-    const [profile, application] = await Promise.all([
-      prisma.studentProfile.findUnique({
-        where: { userId },
-        include: {
-          user: {
-            select: {
-              email: true,
+    logger.debug(`[StudentService.getProfileByUserId] START — userId=${userId}`);
+    try {
+      const [profile, application] = await Promise.all([
+        prisma.studentProfile.findUnique({
+          where: { userId },
+          include: {
+            user: {
+              select: {
+                email: true,
+              },
             },
           },
-        },
-      }),
-      prisma.studentApplication.findUnique({
-        where: { userId },
-        select: {
-          status: true,
-        },
-      }),
-    ]);
+        }),
+        prisma.studentApplication.findUnique({
+          where: { userId },
+          select: {
+            status: true,
+          },
+        }),
+      ]);
 
-    if (!profile) {
-      throw new ApiError(404, 'Student profile not found');
+      logger.debug(`[StudentService.getProfileByUserId] Prisma returned — profile exists: ${!!profile}, application exists: ${!!application}`);
+
+      if (!profile) {
+        logger.warn(`[StudentService.getProfileByUserId] No student profile found for userId=${userId}`);
+        throw new ApiError(404, 'Student profile not found. Please complete your student registration first.');
+      }
+
+      const result = mapProfileResponse(profile, application?.status);
+      logger.debug(`[StudentService.getProfileByUserId] Mapped response: ${JSON.stringify(result)}`);
+      return result;
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        logger.error(`[StudentService.getProfileByUserId] Prisma error code=${err.code} meta=${JSON.stringify(err.meta)} stack=${err.stack}`);
+      } else {
+        logger.error(`[StudentService.getProfileByUserId] Unexpected error: ${err instanceof Error ? err.stack : JSON.stringify(err)}`);
+      }
+      throw err;
     }
-
-    const result = mapProfileResponse(profile, application?.status);
-  logger.debug(`Fetched profile result: ${JSON.stringify(result)}`);
-  return result;
   }
 
   async updateProfile(
@@ -183,41 +195,54 @@ export class StudentService {
 
     // Handle file uploads
     if (files?.profileImage?.[0]) {
-      // Store the uploaded image URL in the new profilePhotoUrl field
-      updateData.profilePhotoUrl = await uploadFile(files.profileImage[0], 'profiles');
+      // Store the uploaded image URL in the profileImage field (maps to DB column profileImageUrl)
+      updateData.profileImage = await uploadFile(files.profileImage[0], 'profiles');
     }
     if (files?.resume?.[0]) {
       updateData.resumeUrl = await uploadFile(files.resume[0], 'resumes');
     }
 
-    logger.debug(`Executing profile update and fetching application for userId=${userId}`);
-  const [updatedProfile, application] = await Promise.all([
-      prisma.studentProfile.update({
-        where: { userId },
-        data: updateData,
-        include: {
-          user: {
-            select: {
-              email: true,
+    logger.debug(`[StudentService.updateProfile] Executing update with data: ${JSON.stringify(updateData)} for userId=${userId}`);
+    try {
+      const [updatedProfile, application] = await Promise.all([
+        prisma.studentProfile.update({
+          where: { userId },
+          data: updateData,
+          include: {
+            user: {
+              select: {
+                email: true,
+              },
             },
           },
-        },
-      }),
-      prisma.studentApplication.findUnique({
-        where: { userId },
-        select: {
-          status: true,
-        },
-      }),
-    ]);
+        }),
+        prisma.studentApplication.findUnique({
+          where: { userId },
+          select: {
+            status: true,
+          },
+        }),
+      ]);
 
-    const updatedResult = mapProfileResponse(updatedProfile, application?.status);
-  logger.debug(`Updated profile result: ${JSON.stringify(updatedResult)}`);
-  return updatedResult;
+      const updatedResult = mapProfileResponse(updatedProfile, application?.status);
+      logger.debug(`[StudentService.updateProfile] Updated profile result: ${JSON.stringify(updatedResult)}`);
+      return updatedResult;
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        logger.error(`[StudentService.updateProfile] Prisma error code=${err.code} meta=${JSON.stringify(err.meta)} stack=${err.stack}`);
+        if (err.code === 'P2025') {
+          throw new ApiError(404, 'Student profile not found. Cannot update a non-existent profile.');
+        }
+      } else {
+        logger.error(`[StudentService.updateProfile] Unexpected error: ${err instanceof Error ? err.stack : JSON.stringify(err)}`);
+      }
+      throw err;
+    }
   }
 
   async getDashboardData(userId: string) {
-  logger.debug(`Fetching dashboard data for userId=${userId}`);
+    logger.debug(`[StudentService.getDashboardData] START — userId=${userId}`);
+    try {
     // 1. Fetch profile details first (for completion percentage)
     const [profile, application] = await Promise.all([
       prisma.studentProfile.findUnique({
@@ -238,8 +263,11 @@ export class StudentService {
       }),
     ]);
 
+    logger.debug(`[StudentService.getDashboardData] Profile exists: ${!!profile}, Application exists: ${!!application}`);
+
     if (!profile) {
-      throw new ApiError(404, 'Student profile not found');
+      logger.warn(`[StudentService.getDashboardData] No student profile found for userId=${userId}`);
+      throw new ApiError(404, 'Student profile not found. Please complete your student registration first.');
     }
 
     // 2. Fetch all other dashboard metrics in parallel using Promise.all
@@ -401,7 +429,16 @@ export class StudentService {
         recentNotifications,
         suggestedMentors,
       };
-      logger.debug(`Dashboard data assembled: ${JSON.stringify(dashboardResponse)}`);
+      logger.debug(`[StudentService.getDashboardData] Dashboard response assembled successfully for userId=${userId}`);
       return dashboardResponse;
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        logger.error(`[StudentService.getDashboardData] Prisma error code=${err.code} meta=${JSON.stringify(err.meta)} stack=${err.stack}`);
+      } else {
+        logger.error(`[StudentService.getDashboardData] Unexpected error: ${err instanceof Error ? err.stack : JSON.stringify(err)}`);
+      }
+      throw err;
+    }
   }
 }
