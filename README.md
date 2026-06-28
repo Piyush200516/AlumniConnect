@@ -38,6 +38,44 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 
 ## Architecture
 
+### 0. Architecture
+
+```mermaid
+flowchart LR
+    %% Users & Client Layer
+    U["Users (Students, Alumni, CDC Admin)"] --> F["React + Vite Frontend"]
+    F --> R["React Router + Context API"]
+    
+    %% API Communication Layer
+    R --> X["Axios API Client"]
+    X --> A["Express.js API"]
+    
+    %% Backend & Security Layer
+    A --> M["JWT Authentication Middleware"]
+    M --> C["Controllers (Auth, Users, Events, Jobs)"]
+    C --> S["Services (Business Logic)"]
+    
+    %% Database & ORM
+    S --> P["Prisma ORM"]
+    P --> D["PostgreSQL (Neon)"]
+    
+    %% External Services & Real-time
+    A --> SO["Socket.IO (Messaging & Notifications)"]
+    A --> CL["Cloudinary + Multer (File Uploads)"]
+    A --> RE["Resend (Email Service)"]
+
+    %% Styling
+    classDef client fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff;
+    classDef server fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff;
+    classDef db fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff;
+    classDef ext fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff;
+
+    class U,F,R,X client;
+    class A,M,C,S server;
+    class P,D db;
+    class SO,CL,RE ext;
+```
+
 ### 1. System Architecture
 ```mermaid
 flowchart LR
