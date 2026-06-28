@@ -3,6 +3,7 @@ import RoleSelection from '../components/auth/RoleSelection';
 import { StudentLogin } from '../pages/auth/student/Login';
 import { StudentSignup } from '../pages/auth/student/Signup';
 import { StudentForgotPassword } from '../pages/auth/student/ForgotPassword';
+import { StudentResetPassword } from '../pages/auth/student/ResetPassword';
 import { AlumniLogin } from '../pages/auth/alumni/Login';
 import { AlumniSignup } from '../pages/auth/alumni/Signup';
 import { CdcLogin } from '../pages/auth/cdc/Login';
@@ -18,6 +19,7 @@ export const AuthRoutes = () => (
     <Route path="/auth/student/login" element={<StudentLogin />} />
     <Route path="/auth/student/signup" element={<StudentSignup />} />
     <Route path="/auth/student/forgot-password" element={<StudentForgotPassword />} />
+    <Route path="/reset-password" element={<StudentResetPassword />} />
     <Route path="/auth/alumni/login" element={<AlumniLogin />} />
     <Route path="/auth/alumni/signup" element={<AlumniSignup />} />
     <Route path="/auth/cdc/login" element={<CdcLogin />} />

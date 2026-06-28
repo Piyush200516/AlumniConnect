@@ -23,7 +23,7 @@ export class CdcService {
       upcomingEventsCount,
       pendingEventCount,
       activeJobsCount,
-    ] = await Promise.all([
+    ] = await prisma.$transaction([
       prisma.user.count({ where: { role: Role.STUDENT } }),
       prisma.user.count({ where: { role: Role.ALUMNI } }),
       prisma.studentApplication.findMany({

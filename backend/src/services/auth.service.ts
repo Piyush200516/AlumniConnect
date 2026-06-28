@@ -222,7 +222,13 @@ class AuthService {
     const user = await prisma.user.findFirst({
       where: { email: { equals: normalized, mode: 'insensitive' } },
     });
-    if (!user) throw new Error('User not found');
+    
+    // Always return success even if user not found to prevent email enumeration
+    if (!user) {
+      logger.info(`Forgot password requested for non-existent email: ${normalized}`);
+      return; 
+    }
+    
     const resetToken = await createPasswordResetToken(user.id);
     await sendPasswordResetEmail(user.email, resetToken);
   }
