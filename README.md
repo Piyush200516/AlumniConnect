@@ -230,46 +230,53 @@ flowchart TB
 ### 6. Request Lifecycle
 ```mermaid
 flowchart TD
-    A([User Action (e.g., Apply for Job)]) --> B[React Component]
+    A[User Action] --> B[React Component]
     B --> C[Axios API Call]
     C --> D[Express Route Handler]
     D --> E{Auth Middleware}
     E -->|Invalid Token| F[401 Unauthorized]
     E -->|Valid Token| G[Job Controller]
-    G --> H[Job Service (Business Logic)]
+    G --> H[Job Service]
     H --> I[Prisma ORM]
-    I --> J[(PostgreSQL)]
+    I --> J[PostgreSQL Database]
     J --> I
     I --> H
     H --> G
     G --> K[JSON Response 200 OK]
     K --> L[Axios Interceptor]
     L --> M[React State Update]
-    M --> N([UI Re-renders])
+    M --> N[UI Rerenders]
 ```
 *Lifecycle of a single API request, from the user clicking a button in the React UI, through the Axios network layer, backend middleware, controllers, services, database querying, and finally updating the frontend state.*
 
 ### 7. Deployment Architecture
 ```mermaid
 flowchart LR
-    User(["End User"])
+    User[End User]
     
     subgraph Hosting Providers
-        Vercel["Frontend (Vercel)"]
-        Render["Backend (Render / Railway)"]
+        Vercel[Frontend Vercel]
+        Render[Backend Render]
     end
     
     subgraph Managed Services
-        Neon[("PostgreSQL (Neon)")]
-        Cloudinary["Cloudinary (Media)"]
-        Resend["Resend (Emails)"]
+        Neon[PostgreSQL Neon]
+        Cloudinary[Cloudinary Media]
+        Resend[Resend Emails]
     end
     
-    User <-->|HTTPS| Vercel
-    Vercel <-->|API Requests| Render
-    User <-->|WSS (Socket.IO)| Render
+    User -->|HTTPS| Vercel
+    Vercel -->|HTTPS| User
     
-    Render <-->|Prisma/TCP| Neon
+    Vercel -->|API Requests| Render
+    Render -->|API Responses| Vercel
+    
+    User -->|WSS Socket.IO| Render
+    Render -->|WSS Socket.IO| User
+    
+    Render -->|Prisma TCP| Neon
+    Neon -->|Prisma TCP| Render
+    
     Render -->|API| Cloudinary
     Render -->|API| Resend
 ```
