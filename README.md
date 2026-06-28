@@ -38,57 +38,270 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 
 ## Architecture
 
+### 1. System Architecture
 ```mermaid
 flowchart LR
-    %% Users & Client Layer
-    U["Users (Students, Alumni, CDC Admin)"] --> F["React + Vite Frontend"]
-    F --> R["React Router + Context API"]
+    %% Actors
+    U1(["Student"]) --> F
+    U2(["Alumni"]) --> F
+    U3(["CDC Admin"]) --> F
     
-    %% API Communication Layer
-    R --> X["Axios API Client"]
-    X --> A["Express.js API"]
+    %% Frontend
+    subgraph Frontend
+        F["React + Vite UI"]
+    end
     
-    %% Backend & Security Layer
-    A --> M["JWT Authentication Middleware"]
-    M --> C["Controllers (Auth, Users, Events, Jobs)"]
-    C --> S["Services (Business Logic)"]
+    %% Backend
+    subgraph Backend
+        A["Express.js API"]
+        C["Controllers"]
+        S["Services"]
+        P["Prisma ORM"]
+        
+        A --> C --> S --> P
+    end
     
-    %% Database & ORM
-    S --> P["Prisma ORM"]
-    P --> D["PostgreSQL (Neon)"]
+    %% Database
+    subgraph Database
+        D[("PostgreSQL (Neon)")]
+    end
     
-    %% External Services & Real-time
-    A --> SO["Socket.IO (Messaging & Notifications)"]
-    A --> CL["Cloudinary + Multer (File Uploads)"]
-    A --> RE["Resend (Email Service)"]
-
-    %% Styling
-    classDef client fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff;
-    classDef server fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff;
-    classDef db fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff;
-    classDef ext fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff;
-
-    class U,F,R,X client;
-    class A,M,C,S server;
-    class P,D db;
-    class SO,CL,RE ext;
+    %% External Services
+    subgraph External Services
+        CL["Cloudinary"]
+        RE["Resend"]
+        SO["Socket.IO"]
+    end
+    
+    %% Connections
+    F <-->|REST API| A
+    F <-->|WebSocket| SO
+    A <--> SO
+    P <--> D
+    A --> CL
+    A --> RE
 ```
+*High-level system overview showing how user interactions flow through the frontend to the backend, interact with the database via Prisma ORM, and utilize external services like Cloudinary for file uploads and Resend for emails.*
 
-### Component Overview
+### 2. Database Architecture (ER Diagram)
+```mermaid
+erDiagram
+    User ||--o| StudentProfile : "has (if STUDENT)"
+    User ||--o| AlumniProfile : "has (if ALUMNI)"
+    User ||--o| CdcProfile : "has (if CDC)"
+    User ||--o{ Post : "creates"
+    User ||--o{ Comment : "writes"
+    User ||--o{ Like : "leaves"
+    User ||--o{ Job : "posts (Alumni)"
+    User ||--o{ JobApplication : "submits (Student)"
+    User ||--o{ Event : "creates"
+    User ||--o{ EventRegistration : "registers for"
+    User ||--o{ Notification : "receives"
+    User ||--o{ MentorshipRequest : "sends/receives"
+    User ||--o{ Message : "sends"
+    User ||--o{ SavedJob : "saves"
+    User ||--o{ SavedAlumni : "saves"
+    User ||--o{ Connection : "requests/accepts"
+    
+    AlumniProfile ||--o{ WorkExperience : "has"
+    AlumniProfile ||--o{ Education : "has"
+    AlumniProfile ||--o{ Skill : "possesses"
+    AlumniProfile }|--o| Company : "works at"
+    
+    Post ||--o{ Comment : "has"
+    Post ||--o{ Like : "has"
+    
+    Job ||--o{ JobApplication : "receives"
+    Job ||--o{ SavedJob : "saved as"
+    
+    Event ||--o{ EventRegistration : "has"
+    Event ||--o{ EventCertificate : "issues"
+    
+    EventRegistration ||--o| EventCertificate : "earns"
+    
+    MentorshipConnection ||--o| Conversation : "has"
+    MentorshipConnection ||--o{ Meeting : "schedules"
+    MentorshipConnection ||--o{ SharedResource : "shares"
+    
+    Conversation ||--o{ Message : "contains"
+    Message ||--o{ MessageAttachment : "has"
+    
+    StudentApplication ||--o{ ApplicationCertification : "includes"
+    User ||--o| StudentApplication : "submits"
+```
+*Entity-Relationship Diagram representing the PostgreSQL database schema. The `User` model acts as the central hub, utilizing a Role-Based Access Control (RBAC) model to link to specific `Student`, `Alumni`, or `CDC` profiles. It also illustrates relationships between posts, jobs, events, and mentorship connections.*
 
-- **Users (Students, Alumni, CDC Admin)**: The primary actors interacting with the portal via tailored dashboards.
-- **React + Vite Frontend**: The fast, optimized client-side application built with React 19.
-- **React Router + Context API**: Handles client-side navigation and global state management (Authentication).
-- **Axios API Client**: Manages asynchronous HTTP requests to the backend with interceptors for auth tokens.
-- **Express.js API**: The robust backend framework routing RESTful requests.
-- **JWT Authentication Middleware**: Secures endpoints by verifying JSON Web Tokens passed in headers.
-- **Controllers**: Directs traffic and parses request/response objects for specific modules (Auth, Events, Jobs, Mentorship).
-- **Services**: Encapsulates the core business logic, keeping controllers clean and reusable.
-- **Prisma ORM**: Type-safe database client ensuring reliable and structured queries.
-- **PostgreSQL (Neon)**: The primary relational database scaling serverless storage.
-- **Socket.IO (Messaging & Notifications)**: Enables bidirectional, real-time communication for chats and instant alerts.
-- **Cloudinary + Multer**: Handles efficient parsing of multipart forms and secure cloud storage for avatars, resumes, and banners.
-- **Resend**: Transmits transactional emails for verification, password resets, and event notifications.
+### 3. Client–Server Architecture
+```mermaid
+flowchart LR
+    Browser["Browser / Client"]
+    
+    subgraph Frontend Application
+        React["React UI"]
+        Axios["Axios Client"]
+    end
+    
+    subgraph Backend Application
+        Express["Express API"]
+        Prisma["Prisma ORM"]
+    end
+    
+    subgraph Cloud Infrastructure
+        DB[("PostgreSQL")]
+        JWT["JWT Auth"]
+        Cloudinary["Cloudinary (Images)"]
+        Resend["Resend (Emails)"]
+        SocketIO["Socket.IO (Real-time)"]
+    end
+    
+    Browser <--> React
+    React <--> Axios
+    Axios <-->|HTTP Request/Response| Express
+    React <-->|WebSocket| SocketIO
+    Express <--> JWT
+    Express <--> Prisma
+    Prisma <--> DB
+    Express --> Cloudinary
+    Express --> Resend
+```
+*Flow of data between the client (Browser/React) and the server (Express.js). Axios is used for HTTP requests, while Socket.IO handles real-time bidirectional communication. The Express backend integrates with external APIs and PostgreSQL.*
+
+### 4. Authentication Flow
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend (React)
+    participant A as API Route
+    participant M as JWT Middleware
+    participant C as Controller
+    participant DB as Database
+    
+    U->>F: Enters Credentials & Clicks Login
+    F->>A: POST /api/auth/login
+    A->>C: Routes to Auth Controller
+    C->>DB: Query User & Verify Password
+    DB-->>C: User Record
+    C-->>F: Returns JWT Token & User Data
+    F->>F: Stores Token (Local Storage / Context)
+    
+    U->>F: Navigates to Dashboard
+    F->>A: GET /api/student/dashboard (with Token)
+    A->>M: Intercepts Request
+    M->>M: Verifies JWT Token
+    M->>C: Forwards Authenticated Request
+    C->>DB: Fetch Dashboard Data
+    DB-->>C: Data Result
+    C-->>F: JSON Response
+    F-->>U: Renders Dashboard
+```
+*Step-by-step authentication sequence. Users authenticate via an Express controller, receive a JSON Web Token (JWT), and use it for subsequent protected API requests, which are validated by a JWT middleware.*
+
+### 5. MVC Architecture
+```mermaid
+flowchart TB
+    Client["Client Request"]
+    
+    subgraph Express Backend
+        Routes["Routes (/api/...)"]
+        Middleware["Middleware (Auth, Uploads, Error Handling)"]
+        Controllers["Controllers (Req/Res handling)"]
+        Services["Services (Business Logic)"]
+    end
+    
+    subgraph Data Access
+        Prisma["Prisma ORM"]
+        Postgres[("PostgreSQL Database")]
+    end
+    
+    Client --> Routes
+    Routes --> Middleware
+    Middleware --> Controllers
+    Controllers --> Services
+    Services --> Prisma
+    Prisma --> Postgres
+    
+    Postgres --> Prisma
+    Prisma --> Services
+    Services --> Controllers
+    Controllers -->|JSON Response| Client
+```
+*The backend follows a customized Model-View-Controller (MVC) pattern, split into Routes, Middleware, Controllers, and Services. The Service layer isolates business logic, making Controllers lighter and the codebase more testable.*
+
+### 6. Request Lifecycle
+```mermaid
+flowchart TD
+    A([User Action (e.g., Apply for Job)]) --> B[React Component]
+    B --> C[Axios API Call]
+    C --> D[Express Route Handler]
+    D --> E{Auth Middleware}
+    E -->|Invalid Token| F[401 Unauthorized]
+    E -->|Valid Token| G[Job Controller]
+    G --> H[Job Service (Business Logic)]
+    H --> I[Prisma ORM]
+    I --> J[(PostgreSQL)]
+    J --> I
+    I --> H
+    H --> G
+    G --> K[JSON Response 200 OK]
+    K --> L[Axios Interceptor]
+    L --> M[React State Update]
+    M --> N([UI Re-renders])
+```
+*Lifecycle of a single API request, from the user clicking a button in the React UI, through the Axios network layer, backend middleware, controllers, services, database querying, and finally updating the frontend state.*
+
+### 7. Deployment Architecture
+```mermaid
+flowchart LR
+    User(["End User"])
+    
+    subgraph Hosting Providers
+        Vercel["Frontend (Vercel)"]
+        Render["Backend (Render / Railway)"]
+    end
+    
+    subgraph Managed Services
+        Neon[("PostgreSQL (Neon)")]
+        Cloudinary["Cloudinary (Media)"]
+        Resend["Resend (Emails)"]
+    end
+    
+    User <-->|HTTPS| Vercel
+    Vercel <-->|API Requests| Render
+    User <-->|WSS (Socket.IO)| Render
+    
+    Render <-->|Prisma/TCP| Neon
+    Render -->|API| Cloudinary
+    Render -->|API| Resend
+```
+*Typical production deployment architecture. The frontend is built and served globally via a CDN like Vercel, while the backend API runs on a PaaS like Render or Railway. Database and media storage are delegated to specialized managed services.*
+
+### 8. Feature Architecture
+```mermaid
+flowchart TB
+    Core["AlumniConnect Platform"]
+    
+    Core --> Auth["Authentication & Profiles"]
+    Core --> Dashboards["Dashboards"]
+    Core --> Features["Core Features"]
+    Core --> Comms["Communications"]
+    
+    Auth --> S_Auth["Student, Alumni, CDC"]
+    Auth --> RBAC["Role-Based Access"]
+    
+    Dashboards --> S_Dash["Student Workspace"]
+    Dashboards --> A_Dash["Alumni Workspace"]
+    Dashboards --> C_Dash["CDC Admin Console"]
+    
+    Features --> Jobs["Jobs & Internships"]
+    Features --> Events["Events & Ticketing"]
+    Features --> Mentorship["Mentorship Programs"]
+    Features --> Applications["Student Portal Apps"]
+    
+    Comms --> Chat["1-on-1 Messaging"]
+    Comms --> Notif["In-App Notifications"]
+    Comms --> Email["Automated Emails"]
+```
+*Modular breakdown of platform features. Functionalities are grouped into logically separate domains like Authentication, Dashboards, Core Features, and Communications, ensuring a scalable and maintainable codebase.*
 
 ## Role-Based Features
 
@@ -341,31 +554,41 @@ npm start
 | Generate Prisma client | `cd backend && npx prisma generate` |
 | Open Prisma Studio | `cd backend && npx prisma studio` |
 
-## Project Structure
+## Folder Architecture
 
 ```text
 alumniconnect/
-|-- frontend/
-|   |-- src/
-|   |   |-- components/
-|   |   |-- pages/
-|   |   |-- routes/
-|   |   |-- services/
-|   |   `-- hooks/
-|   `-- .env
-|-- backend/
-|   |-- src/
-|   |   |-- controllers/
-|   |   |-- routes/
-|   |   |-- services/
-|   |   |-- validators/
-|   |   |-- middleware/
-|   |   |-- utils/
-|   |   |-- socket.ts
-|   |   `-- server.ts
-|   `-- .env
-`-- README.md
+├── frontend/                 # React + Vite application
+│   ├── src/
+│   │   ├── assets/           # Static files (images, icons)
+│   │   ├── components/       # Reusable UI components (Buttons, Cards, Modals)
+│   │   ├── hooks/            # Custom React hooks
+│   │   ├── pages/            # Page-level components (Dashboards, Auth screens)
+│   │   ├── routes/           # Routing configuration (React Router)
+│   │   ├── services/         # API integration and Axios configuration
+│   │   ├── types/            # TypeScript interfaces and types
+│   │   └── utils/            # Helper functions
+│   ├── index.css             # Tailwind CSS entry
+│   └── package.json
+│
+└── backend/                  # Express.js + Node.js server
+    ├── prisma/
+    │   └── schema.prisma     # Database schema and models
+    ├── src/
+    │   ├── config/           # Environment variables and configuration
+    │   ├── controllers/      # Request handlers (Auth, Events, Jobs)
+    │   ├── lib/              # External service configurations (Cloudinary, Resend)
+    │   ├── middleware/       # Custom middleware (JWT auth, error handler)
+    │   ├── routes/           # API route definitions
+    │   ├── services/         # Core business logic
+    │   ├── types/            # TypeScript interfaces
+    │   ├── utils/            # Shared utilities
+    │   ├── validators/       # Zod validation schemas
+    │   ├── server.ts         # Express app entry point
+    │   └── socket.ts         # Socket.IO configuration
+    └── package.json
 ```
+*Directory structure of the monorepo, separating the React frontend and the Express backend while maintaining clean modularity within both.*
 
 ## Development Notes
 
