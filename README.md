@@ -40,12 +40,55 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 
 ```mermaid
 flowchart LR
-  U["Students / Alumni / CDC"] --> F["React + Vite Frontend"]
-  F --> A["Express + Prisma API"]
-  A --> D["PostgreSQL / Neon"]
-  A --> S["Socket.IO realtime"]
-  A --> C["Cloudinary + Resend"]
+    %% Users & Client Layer
+    U["Users (Students, Alumni, CDC Admin)"] --> F["React + Vite Frontend"]
+    F --> R["React Router + Context API"]
+    
+    %% API Communication Layer
+    R --> X["Axios API Client"]
+    X --> A["Express.js API"]
+    
+    %% Backend & Security Layer
+    A --> M["JWT Authentication Middleware"]
+    M --> C["Controllers (Auth, Users, Events, Jobs)"]
+    C --> S["Services (Business Logic)"]
+    
+    %% Database & ORM
+    S --> P["Prisma ORM"]
+    P --> D["PostgreSQL (Neon)"]
+    
+    %% External Services & Real-time
+    A --> SO["Socket.IO (Messaging & Notifications)"]
+    A --> CL["Cloudinary + Multer (File Uploads)"]
+    A --> RE["Resend (Email Service)"]
+
+    %% Styling
+    classDef client fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff;
+    classDef server fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff;
+    classDef db fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff;
+    classDef ext fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff;
+
+    class U,F,R,X client;
+    class A,M,C,S server;
+    class P,D db;
+    class SO,CL,RE ext;
 ```
+
+### Component Overview
+
+- **Users (Students, Alumni, CDC Admin)**: The primary actors interacting with the portal via tailored dashboards.
+- **React + Vite Frontend**: The fast, optimized client-side application built with React 19.
+- **React Router + Context API**: Handles client-side navigation and global state management (Authentication).
+- **Axios API Client**: Manages asynchronous HTTP requests to the backend with interceptors for auth tokens.
+- **Express.js API**: The robust backend framework routing RESTful requests.
+- **JWT Authentication Middleware**: Secures endpoints by verifying JSON Web Tokens passed in headers.
+- **Controllers**: Directs traffic and parses request/response objects for specific modules (Auth, Events, Jobs, Mentorship).
+- **Services**: Encapsulates the core business logic, keeping controllers clean and reusable.
+- **Prisma ORM**: Type-safe database client ensuring reliable and structured queries.
+- **PostgreSQL (Neon)**: The primary relational database scaling serverless storage.
+- **Socket.IO (Messaging & Notifications)**: Enables bidirectional, real-time communication for chats and instant alerts.
+- **Cloudinary + Multer**: Handles efficient parsing of multipart forms and secure cloud storage for avatars, resumes, and banners.
+- **Resend**: Transmits transactional emails for verification, password resets, and event notifications.
 
 ## Role-Based Features
 
