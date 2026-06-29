@@ -584,6 +584,8 @@ cd frontend
 npm run preview
 ```
 
+
+
 Backend production run:
 
 ```bash
@@ -591,6 +593,63 @@ cd backend
 npm run build
 npm start
 ```
+
+### 8 - Testing commands
+
+## 🧪 Testing Commands
+
+### 📦 Frontend (React + Vitest + RTL)
+
+👉 Run these commands inside the `frontend/` folder
+
+```bash
+cd frontend
+
+npm run test
+npm run test:watch
+npm run test:coverage
+
+## 🧪 Tools used:
+
+Vitest
+React Testing Library (RTL)
+@testing-library/user-event
+
+## ⚙️ Backend (Express + Jest + Supertest)
+
+👉 Run these commands inside the backend/ folder
+
+cd backend
+
+npm run test
+npm run test:watch
+npm run test:coverage
+
+🧪 Tools used:
+
+Jest
+Supertest
+
+
+
+### 🌐 E2E Testing (Cypress)
+
+👉 Run from project root OR frontend (depending on setup)
+
+cd frontend
+npx cypress open
+npx cypress run
+
+🧪 Tools used:
+
+Cypress
+
+### 💡 **Pro tip (important):**
+- Frontend tests = UI/components check
+- Backend tests = API/routes check
+- Cypress = full app flow (end-to-end)
+
+
 
 ## Useful Commands
 
