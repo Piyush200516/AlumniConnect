@@ -6,6 +6,7 @@ import { StudentForgotPassword } from '../pages/auth/student/ForgotPassword';
 import { StudentResetPassword } from '../pages/auth/student/ResetPassword';
 import { AlumniLogin } from '../pages/auth/alumni/Login';
 import { AlumniSignup } from '../pages/auth/alumni/Signup';
+import { AlumniForgotPassword } from '../pages/auth/alumni/ForgotPassword';
 import { CdcLogin } from '../pages/auth/cdc/Login';
 import { ProtectedRoute } from '../components/layout/ProtectedRoute';
 import StudentDashboard from '../pages/student/StudentDashboard';
@@ -22,6 +23,7 @@ export const AuthRoutes = () => (
     <Route path="/reset-password" element={<StudentResetPassword />} />
     <Route path="/auth/alumni/login" element={<AlumniLogin />} />
     <Route path="/auth/alumni/signup" element={<AlumniSignup />} />
+    <Route path="/auth/alumni/forgot-password" element={<AlumniForgotPassword />} />
     <Route path="/auth/cdc/login" element={<CdcLogin />} />
 
     {/* Protected Student Routes */}
