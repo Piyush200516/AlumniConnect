@@ -24,20 +24,21 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 - File uploads with Cloudinary, plus a local fallback
 - Optional email verification and password reset flows
 
-### 🚀 Updated “At a Glance” (WITH TESTING)
+## 🚀 At a Glance (Updated with Testing)
 
-Area	Details
-Frontend	React 19, TypeScript, Vite, Tailwind CSS v4
-Backend	Express 5, Prisma, PostgreSQL
-Realtime	Socket.IO
-Forms	React Hook Form + Zod
-HTTP	Axios
-File Uploads	Cloudinary or local uploads/ fallback
-Dev Ports	Frontend 5173, Backend 5002
-Frontend Testing	Vitest, React Testing Library (RTL), @testing-library/user-event
-Backend Testing	Jest, Supertest
-E2E Testing	Cypress
-API Mocking	MSW (Mock Service Worker) / vi.fn (Vitest mocks)
+| Area | Details |
+|------|--------|
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS v4 |
+| Backend | Express 5, Prisma, PostgreSQL |
+| Realtime | Socket.IO |
+| Forms | React Hook Form + Zod |
+| HTTP | Axios |
+| File Uploads | Cloudinary or local `uploads/` fallback |
+| Dev Ports | Frontend: 5173, Backend: 5002 |
+| Frontend Testing | Vitest, React Testing Library (RTL), @testing-library/user-event |
+| Backend Testing | Jest, Supertest |
+| E2E Testing | Cypress |
+| API Mocking | MSW (Mock Service Worker), `vi.fn` (Vitest mocks) |
 
 ## Architecture
 
