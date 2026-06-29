@@ -596,66 +596,79 @@ npm start
 
 ### 8 - Testing commands
 
-## 🧪 Testing Commands
+## 🧪 Testing Guide
 
-### 📦 Frontend (React + Vitest + RTL)
+This project uses different testing tools for frontend, backend, and end-to-end testing.
 
-👉 Run these commands inside the `frontend/` folder
+### 🚀 1. Frontend Testing (Vitest + React Testing Library)
 
-```bash
-cd frontend
+📍 Run inside frontend folder
 
-npm run test
-npm run test:watch
-npm run test:coverage
+- cd frontend
+- npx vitest
 
-## 🧪 Tools used:
+🔁 Watch Mode (auto re-run tests)
 
-Vitest
-React Testing Library (RTL)
-@testing-library/user-event
+- npx vitest --watch
 
-## ⚙️ Backend (Express + Jest + Supertest)
+### 🧪 2. End-to-End Testing (Cypress)
 
-👉 Run these commands inside the backend/ folder
+📍 Run inside frontend folder
 
-cd backend
+📦 Install Cypress (first time only)
 
-npm run test
-npm run test:watch
-npm run test:coverage
+- npm install -D cypress
 
-🧪 Tools used:
+🖥️ Open Cypress UI (interactive mode)
 
-Jest
-Supertest
+- npx cypress open
 
+⚙️ Headless mode (CI / terminal run)
 
+- npx cypress run
 
-### 🌐 E2E Testing (Cypress)
+### 🧪 3. Backend Testing (Jest + Supertest)
 
-👉 Run from project root OR frontend (depending on setup)
+📍 Run inside backend folder
 
-cd frontend
-npx cypress open
-npx cypress run
+- cd backend
 
-🧪 Tools used:
+- npm test
 
-Cypress
+- Alternative command:
 
-### 💡 **Pro tip (important):**
-- Frontend tests = UI/components check
-- Backend tests = API/routes check
-- Cypress = full app flow (end-to-end)
+- npx jest
 
 
-### Just need to remember 3 commands
+### ⚡ 4. One-Line Full Testing Flow
 
-cd backend && npm test
-cd frontend && npx vitest
-cd frontend && npx cypress open
+Step 1: Backend tests
 
+- cd backend && npm test
+
+Step 2: Frontend unit tests
+
+- cd frontend && npx vitest
+
+Step 3: End-to-End tests
+
+- cd frontend && npx cypress open
+
+### 🔥 Final Tip
+
+👉 You only need to remember these 3 commands:
+
+- cd backend && npm test
+- cd frontend && npx vitest
+- cd frontend && npx cypress open
+
+## 🧪 Testing Commands (Important)
+
+| Tool                | Folder     | Command                  | Purpose                          |
+|---------------------|------------|--------------------------|----------------------------------|
+| Jest + Supertest    | backend    | npm test                 | Backend API Testing              |
+| Vitest + RTL        | frontend   | npx vitest               | Frontend Component Testing       |
+| Cypress (E2E)       | frontend   | npx cypress open         | End-to-End User Flow Testing     |
 
 ## Useful Commands
 
