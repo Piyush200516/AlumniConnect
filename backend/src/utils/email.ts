@@ -21,13 +21,15 @@ const transporter = nodemailer.createTransport({
 });
 
 // Verify connection configuration
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("❌ Nodemailer connection error:", error);
-  } else {
-    console.log("✅ Nodemailer transporter is ready to take our messages");
-  }
-});
+if (process.env.NODE_ENV !== "test") {
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error("❌ Nodemailer connection error:", error);
+    } else {
+      console.log("✅ Nodemailer transporter is ready to take our messages");
+    }
+  });
+}
 
 export const sendVerificationEmail = async (
   to: string,

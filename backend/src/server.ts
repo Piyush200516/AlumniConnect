@@ -20,7 +20,7 @@ import { logger } from "./utils/logger";
 import { requestLogger } from "./middleware/requestLogger";
 import { errorHandler } from "./middleware/errorHandler";
 
-const app = express();
+export const app = express();
 const httpServer = createServer(app);
 
 // Initialize Socket.io
@@ -78,4 +78,6 @@ const startServer = async () => {
   }
 };
 
-startServer();
+if (process.env.NODE_ENV !== "test") {
+  startServer();
+}
