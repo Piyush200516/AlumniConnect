@@ -650,6 +650,12 @@ Cypress
 - Cypress = full app flow (end-to-end)
 
 
+### Just need to remember 3 commands
+
+cd backend && npm test
+cd frontend && npx vitest
+cd frontend && npx cypress open
+
 
 ## Useful Commands
 
