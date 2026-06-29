@@ -668,8 +668,8 @@ Step 3: End-to-End tests
 |---------------------|------------|--------------------------|----------------------------------|
 | Jest + Supertest    | backend    | npm test                 | Backend API Testing              |
 | Vitest + RTL        | frontend   | npx vitest               | Frontend Component Testing       |
-| Cypress (E2E)       | frontend   | npx cypress open         | End-to-End User Flow Testing  
-|Perfomance testing   | backend    | k6 run tests/loadtest.js {same folder(k6 run loadtest.js)} |Performanc 
+| Cypress (E2E)       | frontend   | npx cypress open         | End-to-End User Flow Testing     |
+|Perfomance testing   | backend    | k6 run tests/loadtest.js |Performanc Testing                |  
 
 ## Useful Commands
 
