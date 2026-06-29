@@ -23,27 +23,45 @@ export const setupSocket = (server: HttpServer) => {
   });
 
   io.on('connection', (socket: Socket) => {
-    const userId = socket.handshake.query.userId as string;
-    
-    if (userId) {
-      const existing = activeUsers.get(userId) || [];
-      activeUsers.set(userId, [...existing, socket.id]);
-      
-      // Broadcast online status to everyone
-      io?.emit('user_online', { userId });
-      // Send the current list of online users to the newly connected user
-      socket.emit('get_online_users', Array.from(activeUsers.keys()));
-      console.log(`User connected: ${userId} (Socket: ${socket.id})`);
-    }
+  const userId = socket.handshake.query.userId as string;
+  const role = socket.handshake.query.role as string;
+  
+  // Join user-specific room
+  if (userId) {
+    const existing = activeUsers.get(userId) || [];
+    activeUsers.set(userId, [...existing, socket.id]);
+    socket.join(`user_${userId}`);
+  }
+  // Join role-based room if provided
+  if (role) {
+    socket.join(`role_${role}`);
+  }
+  
+  // Broadcast online status to everyone
+  if (userId) {
+    io?.emit('user_online', { userId });
+    socket.emit('get_online_users', Array.from(activeUsers.keys()));
+    console.log(`User connected: ${userId} (Socket: ${socket.id}) role: ${role}`);
+  }
 
     socket.on('join_room', (roomId: string) => {
       socket.join(roomId);
       console.log(`Socket ${socket.id} joined room: ${roomId}`);
     });
 
+    socket.on('join_role_room', (role: string) => {
+      socket.join(`role_${role}`);
+      console.log(`Socket ${socket.id} joined role room: ${role}`);
+    });
+
     socket.on('leave_room', (roomId: string) => {
       socket.leave(roomId);
       console.log(`Socket ${socket.id} left room: ${roomId}`);
+    });
+
+    socket.on('leave_role_room', (role: string) => {
+      socket.leave(`role_${role}`);
+      console.log(`Socket ${socket.id} left role room: ${role}`);
     });
 
     socket.on('typing_start', ({ roomId, userId }: { roomId: string, userId: string }) => {
@@ -84,4 +102,8 @@ export const emitToUser = (userId: string, eventName: string, data: any) => {
   socketIds.forEach(socketId => {
     io?.to(socketId).emit(eventName, data);
   });
+};
+
+export const emitToRole = (role: string, eventName: string, data: any) => {
+  io?.to(`role_${role}`).emit(eventName, data);
 };
