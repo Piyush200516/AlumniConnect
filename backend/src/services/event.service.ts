@@ -310,21 +310,17 @@ export class EventService {
    */
   async registerForEvent(studentId: string, eventId: string) {
     // 1. Verify eligibility criteria
-    // Rule: Profile Completed, Application Submitted, Resume Uploaded
-    const studentProfile = await prisma.studentProfile.findUnique({
-      where: { userId: studentId }
-    });
+    // Rule: Application must be CDC-approved & Resume must be uploaded.
+    // NOTE: Profile completion (photo/basic details) is NOT required for event registration.
     const studentApp = await prisma.studentApplication.findUnique({
       where: { userId: studentId }
     });
 
-    const isProfileComplete = !!(studentProfile && studentProfile.phone && studentProfile.profileImage);
     const isAppSubmitted = !!(studentApp && studentApp.status === PortalApplicationStatus.APPROVED);
     const isResumeUploaded = !!(studentApp && studentApp.resumeUrl);
 
-    if (!isProfileComplete || !isAppSubmitted || !isResumeUploaded) {
+    if (!isAppSubmitted || !isResumeUploaded) {
       let missingMsg = 'You are not eligible to register. Missing requirements:';
-      if (!isProfileComplete) missingMsg += ' Profile is incomplete;';
       if (!isAppSubmitted) missingMsg += ' Application must be verified & approved by CDC;';
       if (!isResumeUploaded) missingMsg += ' Resume has not been uploaded;';
       throw new ApiError(400, missingMsg);

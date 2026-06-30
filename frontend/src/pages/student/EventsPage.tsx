@@ -70,8 +70,9 @@ export default function EventsPage({ onSelectEvent, onViewCertificate }: EventsP
   const [selectedMode, setSelectedMode] = useState('ALL');
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'registered' | 'past' | 'certificates'>('all');
 
-  // Cancel registration state
+  // Registration action states (per-event ID)
   const [cancelLoading, setCancelLoading] = useState<string | null>(null);
+  const [registerLoading, setRegisterLoading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -133,21 +134,31 @@ export default function EventsPage({ onSelectEvent, onViewCertificate }: EventsP
   };
 
   const handleRegister = async (eventId: string) => {
-    // Check local student profile requirements first
-    const isProfileComplete = !!(profile?.phone && profile?.profileImage);
+    // Only check account verification & resume — profile photo/details are NOT required for event registration
     const isAppSubmitted = profile?.verificationStatus === 'VERIFIED';
     const isResumeUploaded = !!profile?.resumeUrl;
 
-    if (!isProfileComplete || !isAppSubmitted || !isResumeUploaded) {
+    if (!isAppSubmitted || !isResumeUploaded) {
       let missingMsg = 'You are not eligible to register. Missing requirements:\n';
-      if (!isProfileComplete) missingMsg += '• Complete profile basic details & photo\n';
       if (!isAppSubmitted) missingMsg += '• Approved CDC Portal Application\n';
       if (!isResumeUploaded) missingMsg += '• Uploaded Resume PDF';
       toastError(missingMsg);
       return;
     }
 
-    onSelectEvent(eventId); // Go to detail view which handles registration modal
+    // Directly call the registration API — do NOT navigate to detail page
+    setRegisterLoading(eventId);
+    try {
+      await api.post(`/events/${eventId}/register`);
+      toastSuccess('Successfully registered for the event!');
+      // Refresh events + registrations list so button flips to "Cancel Reg"
+      await fetchData();
+    } catch (err: any) {
+      console.error(err);
+      toastError(err.response?.data?.message || 'Failed to register for event');
+    } finally {
+      setRegisterLoading(null);
+    }
   };
 
   const handleCancelRegistration = async (eventId: string) => {
@@ -390,10 +401,14 @@ export default function EventsPage({ onSelectEvent, onViewCertificate }: EventsP
                         </button>
                       ) : (
                         <button 
+                          disabled={registerLoading === event.id}
                           onClick={() => handleRegister(event.id)}
-                          className="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold text-white shadow-md shadow-blue-500/15 cursor-pointer transition-colors"
+                          className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed rounded-xl text-xs font-bold text-white shadow-md shadow-blue-500/15 cursor-pointer transition-colors flex items-center justify-center gap-1"
                         >
-                          Register Now
+                          {registerLoading === event.id
+                            ? <><Loader2 className="h-3 w-3 animate-spin" /> Registering...</>
+                            : 'Register Now'
+                          }
                         </button>
                       )}
                     </div>

@@ -101,17 +101,15 @@ export default function EventDetails({ eventId, onGoBack }: EventDetailsProps) {
   };
 
   const handleRegisterClick = () => {
-    // Perform student validation check
-    const isProfileComplete = !!(profile?.phone && profile?.profileImage);
+    // Only check account verification & resume — profile photo/details are NOT required for event registration
     const isAppSubmitted = profile?.verificationStatus === 'VERIFIED';
     const isResumeUploaded = !!profile?.resumeUrl;
 
-    if (!isProfileComplete || !isAppSubmitted || !isResumeUploaded) {
+    if (!isAppSubmitted || !isResumeUploaded) {
       let missingMsg = 'You are not eligible to register. Missing requirements:\n';
-      if (!isProfileComplete) missingMsg += '• Complete profile basic details & photo\n';
       if (!isAppSubmitted) missingMsg += '• Approved CDC Portal Application\n';
       if (!isResumeUploaded) missingMsg += '• Uploaded Resume PDF';
-      alert(missingMsg); // Simple modal alert or warning banner is fine
+      toastError(missingMsg);
       return;
     }
 
@@ -479,7 +477,7 @@ END:VCALENDAR`;
               <div className="flex gap-2 text-[10px] text-slate-500 leading-normal font-semibold border-t border-slate-900 pt-4">
                 <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
                 <p>
-                  Requires completed student profile, uploaded resume PDF, and verified dashboard application status to enroll.
+                  Requires a verified CDC portal application and uploaded resume PDF to enroll.
                 </p>
               </div>
             )}

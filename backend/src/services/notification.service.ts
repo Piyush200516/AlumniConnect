@@ -18,59 +18,55 @@ export class NotificationService {
     title: string;
     message: string;
     type: NotificationType | string;
-    receiverId: string;
-    receiverRole: string;
-    link?: string;
+    userId: string;
+    linkUrl?: string;
   }) {
     const notification = await this.prisma.notification.create({
       data: {
         title: data.title,
         message: data.message,
         type: data.type as any,
-        receiverId: data.receiverId,
-        receiverRole: data.receiverRole,
-        link: data.link,
+        userId: data.userId,
+        linkUrl: data.linkUrl,
         isRead: false,
       },
     });
 
     // Emit to user-specific room
-    emitToUser(data.receiverId, 'new_notification', notification);
-    // Emit to role-based room (e.g., student, alumni, cdc, admin)
-    emitToUser(data.receiverRole, 'new_notification_role', notification);
+    emitToUser(data.userId, 'new_notification', notification);
     return notification;
   }
 
   async getUserNotifications(userId: string) {
     return this.prisma.notification.findMany({
-      where: { receiverId: userId },
+      where: { userId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async getUnreadCount(userId: string) {
     return this.prisma.notification.count({
-      where: { receiverId: userId, isRead: false },
+      where: { userId, isRead: false },
     });
   }
 
   async markAsRead(notificationId: string, userId: string) {
     return this.prisma.notification.updateMany({
-      where: { id: notificationId, receiverId: userId },
+      where: { id: notificationId, userId },
       data: { isRead: true },
     });
   }
 
   async markAllRead(userId: string) {
     return this.prisma.notification.updateMany({
-      where: { receiverId: userId, isRead: false },
+      where: { userId, isRead: false },
       data: { isRead: true },
     });
   }
 
   async deleteNotification(notificationId: string, userId: string) {
     return this.prisma.notification.deleteMany({
-      where: { id: notificationId, receiverId: userId },
+      where: { id: notificationId, userId },
     });
   }
 }

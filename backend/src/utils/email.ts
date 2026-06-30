@@ -6,19 +6,40 @@ const FROM_EMAIL =
 const FRONTEND_URL =
   process.env.FRONTEND_URL || "http://localhost:5173";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || "sandbox.smtp.mailtrap.io",
-  port: parseInt(process.env.EMAIL_PORT || "587"),
-  secure: parseInt(process.env.EMAIL_PORT || "587") === 465,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    // Require TLS explicitly if secure is true
-    rejectUnauthorized: process.env.NODE_ENV === "production",
+const transporter = (() => {
+  if (
+    process.env.SMTP_HOST &&
+    process.env.SMTP_PORT &&
+    process.env.EMAIL_USER &&
+    process.env.EMAIL_PASS
+  ) {
+    const transport = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT),
+      secure: parseInt(process.env.SMTP_PORT) === 465,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      tls: {
+        rejectUnauthorized: process.env.NODE_ENV === "production",
+      },
+    });
+    // Verify connection (skip in test env)
+    if (process.env.NODE_ENV !== "test") {
+      transport.verify((error, success) => {
+        if (error) {
+          console.error("❌ Nodemailer connection error:", error);
+        } else {
+          console.log("✅ Nodemailer transporter is ready to take our messages");
+        }
+      });
+    }
+    return transport;
   }
-});
+  console.warn("⚠️ SMTP configuration missing – email functions will be disabled.");
+  return null;
+})();
 
 // Verify connection configuration
 if (process.env.NODE_ENV !== "test") {
@@ -38,12 +59,17 @@ export const sendVerificationEmail = async (
   const verifyUrl = `${FRONTEND_URL}/verify-email/${token}`;
 
   try {
+    if (!transporter) {
+      console.error("✉️ Email service is unavailable – missing transporter.");
+      return;
+    }
     await transporter.sendMail({
       from: FROM_EMAIL,
       to,
       subject: "AlumniConnect – Verify Your Email",
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 10px;">
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 10px;"
+        >
           <h2 style="color: #333; text-align: center;">Verify Your Email</h2>
           <p style="color: #555; text-align: center;">Hello,</p>
           <p style="color: #555; text-align: center;">Please verify your email address by clicking the button below:</p>
