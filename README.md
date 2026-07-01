@@ -29,7 +29,7 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 | Area | Details |
 |------|--------|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS v4 |
-| Backend | Express 5, Prisma, PostgreSQL, forset passwork (JWT + Nodemailer (Ethereal)) |
+| Backend | Express 5, Prisma, PostgreSQL, Forgot Password (JWT + Nodemailer (Ethereal)) |
 | Realtime | Socket.IO |
 | Forms | React Hook Form + Zod |
 | HTTP | Axios |
@@ -41,6 +41,8 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 | API Mocking | MSW (Mock Service Worker), `vi.fn` (Vitest mocks) |
 
 ## Architecture
+
+
 
 ### 0. Architecture
 
@@ -78,6 +80,23 @@ flowchart LR
     class A,M,C,S server;
     class P,D db;
     class SO,CL,RE ext;
+```
+### Full Reset Password Flow
+
+```## 🔐 Forgot Password Flow
+
+```mermaid
+flowchart TD
+A[User: Forgot Password Request] --> B[Backend: Check Email via Prisma]
+B --> C[Generate JWT Token with Expiry]
+C --> D[Store Token / Stateless Verify]
+D --> E[Send Email via Nodemailer + Ethereal]
+E --> F[User Receives Reset Link]
+F --> G[Frontend Opens Reset Page]
+G --> H[User Enters New Password]
+H --> I[Verify JWT Token]
+I --> J[Update Password in Database]
+
 ```
 
 ### 1. System Architecture
