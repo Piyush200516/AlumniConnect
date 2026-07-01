@@ -84,7 +84,6 @@ flowchart LR
 ### Full Forgot Password Flow
 
 ![alt text](image.png)
-```
 
 ### 1. System Architecture
 ```mermaid
