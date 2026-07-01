@@ -39,3 +39,6 @@ backend/src/config/*.json
 
 # -- Firebase service-account secret --
 backend/src/config/*.json
+
+# -- Firebase service-account secret --
+backend/src/config/*.json
