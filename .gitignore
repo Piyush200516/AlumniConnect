@@ -14,6 +14,9 @@ node_modules/
 # =========================
 backend/src/config/*.json
 
+
+alumniconnect/backend/src/config/alumniconnect-9be89-firebase-adminsdk-fbsvc-f426a5b160.json
+
 # =========================
 # 📄 Logs
 # =========================
