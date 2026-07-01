@@ -217,8 +217,13 @@ class AuthService {
 
   /** Forgot password */
   async forgotPassword(email: string) {
-    const parsed = forgotPasswordSchema.parse({ email });
-    const normalized = normalizeEmail(parsed.email);
+    logger.info(`Forgot password requested. Raw email: "${email}"`);
+    const normalized = normalizeEmail(email || '');
+    logger.info(`Normalized email: "${normalized}"`);
+
+    const parsed = forgotPasswordSchema.parse({ email: normalized });
+    logger.info(`Querying database for user by email: "${normalized}" (case-insensitive)`);
+    
     const user = await prisma.user.findFirst({
       where: { email: { equals: normalized, mode: 'insensitive' } },
     });
@@ -228,9 +233,16 @@ class AuthService {
       logger.info(`Forgot password requested for non-existent email: ${normalized}`);
       return; 
     }
+
+    logger.info("User found");
     
     const resetToken = await createPasswordResetToken(user.id);
-    await sendPasswordResetEmail(user.email, resetToken);
+    logger.info("Reset token generated");
+
+    // Send email asynchronously in the background so we return success response immediately
+    sendPasswordResetEmail(user.email, resetToken).catch((error) => {
+      logger.error(`Error sending password reset email in background for ${user.email}:`, error);
+    });
   }
 
   /** Reset password */

@@ -4,6 +4,7 @@ import cors from "cors";
 import { createServer } from "http";
 import { setupSocket } from "./socket";
 import { prisma } from "./lib/prisma";
+import { transporter } from "./config/mail";
 
 import path from "path";
 import authRoutes from "./routes/auth.routes";
@@ -68,6 +69,15 @@ const startServer = async () => {
 
     await prisma.$connect();
     console.log("Database Connected Successfully");
+
+    if (process.env.NODE_ENV !== "test") {
+      try {
+        await transporter.verify();
+        logger.info("✅ Ethereal Email Connected Successfully");
+      } catch (err) {
+        logger.error(`❌ Ethereal Email connection error: ${err instanceof Error ? err.message : err}`);
+      }
+    }
 
     httpServer.listen(PORT, "0.0.0.0", () => {
       logger.info(`🚀 Server running on http://localhost:${PORT}`);
