@@ -81,22 +81,9 @@ flowchart LR
     class P,D db;
     class SO,CL,RE ext;
 ```
-### Full Reset Password Flow
+### Full Forgot Password Flow
 
-```## 🔐 Forgot Password Flow
-
-```mermaid
-flowchart TD
-A[User: Forgot Password Request] --> B[Backend: Check Email via Prisma]
-B --> C[Generate JWT Token with Expiry]
-C --> D[Store Token / Stateless Verify]
-D --> E[Send Email via Nodemailer + Ethereal]
-E --> F[User Receives Reset Link]
-F --> G[Frontend Opens Reset Page]
-G --> H[User Enters New Password]
-H --> I[Verify JWT Token]
-I --> J[Update Password in Database]
-
+![alt text](image.png)
 ```
 
 ### 1. System Architecture
