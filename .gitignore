@@ -34,3 +34,5 @@ build/
 # =========================
 .DS_Store
 Thumbs.db
+# -- Firebase service-account secret --
+backend/src/config/*.json
