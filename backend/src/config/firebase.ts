@@ -9,43 +9,41 @@ import { prisma } from '../lib/prisma';
 let firebaseApp: App | null = null;
 let messaging: Messaging | null = null;
 
+export const getMessagingInstance = (): Messaging | null => messaging;
+
 /**
  * Resolve the Firebase service account from FIREBASE_SERVICE_ACCOUNT env var.
  *
- * Accepts two formats in .env:
+ * Accepts three formats in .env:
  *   1. Inline JSON string  → FIREBASE_SERVICE_ACCOUNT={"type":"service_account",...}
  *   2. File path           → FIREBASE_SERVICE_ACCOUNT=./secrets/serviceAccount.json
- *                            FIREBASE_SERVICE_ACCOUNT=C:\path\to\serviceAccount.json
+ *   3. Default fallback    → ./serviceAccount.json
  */
 function resolveServiceAccount(): ServiceAccount | null {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
 
-  if (!raw) return null;
-
   // ── Case 1: JSON string (starts with '{') ──────────────────────────────────
-  if (raw.startsWith('{')) {
+  if (raw?.startsWith('{')) {
     try {
       return JSON.parse(raw) as ServiceAccount;
     } catch (err) {
       logger.error(
-        '[Firebase] FIREBASE_SERVICE_ACCOUNT looks like JSON but failed to parse. ' +
-          'Make sure the JSON is minified (no newlines) and properly quoted in .env.\n' +
-          `Parse error: ${err instanceof Error ? err.message : err}`
+        '[Firebase] FIREBASE_SERVICE_ACCOUNT JSON parse error: ' +
+          `${err instanceof Error ? err.message : err}`
       );
       return null;
     }
   }
 
-  // ── Case 2: File path ──────────────────────────────────────────────────────
-  // Resolve relative paths from the project root (cwd), not from this file
-  const filePath = path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
+  // ── Case 2 & 3: File path or Default ───────────────────────────────────────
+  const filePath = raw 
+    ? (path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw))
+    : path.resolve(process.cwd(), 'serviceAccount.json');
 
   if (!fs.existsSync(filePath)) {
-    logger.error(
-      `[Firebase] FIREBASE_SERVICE_ACCOUNT is set to a file path, but the file was not found:\n` +
-        `  Path tried: ${filePath}\n` +
-        `  Original value: ${raw}`
-    );
+    if (raw) {
+      logger.error(`[Firebase] Configured file not found: ${filePath}`);
+    }
     return null;
   }
 
@@ -53,10 +51,7 @@ function resolveServiceAccount(): ServiceAccount | null {
     const fileContent = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(fileContent) as ServiceAccount;
   } catch (err) {
-    logger.error(
-      `[Firebase] Failed to read/parse service account file at: ${filePath}\n` +
-        `Error: ${err instanceof Error ? err.message : err}`
-    );
+    logger.error(`[Firebase] Failed to read/parse file at: ${filePath}`);
     return null;
   }
 }
