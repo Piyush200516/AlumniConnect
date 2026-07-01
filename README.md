@@ -29,7 +29,7 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 | Area | Details |
 |------|--------|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS v4 |
-| Backend | Express 5, Prisma, PostgreSQL |
+| Backend | Express 5, Prisma, PostgreSQL, forset passwork (JWT + Nodemailer (Ethereal)) |
 | Realtime | Socket.IO |
 | Forms | React Hook Form + Zod |
 | HTTP | Axios |
