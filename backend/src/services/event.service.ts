@@ -4,6 +4,9 @@ import { createEventSchema, editEventSchema, updateEventApprovalSchema } from '.
 import { EventStatus, EventApprovalStatus, EventRegistrationStatus, Role, PortalApplicationStatus } from '@prisma/client';
 import { sendEventRegistrationConfirmation } from '../utils/email';
 import crypto from 'crypto';
+import { NotificationService } from './notification.service';
+
+const notificationService = new NotificationService();
 
 export class EventService {
   /**
@@ -231,15 +234,13 @@ export class EventService {
     // If CDC attached the event to an alumni portal, notify that alumni as well.
     if (hostedAlumni) {
       try {
-        await prisma.notification.create({
-          data: {
-            userId: hostedAlumni.id,
-            type: 'EVENT_CREATED',
-            title: `Event created for your portal: ${event.title}`,
-            message: `The CDC has published "${event.title}" under your alumni portal. Students can now view and register for it.`,
-            linkUrl: '/alumni/dashboard'
-          }
-        });
+        await notificationService.sendNotification(
+          hostedAlumni.id,
+          `Event created for your portal: ${event.title}`,
+          `The CDC has published "${event.title}" under your alumni portal. Students can now view and register for it.`,
+          'EVENT_CREATED',
+          { linkUrl: '/alumni/dashboard' }
+        );
       } catch (err) {
         console.error('Failed to notify alumni about event creation:', err);
       }
@@ -618,21 +619,13 @@ export class EventService {
    */
   private async notifyStudentsOfNewEvent(event: any) {
     try {
-      const students = await prisma.user.findMany({
-        where: { role: Role.STUDENT }
-      });
-
-      if (students.length > 0) {
-        await prisma.notification.createMany({
-          data: students.map(s => ({
-            userId: s.id,
-            type: 'EVENT_CREATED',
-            title: `New Event: ${event.title}`,
-            message: `A new ${event.category} by ${event.speakerName} has been scheduled. Register now before seats run out!`,
-            linkUrl: `/student/events/${event.id}`
-          }))
-        });
-      }
+      await notificationService.sendRoleNotification(
+        Role.STUDENT,
+        `New Event: ${event.title}`,
+        `A new ${event.category} by ${event.speakerName} has been scheduled. Register now before seats run out!`,
+        'EVENT_CREATED',
+        { linkUrl: `/student/events/${event.id}` }
+      );
     } catch (err) {
       console.error('Failed to create bulk student notifications for new event:', err);
     }

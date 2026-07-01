@@ -1,6 +1,9 @@
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/error';
 import { emitToUser, io } from '../socket';
+import { NotificationService } from './notification.service';
+
+const notificationService = new NotificationService();
 
 export class MessageService {
   /**
@@ -84,24 +87,18 @@ export class MessageService {
     // Emit live via Socket.io
     io?.to(conversationId).emit('receive_message', message);
 
-    // Notification to receiver
     const senderName = message.sender.studentProfile?.fullName || message.sender.alumniProfile?.fullName || 'A member';
-    await prisma.notification.create({
-      data: {
-        userId: receiverId,
-        type: 'NEW_MESSAGE',
-        title: `New Message from ${senderName}`,
-        message: isResumeReview ? 'Requested a Resume Review 📄' : content,
-        linkUrl: `/student/dashboard`
-      }
-    });
-    emitToUser(receiverId, 'notification', {
-      userId: receiverId,
-      type: 'NEW_MESSAGE',
-      title: `New Message from ${senderName}`,
-      message: isResumeReview ? 'Requested a Resume Review 📄' : content,
-      linkUrl: `/student/dashboard`
-    });
+    try {
+      await notificationService.sendNotification(
+        receiverId,
+        `New Message from ${senderName}`,
+        isResumeReview ? 'Requested a Resume Review 📄' : content,
+        'NEW_MESSAGE',
+        { linkUrl: `/student/dashboard` }
+      );
+    } catch (err) {
+      console.error('Failed to create/send notification for new message:', err);
+    }
 
     return message;
   }

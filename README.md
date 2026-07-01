@@ -29,7 +29,7 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 | Area | Details |
 |------|--------|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS v4 |
-| Backend | Express 5, Prisma, PostgreSQL, Forgot Password (JWT + Nodemailer (Ethereal)) |
+| Backend | Express 5, Prisma, PostgreSQL, Forgot Password (JWT + Nodemailer (Ethereal)), FCM |
 | Realtime | Socket.IO |
 | Forms | React Hook Form + Zod |
 | HTTP | Axios |
@@ -42,6 +42,11 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 
 ## Architecture
 
+### Architectural & Flow Diagram
+
+-- The diagram below details how notifications flow through the system:
+
+![alt text](image-1.png)
 
 
 ### 0. Architecture

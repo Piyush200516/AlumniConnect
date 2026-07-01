@@ -39,6 +39,7 @@ model User {
   sentMentorshipRequests     MentorshipRequest[]    @relation("MentorshipStudent")
   sentMessages               Message[]
   notifications              Notification[]
+  fcmTokens                  FcmToken[]
   posts                      Post[]
   savedByUsers               SavedAlumni[]          @relation("AlumniSavedBy")
   savedAlumni                SavedAlumni[]          @relation("UserSavedAlumni")
@@ -396,6 +397,19 @@ model Notification {
   @@index([userId, isRead])
   @@index([createdAt(sort: Desc)])
   @@map("notifications")
+}
+
+model FcmToken {
+  id         String   @id @default(uuid())
+  userId     String
+  token      String   @unique
+  deviceType String?  // e.g., "WEB", "ANDROID", "IOS"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("fcm_tokens")
 }
 
 model StudentApplication {

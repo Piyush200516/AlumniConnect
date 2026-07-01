@@ -2,6 +2,9 @@ import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/error';
 import { ConnectionStatus, Role } from '@prisma/client';
 import { emitToUser } from '../socket';
+import { NotificationService } from './notification.service';
+
+const notificationService = new NotificationService();
 
 const getDashboardLink = (role: Role) => {
   if (role === Role.ALUMNI) {
@@ -136,16 +139,13 @@ export class ConnectionService {
               where: { id: existing.senderId },
               select: { role: true }
             });
-            const autoAcceptNotification = await prisma.notification.create({
-              data: {
-                userId: existing.senderId,
-                type: 'MENTORSHIP_ACCEPTED',
-                title: 'Connection Request Accepted',
-                message: `${getDisplayName(accepterProfile || {})} accepted your connection request. You can now chat in messages.`,
-                linkUrl: getDashboardLink(originalSenderProfile?.role || Role.STUDENT),
-              }
-            });
-            emitToUser(existing.senderId, 'notification', autoAcceptNotification);
+            await notificationService.sendNotification(
+              existing.senderId,
+              'Connection Request Accepted',
+              `${getDisplayName(accepterProfile || {})} accepted your connection request. You can now chat in messages.`,
+              'MENTORSHIP_ACCEPTED',
+              { linkUrl: getDashboardLink(originalSenderProfile?.role || Role.STUDENT) }
+            );
           } catch (err) {
             console.error('Failed to notify auto-accepted connection:', err);
           }
@@ -168,16 +168,13 @@ export class ConnectionService {
             where: { id: receiverId },
             select: { role: true }
           });
-          const notification = await prisma.notification.create({
-            data: {
-              userId: receiverId,
-              type: 'MENTORSHIP_REQUEST',
-              title: 'New Connection Request',
-              message: `${getDisplayName(senderProfile || {})} wants to connect with you in the networking directory.`,
-              linkUrl: getDashboardLink(receiverProfile?.role || Role.STUDENT),
-            }
-          });
-          emitToUser(receiverId, 'notification', notification);
+          await notificationService.sendNotification(
+            receiverId,
+            'New Connection Request',
+            `${getDisplayName(senderProfile || {})} wants to connect with you in the networking directory.`,
+            'MENTORSHIP_REQUEST',
+            { linkUrl: getDashboardLink(receiverProfile?.role || Role.STUDENT) }
+          );
         } catch (err) {
           console.error('Failed to re-notify connection request:', err);
         }
@@ -206,16 +203,13 @@ export class ConnectionService {
         select: { role: true },
       });
       const senderName = getDisplayName(senderProfile || {});
-      const notification = await prisma.notification.create({
-        data: {
-          userId: receiverId,
-          type: 'MENTORSHIP_REQUEST', // fits nicely, or we can use SYSTEM
-          title: `New Connection Request`,
-          message: `${senderName} wants to connect with you in the networking directory.`,
-          linkUrl: getDashboardLink(receiverProfile?.role || Role.STUDENT),
-        }
-      });
-      emitToUser(receiverId, 'notification', notification);
+      await notificationService.sendNotification(
+        receiverId,
+        `New Connection Request`,
+        `${senderName} wants to connect with you in the networking directory.`,
+        'MENTORSHIP_REQUEST',
+        { linkUrl: getDashboardLink(receiverProfile?.role || Role.STUDENT) }
+      );
     } catch (err) {
       console.error('Failed to create connection notification:', err);
     }
@@ -261,16 +255,13 @@ export class ConnectionService {
         }),
       ]);
 
-      const senderNotification = await prisma.notification.create({
-        data: {
-          userId: connection.senderId,
-          type: 'MENTORSHIP_ACCEPTED',
-          title: 'Connection Request Accepted',
-          message: `${getDisplayName(receiverProfile || {})} accepted your connection request. You can now chat in messages.`,
-          linkUrl: getDashboardLink(senderProfile?.role || Role.STUDENT),
-        }
-      });
-      emitToUser(connection.senderId, 'notification', senderNotification);
+      await notificationService.sendNotification(
+        connection.senderId,
+        'Connection Request Accepted',
+        `${getDisplayName(receiverProfile || {})} accepted your connection request. You can now chat in messages.`,
+        'MENTORSHIP_ACCEPTED',
+        { linkUrl: getDashboardLink(senderProfile?.role || Role.STUDENT) }
+      );
     } catch (err) {
       console.error('Failed to notify accepted connection:', err);
     }
@@ -311,16 +302,13 @@ export class ConnectionService {
           select: { role: true }
         }),
       ]);
-      const rejectionNotification = await prisma.notification.create({
-        data: {
-          userId: connection.senderId,
-          type: 'SYSTEM',
-          title: 'Connection Request Declined',
-          message: `${getDisplayName(receiverProfile || {})} declined your connection request.`,
-          linkUrl: getDashboardLink(senderProfile?.role || Role.STUDENT),
-        }
-      });
-      emitToUser(connection.senderId, 'notification', rejectionNotification);
+      await notificationService.sendNotification(
+        connection.senderId,
+        'Connection Request Declined',
+        `${getDisplayName(receiverProfile || {})} declined your connection request.`,
+        'SYSTEM',
+        { linkUrl: getDashboardLink(senderProfile?.role || Role.STUDENT) }
+      );
     } catch (err) {
       console.error('Failed to notify rejected connection:', err);
     }

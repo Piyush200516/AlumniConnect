@@ -14,6 +14,9 @@ import {
   Role, 
   PortalApplicationStatus 
 } from '@prisma/client';
+import { NotificationService } from './notification.service';
+
+const notificationService = new NotificationService();
 
 const studentVisibleJobStatuses: JobApprovalStatus[] = [
   JobApprovalStatus.APPROVED,
@@ -357,15 +360,13 @@ export class JobService {
 
     // 4. Send Notification to Job Poster
     try {
-      await prisma.notification.create({
-        data: {
-          userId: job.postedById,
-          type: 'JOB_APPLICATION',
-          title: `New Applicant for ${job.title}`,
-          message: `${application.applicant.studentProfile?.fullName || 'A student'} has applied for the ${job.title} position.`,
-          linkUrl: `/alumni/dashboard` // Alumni dashboard tab for candidate tracking
-        }
-      });
+      await notificationService.sendNotification(
+        job.postedById,
+        `New Applicant for ${job.title}`,
+        `${application.applicant.studentProfile?.fullName || 'A student'} has applied for the ${job.title} position.`,
+        'JOB_APPLICATION',
+        { linkUrl: `/alumni/dashboard` }
+      );
     } catch (err) {
       console.error('Failed to create notification for alumni job posting application:', err);
     }
@@ -408,15 +409,13 @@ export class JobService {
 
     // Notify student applicant
     try {
-      await prisma.notification.create({
-        data: {
-          userId: application.applicantId,
-          type: 'APPLICATION_UPDATE',
-          title: `Application Update: ${application.job.title}`,
-          message: `Your application status for ${application.job.title} at ${application.job.company} has been updated to ${validated.status}.`,
-          linkUrl: `/student/dashboard` // redirects to student applications tab
-        }
-      });
+      await notificationService.sendNotification(
+        application.applicantId,
+        `Application Update: ${application.job.title}`,
+        `Your application status for ${application.job.title} at ${application.job.company} has been updated to ${validated.status}.`,
+        'APPLICATION_UPDATE',
+        { linkUrl: `/student/dashboard` }
+      );
     } catch (err) {
       console.error('Failed to notify student of job application status update:', err);
     }
@@ -525,15 +524,13 @@ export class JobService {
 
     // Notify the posting alumni
     try {
-      await prisma.notification.create({
-        data: {
-          userId: job.postedById,
-          type: 'SYSTEM',
-          title: `Job Post Status: ${job.title}`,
-          message: `Your job posting for "${job.title}" has been ${approvalStatus.toLowerCase()} by the CDC.${remarks ? ` Remarks: ${remarks}` : ''}`,
-          linkUrl: `/alumni/dashboard`
-        }
-      });
+      await notificationService.sendNotification(
+        job.postedById,
+        `Job Post Status: ${job.title}`,
+        `Your job posting for "${job.title}" has been ${approvalStatus.toLowerCase()} by the CDC.${remarks ? ` Remarks: ${remarks}` : ''}`,
+        'SYSTEM',
+        { linkUrl: `/alumni/dashboard` }
+      );
     } catch (err) {
       console.error('Failed to notify alumni of job approval verdict:', err);
     }
@@ -546,21 +543,13 @@ export class JobService {
    */
   private async notifyStudentsOfNewJob(job: any) {
     try {
-      const students = await prisma.user.findMany({
-        where: { role: Role.STUDENT }
-      });
-
-      if (students.length > 0) {
-        await prisma.notification.createMany({
-          data: students.map(s => ({
-            userId: s.id,
-            type: 'JOB_POSTED',
-            title: `New Job: ${job.title} at ${job.company}`,
-            message: `${job.company} is looking for a ${job.title}. Apply now before the deadline on ${job.deadline ? new Date(job.deadline).toLocaleDateString() : 'N/A'}!`,
-            linkUrl: `/student/dashboard` // student opportunities page
-          }))
-        });
-      }
+      await notificationService.sendRoleNotification(
+        Role.STUDENT,
+        `New Job: ${job.title} at ${job.company}`,
+        `${job.company} is looking for a ${job.title}. Apply now before the deadline on ${job.deadline ? new Date(job.deadline).toLocaleDateString() : 'N/A'}!`,
+        'JOB_POSTED',
+        { linkUrl: `/student/dashboard` }
+      );
     } catch (err) {
       console.error('Failed to create bulk student notifications for new job posting:', err);
     }

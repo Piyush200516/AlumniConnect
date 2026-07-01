@@ -2,6 +2,9 @@ import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/error';
 import { MentorshipStatus, Role, PrivacySetting, ConnectionStatus } from '@prisma/client';
 import { emitToUser } from '../socket';
+import { NotificationService } from './notification.service';
+
+const notificationService = new NotificationService();
 
 export class MentorshipService {
   /**
@@ -530,16 +533,13 @@ export class MentorshipService {
    */
   private async notifyUser(userId: string, type: any, title: string, message: string) {
     try {
-      const notification = await prisma.notification.create({
-        data: {
-          userId,
-          type,
-          title,
-          message,
-          linkUrl: '/student/dashboard'
-        }
+      let linkUrl = '/student/dashboard';
+      if (type === 'MENTORSHIP_REQUEST') {
+        linkUrl = '/alumni/dashboard';
+      }
+      await notificationService.sendNotification(userId, title, message, type, {
+        linkUrl
       });
-      emitToUser(userId, 'notification', notification);
     } catch (err) {
       console.error('Failed to create/emit notification:', err);
     }

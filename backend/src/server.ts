@@ -20,6 +20,8 @@ import fileRoutes from "./routes/file.routes";
 import { logger } from "./utils/logger";
 import { requestLogger } from "./middleware/requestLogger";
 import { errorHandler } from "./middleware/errorHandler";
+import { initializeFirebase } from "./config/firebase";
+import notificationRoutes from "./routes/notification.routes";
 
 export const app = express();
 const httpServer = createServer(app);
@@ -55,6 +57,7 @@ app.use("/api/cdc", cdcRoutes);
 app.use("/api/mentorship", mentorshipRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/files", fileRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Global error handler
 app.use(errorHandler);
@@ -69,6 +72,9 @@ const startServer = async () => {
 
     await prisma.$connect();
     console.log("Database Connected Successfully");
+
+    // Initialize Firebase Admin SDK
+    initializeFirebase();
 
     if (process.env.NODE_ENV !== "test") {
       try {
