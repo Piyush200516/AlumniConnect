@@ -7,3 +7,4 @@ node_modules
 /uploads
 
 backend/src/config/*.json
+=./src/config/alumniconnect-9be89-firebase-adminsdk-fbsvc-f426a5b160.json
