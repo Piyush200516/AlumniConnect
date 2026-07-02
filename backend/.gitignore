@@ -6,5 +6,10 @@ node_modules
 /dist
 /uploads
 
+backend/src/config/firebase.ts
+
+backend/src/config/serviceAccount.json
 backend/src/config/*.json
-=./src/config/alumniconnect-9be89-firebase-adminsdk-fbsvc-f426a5b160.json
+
+backend/src/config/*.json
+./backend/src/config/alumniconnect-9be89-firebase-adminsdk-fbsvc-f426a5b160.json
