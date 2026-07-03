@@ -41,16 +41,21 @@ export const errorHandler = (err: any, req: Request, res: Response, _next: NextF
           : err.code === 'P2022'
             ? 'Database column mapping error — schema may be out of sync.'
             : `Database error (${err.code})`;
-    return responseError(res, { success: false, message }, 500);
+    const status = err.code === 'P2025' ? 404 : 500;
+    return responseError(res, { success: false, message }, status);
   }
 
   // Prisma validation errors (e.g. unknown field passed to query)
   if (err instanceof Prisma.PrismaClientValidationError) {
-    logger.error(`[Prisma ValidationError] ${err.message}`);
-    return responseError(res, { success: false, message: 'Database query validation error — check schema field names.' }, 500);
+    logger.error(`[Prisma ValidationError] ${err.name}: ${err.message}\nStack: ${err.stack}`);
+    return responseError(res, {
+      success: false,
+      errorName: err.name,
+      message: err.message,
+      stack: err.stack,
+    }, 500);
   }
 
-  // Prisma initialization / connection errors
   if (err instanceof Prisma.PrismaClientInitializationError) {
     logger.error(`[Prisma InitError] ${err.message}`);
     return responseError(res, { success: false, message: 'Database connection failed' }, 503);
