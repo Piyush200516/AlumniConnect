@@ -17,35 +17,45 @@ import { logger } from '../utils/logger';
 
 const router = Router();
 
-// ---- Sign-up ----
+// ──────────────────────────────────────────────
+// Sign-up
+// ──────────────────────────────────────────────
 router.post('/student/signup', studentSignup);
 router.post('/alumni/signup', alumniSignup);
 
-// ---- Login ----
+// ──────────────────────────────────────────────
+// Login (email + password)
+// ──────────────────────────────────────────────
 router.post('/student/login', studentLogin);
 router.post('/alumni/login', alumniLogin);
 router.post('/cdc/login', cdcLogin);
 router.post('/login', commonLogin);
 
-// ---- Email verification ----
+// ──────────────────────────────────────────────
+// Email verification & password reset
+// ──────────────────────────────────────────────
 router.get('/verify-email/:token', verifyEmail);
-
-// ---- Password reset ----
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 
-// =============================================
+// ══════════════════════════════════════════════
 // Google OAuth
-// =============================================
-// Role-specific initiation routes — they pass `state` so the
-// passport strategy knows which role the user is signing up / logging in as.
+// ══════════════════════════════════════════════
+
+// Generic route — frontend opens http://localhost:3000/api/auth/google
+// Falls back to STUDENT role when no state is provided.
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email'],
+  session: false,
+}));
+console.log('✅ Route registered: GET /api/auth/google');
+
+// Role-specific initiation routes
 router.get('/student/google', passport.authenticate('google', { scope: ['profile', 'email'], state: 'student', session: false }));
 router.get('/alumni/google',  passport.authenticate('google', { scope: ['profile', 'email'], state: 'alumni',  session: false }));
 router.get('/cdc/google',     passport.authenticate('google', { scope: ['profile', 'email'], state: 'cdc',     session: false }));
 
-// Single Google callback — Google always redirects here regardless of which
-// role-specific initiation route was used. The passport strategy has already
-// resolved the user (and created a new one if needed).
+// Single Google callback — Google always redirects here.
 router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: '/login', session: false }),
   async (req, res) => {
@@ -59,13 +69,12 @@ router.get('/google/callback',
       const accessToken = generateAccessToken({ userId: user.id, email: user.email, role: user.role });
       const refreshToken = await generateRefreshToken({ userId: user.id, email: user.email, role: user.role });
 
-      // Determine dashboard path based on role
       let dashboardPath = '/student/dashboard';
       if (user.role === 'ALUMNI') dashboardPath = '/alumni/dashboard';
       else if (user.role === 'CDC') dashboardPath = '/cdc/dashboard';
 
       const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}${dashboardPath}?accessToken=${accessToken}&refreshToken=${refreshToken}`;
-      logger.info(`[Google OAuth] Redirecting ${user.email} (${user.role}) to dashboard`);
+      logger.info(`[Google OAuth] Redirecting ${user.email} (${user.role}) to ${dashboardPath}`);
       return res.redirect(redirectUrl);
     } catch (err) {
       logger.error(`[Google OAuth callback error] ${err instanceof Error ? err.message : err}`);
@@ -73,10 +82,20 @@ router.get('/google/callback',
     }
   }
 );
+console.log('✅ Route registered: GET /api/auth/google/callback');
 
-// =============================================
+// ══════════════════════════════════════════════
 // GitHub OAuth
-// =============================================
+// ══════════════════════════════════════════════
+
+// Generic route — frontend opens http://localhost:3000/api/auth/github
+router.get('/github', passport.authenticate('github', {
+  scope: ['user:email'],
+  session: false,
+} as any));
+console.log('✅ Route registered: GET /api/auth/github');
+
+// Role-specific initiation routes
 router.get('/student/github', passport.authenticate('github', { scope: ['user:email'], state: 'student', session: false } as any));
 router.get('/alumni/github',  passport.authenticate('github', { scope: ['user:email'], state: 'alumni',  session: false } as any));
 router.get('/cdc/github',     passport.authenticate('github', { scope: ['user:email'], state: 'cdc',     session: false } as any));
@@ -100,7 +119,7 @@ router.get('/github/callback',
       else if (user.role === 'CDC') dashboardPath = '/cdc/dashboard';
 
       const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}${dashboardPath}?accessToken=${accessToken}&refreshToken=${refreshToken}`;
-      logger.info(`[GitHub OAuth] Redirecting ${user.email} (${user.role}) to dashboard`);
+      logger.info(`[GitHub OAuth] Redirecting ${user.email} (${user.role}) to ${dashboardPath}`);
       return res.redirect(redirectUrl);
     } catch (err) {
       logger.error(`[GitHub OAuth callback error] ${err instanceof Error ? err.message : err}`);
@@ -108,5 +127,6 @@ router.get('/github/callback',
     }
   }
 );
+console.log('✅ Route registered: GET /api/auth/github/callback');
 
 export default router;

@@ -23,7 +23,6 @@ passport.deserializeUser(async (id: string, done) => {
 
 // Helper to determine role from state query param
 function getRoleFromState(state: any): Role {
-  // Expected state values: 'student', 'alumni', 'cdc'
   switch (String(state).toLowerCase()) {
     case 'student':
       return Role.STUDENT;
@@ -32,18 +31,30 @@ function getRoleFromState(state: any): Role {
     case 'cdc':
       return Role.CDC;
     default:
-      // Fallback to STUDENT if unknown
       return Role.STUDENT;
   }
 }
 
-// Google OAuth Strategy
+// ── Resolve callback URLs ──
+// Priority: GOOGLE_CALLBACK_URL env > BACKEND_URL env > default http://localhost:3000
+const googleCallbackURL =
+  process.env.GOOGLE_CALLBACK_URL ||
+  `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/auth/google/callback`;
+
+const githubCallbackURL =
+  process.env.GITHUB_CALLBACK_URL ||
+  `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/auth/github/callback`;
+
+logger.info(`[Passport] Google callbackURL = ${googleCallbackURL}`);
+logger.info(`[Passport] GitHub callbackURL = ${githubCallbackURL}`);
+
+// ── Google OAuth Strategy ──
 passport.use(
   new GoogleStrategy(
     {
-      clientID: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-      callbackURL: `${process.env.BACKEND_URL || 'http://localhost:5001'}/api/auth/google/callback`,
+      clientID: (process.env.GOOGLE_CLIENT_ID || '').trim(),
+      clientSecret: (process.env.GOOGLE_CLIENT_SECRET || '').trim(),
+      callbackURL: googleCallbackURL,
       passReqToCallback: true,
     },
     async (req: any, accessToken: string, refreshToken: string, profile: GoogleProfile, done: any) => {
@@ -63,12 +74,12 @@ passport.use(
           const hashedPwd = await bcrypt.hash(defaultPwd, 12);
           user = await prisma.user.create({
             data: {
-                email,
-                password: hashedPwd,
-                profilePhotoUrl: profile.photos && profile.photos[0] ? profile.photos[0].value : undefined,
-                role: requestedRole,
-                isEmailVerified: true,
-              },
+              email,
+              password: hashedPwd,
+              profilePhotoUrl: profile.photos && profile.photos[0] ? profile.photos[0].value : undefined,
+              role: requestedRole,
+              isEmailVerified: true,
+            },
           });
           logger.info(`Created new Google OAuth user: ${email} with role ${requestedRole}`);
         }
@@ -80,14 +91,15 @@ passport.use(
     }
   )
 );
+console.log('✅ Google OAuth strategy loaded');
 
-// GitHub OAuth Strategy
+// ── GitHub OAuth Strategy ──
 passport.use(
   new GitHubStrategy(
     {
-      clientID: process.env.GITHUB_CLIENT_ID || '',
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
-      callbackURL: `${process.env.BACKEND_URL || 'http://localhost:5001'}/api/auth/github/callback`,
+      clientID: (process.env.GITHUB_CLIENT_ID || '').trim(),
+      clientSecret: (process.env.GITHUB_CLIENT_SECRET || '').trim(),
+      callbackURL: githubCallbackURL,
       scope: ['user:email'],
       passReqToCallback: true,
     },
@@ -108,12 +120,12 @@ passport.use(
           const hashedPwd = await bcrypt.hash(defaultPwd, 12);
           user = await prisma.user.create({
             data: {
-                email,
-                password: hashedPwd,
-                profilePhotoUrl: profile.photos && profile.photos[0] ? profile.photos[0].value : undefined,
-                role: requestedRole,
-                isEmailVerified: true,
-              },
+              email,
+              password: hashedPwd,
+              profilePhotoUrl: profile.photos && profile.photos[0] ? profile.photos[0].value : undefined,
+              role: requestedRole,
+              isEmailVerified: true,
+            },
           });
           logger.info(`Created new GitHub OAuth user: ${email} with role ${requestedRole}`);
         }
@@ -125,5 +137,6 @@ passport.use(
     }
   )
 );
+console.log('✅ GitHub OAuth strategy loaded');
 
 export default passport;

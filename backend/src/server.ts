@@ -69,7 +69,37 @@ app.use("/api/notifications", notificationRoutes);
 // Global error handler
 app.use(errorHandler);
 
-const PORT = Number(process.env.PORT) || 5001;
+const PORT = Number(process.env.PORT) || 3000;
+
+// Helper: print every registered Express route at startup
+function printRoutes(app: express.Express) {
+  const routes: string[] = [];
+  app._router?.stack?.forEach((middleware: any) => {
+    if (middleware.route) {
+      // Direct route
+      const methods = Object.keys(middleware.route.methods).join(',').toUpperCase();
+      routes.push(`  ${methods} ${middleware.route.path}`);
+    } else if (middleware.name === 'router' && middleware.handle?.stack) {
+      // Router middleware
+      const prefix = middleware.regexp?.source
+        ?.replace('\\/?', '')
+        ?.replace('(?=\\/|$)', '')
+        ?.replace(/\\\//g, '/')
+        ?.replace(/^\^/, '') || '';
+      middleware.handle.stack.forEach((handler: any) => {
+        if (handler.route) {
+          const methods = Object.keys(handler.route.methods).join(',').toUpperCase();
+          routes.push(`  ${methods} ${prefix}${handler.route.path}`);
+        }
+      });
+    }
+  });
+  if (routes.length > 0) {
+    console.log(`\n📋 Registered routes (${routes.length}):`);
+    routes.forEach((r) => console.log(r));
+    console.log('');
+  }
+}
 
 const startServer = async () => {
   try {
@@ -94,6 +124,7 @@ const startServer = async () => {
 
     httpServer.listen(PORT, "0.0.0.0", () => {
       logger.info(`🚀 Server running on http://localhost:${PORT}`);
+      printRoutes(app);
     });
   } catch (error) {
     logger.error(`Failed to start server due to connection or configuration error: ${error instanceof Error ? error.message : error}`);
@@ -104,3 +135,4 @@ const startServer = async () => {
 if (process.env.NODE_ENV !== "test") {
   startServer();
 }
+
