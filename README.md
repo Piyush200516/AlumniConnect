@@ -28,13 +28,21 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 
 | Area | Details |
 |------|--------|
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS v4 |
-| Backend | Express 5, Prisma, PostgreSQL, Forgot Password (JWT + Nodemailer (Ethereal)), FCM |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, Redux Toolkit, React Toastify |
+| Backend | Node.js, Express 5,Passport.js, Google OAuth 2.0,JWT Authentication, bcryptjs, Multer, CORS, dotenv Prisma, PostgreSQL, FCM |
 | Realtime | Socket.IO |
+|Authentication | Google OAuth, GitHub OAuth, Email Verification, Forgot Password, Reset Password, JWT Refresh Token |
+|Notifications| Firebase Admin SDK, Firebase Cloud Messaging (FCM), Socket.IO Notifications, Nodemailer|
+|Email| Nodemailer, Ethereal Email |
 | Forms | React Hook Form + Zod |
 | HTTP | Axios |
-| File Uploads | Cloudinary or local `uploads/` fallback |
-| Dev Ports | Frontend: 5173, Backend: 5002 |
+| File Uploads | Multer,  Cloudinary or local `uploads/` fallback |
+|API | REST API|
+| Security | Helmet , Express Rate Limit |
+|Version Control | Git , Github |
+|Tools |  Postman, Prisma Studio, VS Code|
+|Deployment | Vercel, Railway/Render, Neon PostgreSQL |
+| Dev Ports | Frontend: 5173, Backend: 3000 |
 | Frontend Testing | Vitest, React Testing Library (RTL), @testing-library/user-event |
 | Backend Testing | Jest, Supertest |
 | E2E Testing | Cypress |
