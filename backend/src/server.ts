@@ -8,6 +8,8 @@ import { transporter } from "./config/mail";
 
 import path from "path";
 import authRoutes from "./routes/auth.routes";
+import passport from "./config/passport";
+import session from "express-session";
 import studentRoutes from "./routes/student.routes";
 import applicationRoutes from "./routes/application.routes";
 import eventRoutes from "./routes/event.routes";
@@ -32,6 +34,11 @@ setupSocket(httpServer);
 // CORS – allow frontend dev origin
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173", credentials: true }));
 app.use(express.json());
+
+// Initialize Passport
+app.use(passport.initialize());
+// Optional session support (if needed)
+app.use(session({ secret: process.env.SESSION_SECRET || 'session-secret', resave: false, saveUninitialized: false }));
 
 // Request logging middleware
 app.use(requestLogger);

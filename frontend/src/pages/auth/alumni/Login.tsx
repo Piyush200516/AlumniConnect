@@ -30,17 +30,11 @@ export const AlumniLogin = () => {
 
   // Placeholder OAuth handlers
   const handleGoogleLogin = () => {
-    console.log('Google OAuth Login');
-
-    // Later replace with:
-    // window.location.href = "http://localhost:5000/api/auth/google";
+    window.location.href = "http://localhost:3000/api/auth/google";
   };
 
   const handleGithubLogin = () => {
-    console.log('GitHub OAuth Login');
-
-    // Later replace with:
-    // window.location.href = "http://localhost:5000/api/auth/github";
+    window.location.href = "http://localhost:3000/api/auth/github";
   };
 
   return (
