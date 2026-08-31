@@ -51,7 +51,6 @@ model User {
 
   @@index([role])
   @@index([status])
-  @@index([email])
   @@index([createdAt])
   @@map("users")
 }
@@ -82,6 +81,7 @@ model StudentProfile {
   @@index([graduationYear])
   @@index([course])
   @@index([createdAt])
+  @@index([verificationStatus])
   @@map("student_profiles")
 }
 
@@ -128,6 +128,12 @@ model AlumniProfile {
   @@index([skills])
   @@index([interests])
   @@index([createdAt])
+  @@index([branch])
+  @@index([experience])
+  @@index([currentCompany])
+  @@index([designation])
+  @@index([location])
+  @@index([companyId])
   @@map("alumni_profiles")
 }
 
@@ -190,7 +196,6 @@ model Like {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
-  @@index([postId])
   @@index([userId])
   @@map("likes")
 }
@@ -211,7 +216,6 @@ model MentorshipRequest {
   student   User             @relation("MentorshipStudent", fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, alumniId])
-  @@index([studentId])
   @@index([alumniId])
   @@index([status])
   @@index([createdAt])
@@ -247,7 +251,6 @@ model Job {
 
   @@index([postedById])
   @@index([jobType])
-  @@index([isActive])
   @@index([deadline])
   @@index([createdAt(sort: Desc)])
   @@index([approvalStatus])
@@ -270,7 +273,6 @@ model JobApplication {
   job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@unique([jobId, applicantId])
-  @@index([jobId])
   @@index([applicantId])
   @@index([status])
   @@index([createdAt])
@@ -337,7 +339,6 @@ model EventRegistration {
   user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
-  @@index([eventId])
   @@index([userId])
   @@index([status])
   @@index([createdAt])
@@ -372,7 +373,6 @@ model Message {
   conversation   Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User                @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
-  @@index([conversationId])
   @@index([senderId])
   @@index([createdAt(sort: Desc)])
   @@index([conversationId, createdAt(sort: Desc)])
@@ -393,7 +393,6 @@ model Notification {
   createdAt DateTime         @default(now())
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
   @@index([userId, isRead])
   @@index([createdAt(sort: Desc)])
   @@map("notifications")
@@ -499,6 +498,7 @@ model ApplicationCertification {
   updatedAt           DateTime           @updatedAt
   application         StudentApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
+  @@index([applicationId])
   @@map("application_certifications")
 }
 
@@ -529,6 +529,7 @@ model SavedJob {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, jobId])
+  @@index([jobId])
   @@map("saved_jobs")
 }
 
@@ -603,7 +604,6 @@ model Connection {
   sender     User             @relation("ConnectionSender", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
-  @@index([senderId])
   @@index([receiverId])
   @@index([status])
   @@map("connections")
@@ -618,6 +618,7 @@ model SavedAlumni {
   user      User     @relation("UserSavedAlumni", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, alumniId])
+  @@index([alumniId])
   @@map("saved_alumni")
 }
 
@@ -634,7 +635,6 @@ model MentorshipConnection {
   resources    SharedResource[]
 
   @@unique([studentId, alumniId])
-  @@index([studentId])
   @@index([alumniId])
   @@map("mentorship_connections")
 }
