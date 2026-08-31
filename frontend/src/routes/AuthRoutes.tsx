@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import RoleSelection from '../components/auth/RoleSelection';
+import { CommonLogin } from '../pages/auth/CommonLogin';
 import { StudentLogin } from '../pages/auth/student/Login';
 import { StudentSignup } from '../pages/auth/student/Signup';
 import { StudentForgotPassword } from '../pages/auth/student/ForgotPassword';
@@ -15,7 +16,8 @@ import AlumniDashboard from '../pages/alumni/AlumniDashboard';
 
 export const AuthRoutes = () => (
   <Routes>
-    <Route path="/" element={<Navigate to="/auth" replace />} />
+    <Route path="/" element={<Navigate to="/login" replace />} />
+    <Route path="/login" element={<CommonLogin />} />
     <Route path="/auth" element={<RoleSelection />} />
     <Route path="/auth/student/login" element={<StudentLogin />} />
     <Route path="/auth/student/signup" element={<StudentSignup />} />

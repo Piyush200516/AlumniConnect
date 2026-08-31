@@ -67,7 +67,7 @@ export const StudentResetPassword = () => {
              </div>
              <p className="text-white mb-6">Invalid or missing reset token.</p>
              <Link
-               to="/auth/student/login"
+               to="/login"
                className="w-full inline-block py-2 bg-primary-dark text-white rounded hover:bg-primary-light transition text-center"
              >
                Back to Login
@@ -80,7 +80,7 @@ export const StudentResetPassword = () => {
             </div>
             <p className="text-white mb-6">Your password has been successfully reset.</p>
             <Link
-              to="/auth/student/login"
+              to="/login"
               className="w-full inline-block py-2 bg-primary-dark text-white rounded hover:bg-primary-light transition text-center"
             >
               Log In Now

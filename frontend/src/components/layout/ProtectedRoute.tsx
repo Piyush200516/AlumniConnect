@@ -25,8 +25,8 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   const userRole = normalizeRole(user?.role);
 
   if (!user || !userRole) {
-    // Not authenticated, send to role selection
-    return <Navigate to="/auth" replace state={{ from: location }} />;
+    // Not authenticated, send to common login page
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   if (!allowedRoles.includes(userRole)) {

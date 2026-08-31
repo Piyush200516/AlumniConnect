@@ -52,7 +52,7 @@ export const StudentForgotPassword = () => {
             </div>
             <p className="text-white mb-6">If an account exists for that email, we have sent password reset instructions.</p>
             <Link
-              to="/auth/student/login"
+              to="/login"
               className="w-full inline-block py-2 bg-primary-dark text-white rounded hover:bg-primary-light transition text-center"
             >
               Back to Login
@@ -79,7 +79,7 @@ export const StudentForgotPassword = () => {
               {loading ? <LoadingSpinner /> : 'Send Reset Link'}
             </button>
             <div className="mt-4 text-center">
-              <Link to="/auth/student/login" className="text-sm text-primary-light hover:underline">
+              <Link to="/login" className="text-sm text-primary-light hover:underline">
                 Back to Login
               </Link>
             </div>

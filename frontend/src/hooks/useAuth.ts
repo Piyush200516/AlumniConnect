@@ -25,17 +25,27 @@ export const useAuth = () => {
     setUser(user);
   };
 
-  const login = async (role: Role, data: any, endpoint: string, redirectPath: string) => {
+  const login = async (role?: Role, data?: any, endpoint?: string, redirectPath?: string) => {
     const payload = normalizeEmail(data);
     console.log("Login Request", payload);
     try {
-      const res = await api.post(endpoint, payload);
+      const finalEndpoint = endpoint || '/auth/login';
+      const res = await api.post(finalEndpoint, payload);
       const response = res;
       console.log("API Response", response);
       const token = res.data.token || res.data.data?.token || res.data.data?.accessToken;
-      storeUser(role, token);
+      
+      const rawRole = role || res.data.data?.user?.role || res.data.user?.role;
+      if (!rawRole) {
+        throw new Error('Role not specified in login response');
+      }
+      
+      const finalRole = rawRole.trim().toLowerCase() as Role;
+      storeUser(finalRole, token);
       toastSuccess('Login successful');
-      navigate(redirectPath);
+      
+      const finalRedirectPath = redirectPath || `/${finalRole}/dashboard`;
+      navigate(finalRedirectPath);
     } catch (err: any) {
       const response = err.response;
       console.log("API Response", response);

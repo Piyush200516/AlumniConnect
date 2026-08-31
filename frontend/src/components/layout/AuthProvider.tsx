@@ -103,6 +103,30 @@ export const AuthContext = createContext<AuthContextProps | undefined>(undefined
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUserState] = useState<User | null>(() => {
+    // 1. Check if token is in URL (for OAuth callback redirect)
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromUrl = params.get('accessToken') || params.get('token');
+    if (tokenFromUrl) {
+      const path = window.location.pathname;
+      let roleFromUrl: User['role'] | null = null;
+      if (path.includes('/student') || path.includes('student')) roleFromUrl = 'student';
+      else if (path.includes('/alumni') || path.includes('alumni')) roleFromUrl = 'alumni';
+      else if (path.includes('/cdc') || path.includes('cdc')) roleFromUrl = 'cdc';
+
+      if (roleFromUrl) {
+        const userObj: User = { token: tokenFromUrl, role: roleFromUrl };
+        localStorage.setItem('user', JSON.stringify(userObj));
+        localStorage.setItem('token', tokenFromUrl);
+        localStorage.setItem('role', roleFromUrl);
+        
+        // Strip tokens from URL without reloading
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+        return userObj;
+      }
+    }
+
+    // 2. Fallback to localStorage
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       try {
@@ -149,7 +173,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setProfile(null);
     localStorage.clear();
     sessionStorage.clear();
-    window.location.href = '/auth';
+    window.location.href = '/login';
   };
 
   const refreshProfile = async () => {

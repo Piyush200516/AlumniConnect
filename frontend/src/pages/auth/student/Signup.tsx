@@ -52,7 +52,7 @@ export const StudentSignup = () => {
         </form>
         <p className="mt-4 text-center text-gray-300">
           Already have an account?{' '}
-          <Link to="/auth/student/login" className="text-primary-light hover:underline">Login here</Link>
+          <Link to="/login" className="text-primary-light hover:underline">Login here</Link>
         </p>
       </motion.div>
     </div>
