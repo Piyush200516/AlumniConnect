@@ -12,7 +12,7 @@ import {
   MessageSquare, 
   X
 } from 'lucide-react';
-import { useSocket } from '../../layout/SocketProvider';
+import { useSocket } from '../../layout/SocketContext';
 import { useAuthContext } from '../../layout/AuthProvider';
 import api from '../../../services/api';
 import { toastSuccess, toastError } from '../../../utils/toast';

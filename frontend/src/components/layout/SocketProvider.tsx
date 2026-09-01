@@ -1,15 +1,9 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthContext } from './AuthProvider';
-
-interface SocketContextProps {
-  socket: Socket | null;
-  onlineUsers: string[];
-  isOnline: (userId: string) => boolean;
-}
-
-const SocketContext = createContext<SocketContextProps | undefined>(undefined);
+import { SocketContext } from './SocketContext';
+import { API_ORIGIN } from '../../services/api';
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuthContext();
@@ -18,26 +12,20 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!user) {
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-      }
       return;
     }
-
-    // Resolve socket url by removing api prefix
-    const backendBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5002/api').replace('/api', '');
 
     // Parse token payload for userId or use user.id if available
     let userId = '';
     try {
       const decoded = JSON.parse(atob(user.token.split('.')[1]));
       userId = decoded.userId || decoded.id || '';
-    } catch (e) {
+    } catch {
       console.error('Failed to parse userId from token');
     }
 
-    const socketInstance = io(backendBaseUrl, {
+    const socketInstance = io(API_ORIGIN, {
+      auth: { token: user.token },
       query: { userId },
       transports: ['websocket', 'polling']
     });
@@ -64,6 +52,8 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       socketInstance.disconnect();
+      setSocket((currentSocket) => currentSocket === socketInstance ? null : currentSocket);
+      setOnlineUsers([]);
     };
   }, [user]);
 
@@ -74,12 +64,4 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
       {children}
     </SocketContext.Provider>
   );
-};
-
-export const useSocket = () => {
-  const context = useContext(SocketContext);
-  if (!context) {
-    throw new Error('useSocket must be used within a SocketProvider');
-  }
-  return context;
 };

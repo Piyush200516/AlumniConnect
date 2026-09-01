@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { FcGoogle } from 'react-icons/fc';
 import { FaGithub } from 'react-icons/fa';
+import { getApiUrl } from '../../services/api';
 
 export const CommonLogin = () => {
   const { login } = useAuth();
@@ -33,11 +34,11 @@ export const CommonLogin = () => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:3000/api/auth/google";
+    window.location.href = getApiUrl('/auth/google');
   };
 
   const handleGithubLogin = () => {
-    window.location.href = "http://localhost:3000/api/auth/github";
+    window.location.href = getApiUrl('/auth/github');
   };
 
   return (

@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuthContext } from '../../components/layout/AuthProvider';
-import { useSocket } from '../../components/layout/SocketProvider';
+import { useSocket } from '../../components/layout/SocketContext';
 import { toastSuccess, toastError } from '../../utils/toast';
 
 interface Mentor {

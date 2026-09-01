@@ -67,7 +67,7 @@ app.use("/api/notifications", notificationRoutes);
 // Global error handler
 app.use(errorHandler);
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 5002;
 
 // Helper: print every registered Express route at startup
 function printRoutes(app: express.Express) {
@@ -111,18 +111,17 @@ const startServer = async () => {
     // Initialize Firebase Admin SDK
     initializeFirebase();
 
-    if (process.env.NODE_ENV !== "test") {
-      try {
-        await transporter.verify();
-        logger.info("✅ Ethereal Email Connected Successfully");
-      } catch (err) {
-        logger.error(`❌ Ethereal Email connection error: ${err instanceof Error ? err.message : err}`);
-      }
-    }
-
     httpServer.listen(PORT, "0.0.0.0", () => {
       logger.info(`🚀 Server running on http://localhost:${PORT}`);
       printRoutes(app);
+
+      if (process.env.NODE_ENV !== "test") {
+        transporter.verify()
+          .then(() => logger.info("Email transporter connected successfully"))
+          .catch((err) => {
+            logger.error(`Email transporter connection error: ${err instanceof Error ? err.message : err}`);
+          });
+      }
     });
   } catch (error) {
     logger.error(`Failed to start server due to connection or configuration error: ${error instanceof Error ? error.message : error}`);

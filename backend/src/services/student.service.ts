@@ -124,7 +124,7 @@ export class StudentService {
   async getProfileByUserId(userId: string) {
     logger.debug(`[StudentService.getProfileByUserId] START — userId=${userId}`);
     try {
-      const [profile, application] = await Promise.all([
+      let [profile, application] = await Promise.all([
         prisma.studentProfile.findUnique({
           where: { userId },
           include: {
@@ -146,8 +146,32 @@ export class StudentService {
       logger.debug(`[StudentService.getProfileByUserId] Prisma returned — profile exists: ${!!profile}, application exists: ${!!application}`);
 
       if (!profile) {
-        logger.warn(`[StudentService.getProfileByUserId] No student profile found for userId=${userId}`);
-        throw new ApiError(404, 'Student profile not found. Please complete your student registration first.');
+        // Query user record directly from Prisma using userId from auth middleware
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+          logger.warn(`[StudentService.getProfileByUserId] User record not found for userId=${userId}`);
+          throw new ApiError(404, 'User account not found');
+        }
+
+        // Auto-create initial StudentProfile for user so frontend receives complete profile object
+        profile = await prisma.studentProfile.create({
+          data: {
+            userId,
+            fullName: user.email.split('@')[0] || 'Student',
+            enrollmentNumber: `STU-${userId.slice(0, 8).toUpperCase()}`,
+            branch: 'General',
+            course: 'B.Tech',
+            graduationYear: new Date().getFullYear(),
+          },
+          include: {
+            user: {
+              select: {
+                email: true,
+              },
+            },
+          },
+        });
+        logger.info(`[StudentService.getProfileByUserId] Auto-created initial StudentProfile for userId=${userId}`);
       }
 
       const result = mapProfileResponse(profile, application?.status);

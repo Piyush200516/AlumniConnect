@@ -109,27 +109,7 @@ export const getStudentProfile = async (
     }
     const userId = req.user.id;
 
-    // Verify that the logged-in user's ID exists in the User table
-    const userRecord = await prisma.user.findUnique({ where: { id: userId } });
-    if (!userRecord) {
-      logger.warn(`[Controller.getStudentProfile] User ID ${userId} not found in User table`);
-      return res.status(404).json({
-        success: false,
-        message: "User not found"
-      });
-    }
-
-    // Verify that the student record exists in the StudentProfile table
-    const studentRecord = await prisma.studentProfile.findUnique({ where: { userId } });
-    if (!studentRecord) {
-      logger.warn(`[Controller.getStudentProfile] StudentProfile not found for user ID ${userId}`);
-      return res.status(404).json({
-        success: false,
-        message: "Student profile not found"
-      });
-    }
-
-    logger.info(`[Controller.getStudentProfile] Calling service for userId=${userId}`);
+    logger.info(`[Controller.getStudentProfile] Querying Prisma for full profile data for userId=${userId}`);
     const profile = await studentService.getProfileByUserId(userId);
     logger.debug(`[Controller.getStudentProfile] Service returned profile successfully`);
     responseSuccess(res, 'Profile fetched successfully', profile);

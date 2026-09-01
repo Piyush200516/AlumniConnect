@@ -15,7 +15,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { toastSuccess, toastError } from '../../utils/toast';
-import { useSocket } from '../../components/layout/SocketProvider';
+import { useSocket } from '../../components/layout/SocketContext';
 
 interface AlumniProfile {
   fullName: string;

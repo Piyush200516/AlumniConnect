@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { FcGoogle } from 'react-icons/fc';
 import { FaGithub } from 'react-icons/fa';
+import { getApiUrl } from '../../../services/api';
 
 export const AlumniLogin = () => {
   const { login } = useAuth();
@@ -28,13 +29,12 @@ export const AlumniLogin = () => {
     setLoading(false);
   };
 
-  // Placeholder OAuth handlers
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:3000/api/auth/google";
+    window.location.href = getApiUrl('/auth/alumni/google');
   };
 
   const handleGithubLogin = () => {
-    window.location.href = "http://localhost:3000/api/auth/github";
+    window.location.href = getApiUrl('/auth/alumni/github');
   };
 
   return (

@@ -35,15 +35,18 @@ function getRoleFromState(state: any): Role {
   }
 }
 
-// ── Resolve callback URLs ──
-// Priority: GOOGLE_CALLBACK_URL env > BACKEND_URL env > default http://localhost:3000
+// Resolve callback URLs.
+// Priority: provider-specific env > BACKEND_URL env > local backend port.
+const defaultBackendUrl = `http://localhost:${process.env.PORT || 5002}`;
+const backendUrl = (process.env.BACKEND_URL || defaultBackendUrl).replace(/\/+$/, '');
+
 const googleCallbackURL =
   process.env.GOOGLE_CALLBACK_URL ||
-  `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/auth/google/callback`;
+  `${backendUrl}/api/auth/google/callback`;
 
 const githubCallbackURL =
   process.env.GITHUB_CALLBACK_URL ||
-  `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/auth/github/callback`;
+  `${backendUrl}/api/auth/github/callback`;
 
 logger.info(`[Passport] Google callbackURL = ${googleCallbackURL}`);
 logger.info(`[Passport] GitHub callbackURL = ${githubCallbackURL}`);
