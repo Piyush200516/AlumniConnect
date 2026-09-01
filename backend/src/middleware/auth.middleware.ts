@@ -33,19 +33,9 @@ export const authenticateUser = async (
     logger.debug(`[AuthMiddleware] Token present, length=${token.length}`);
     const payload = verifyAccessToken(token);
     logger.info(`[AuthMiddleware] JWT decoded — userId=${payload.userId}, email=${payload.email}, role=${payload.role}`);
-    // optional: fetch fresh user from DB to ensure still active
-    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
-    if (!user) {
-      logger.error(`[AuthMiddleware] User not found in DB for userId=${payload.userId}`);
-      throw new ApiError(401, 'User not found');
-    }
-    logger.debug(`[AuthMiddleware] User found — id=${user.id}, email=${user.email}, role=${user.role}, status=${user.status}`);
-    if (user.status !== 'ACTIVE') {
-      logger.error(`[AuthMiddleware] Inactive account — userId=${user.id}, status=${user.status}`);
-      throw new ApiError(403, 'Account is not active');
-    }
-    req.user = { id: user.id, email: user.email, role: user.role };
-    logger.info(`[AuthMiddleware] Authenticated successfully — userId=${user.id}, role=${user.role}`);
+
+    req.user = { id: payload.userId, email: payload.email, role: payload.role };
+    logger.info(`[AuthMiddleware] Authenticated successfully — userId=${payload.userId}, role=${payload.role}`);
     next();
   } catch (err: any) {
     logger.error(`[AuthMiddleware] Authentication failed: ${err instanceof Error ? err.message : JSON.stringify(err)}`);

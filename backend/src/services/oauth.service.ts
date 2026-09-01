@@ -7,8 +7,8 @@ export interface JwtTokens {
   refreshToken: string;
 }
 
-export const createJwtForUser = (user: { id: string; email: string; role: Role }): JwtTokens => {
+export const createJwtForUser = async (user: { id: string; email: string; role: Role }): Promise<JwtTokens> => {
   const accessToken = generateAccessToken({ userId: user.id, email: user.email, role: user.role });
-  const refreshToken = generateRefreshToken({ userId: user.id, email: user.email, role: user.role });
+  const refreshToken = await generateRefreshToken({ userId: user.id, email: user.email, role: user.role });
   return { accessToken, refreshToken };
 };

@@ -50,9 +50,7 @@ export const errorHandler = (err: any, req: Request, res: Response, _next: NextF
     logger.error(`[Prisma ValidationError] ${err.name}: ${err.message}\nStack: ${err.stack}`);
     return responseError(res, {
       success: false,
-      errorName: err.name,
       message: err.message,
-      stack: err.stack,
     }, 500);
   }
 

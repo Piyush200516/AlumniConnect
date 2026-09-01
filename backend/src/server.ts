@@ -37,8 +37,6 @@ app.use(express.json());
 
 // Initialize Passport
 app.use(passport.initialize());
-// Optional session support (if needed)
-app.use(session({ secret: process.env.SESSION_SECRET || 'session-secret', resave: false, saveUninitialized: false }));
 
 // Request logging middleware
 app.use(requestLogger);
