@@ -417,13 +417,24 @@ export default function AlumniDashboard() {
     setJobsLoading(true);
     try {
       const payload = {
-        ...jobFormData,
+        title: jobFormData.title.trim(),
+        company: jobFormData.company.trim(),
+        companyLogo: jobFormData.companyLogo.trim() || null,
+        location: jobFormData.location.trim() || null,
+        salary: jobFormData.salary.trim() || null,
+        jobType: jobFormData.jobType,
         skillsRequired: jobFormData.skillsRequired.split(',').map(s => s.trim()).filter(Boolean),
-        deadline: jobFormData.deadline ? new Date(jobFormData.deadline) : null
+        deadline: jobFormData.deadline ? new Date(jobFormData.deadline) : null,
+        description: jobFormData.description.trim(),
+        responsibilities: jobFormData.responsibilities.trim() || null,
+        eligibility: jobFormData.eligibility.trim() || null,
+        benefits: jobFormData.benefits.trim() || null,
+        selectionProcess: jobFormData.selectionProcess.trim() || null,
+        applicationLink: jobFormData.applicationLink.trim() || null,
       };
 
       await api.post('/jobs/create', payload);
-      toastSuccess('Job posting created successfully and submitted for CDC approval!');
+      toastSuccess('Job opportunity posted successfully!');
       
       // Reset form
       setJobFormData({
@@ -447,7 +458,8 @@ export default function AlumniDashboard() {
       fetchMyJobs();
     } catch (err: any) {
       console.error(err);
-      toastError(err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Failed to create job posting');
+      const errMsg = err.response?.data?.errors?.[0]?.message || err.response?.data?.message || 'Failed to create job posting';
+      toastError(errMsg);
     } finally {
       setJobsLoading(false);
     }
@@ -1247,9 +1259,11 @@ export default function AlumniDashboard() {
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-900">
                 <button 
                   type="submit" 
-                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 cursor-pointer"
+                  disabled={jobsLoading}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 cursor-pointer flex items-center gap-2"
                 >
-                  Post Opportunity
+                  {jobsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {jobsLoading ? 'Posting Opportunity...' : 'Post Opportunity'}
                 </button>
               </div>
             </form>

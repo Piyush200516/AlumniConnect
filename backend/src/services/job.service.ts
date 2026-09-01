@@ -15,6 +15,7 @@ import {
   PortalApplicationStatus 
 } from '@prisma/client';
 import { NotificationService } from './notification.service';
+import { io } from '../socket';
 
 const notificationService = new NotificationService();
 
@@ -240,6 +241,15 @@ export class JobService {
     // Notify students immediately if CDC posted it
     if (approvalStatus === JobApprovalStatus.APPROVED) {
       await this.notifyStudentsOfNewJob(job);
+    }
+
+    // Broadcast real-time socket event so connected student feeds auto-sync
+    try {
+      if (io) {
+        io.emit('job_created', job);
+      }
+    } catch (err) {
+      console.error('Failed to emit real-time job_created socket event:', err);
     }
 
     return job;

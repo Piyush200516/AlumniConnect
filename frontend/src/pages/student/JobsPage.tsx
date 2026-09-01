@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
@@ -15,6 +15,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { toastSuccess, toastError } from '../../utils/toast';
+import { useSocket } from '../../components/layout/SocketProvider';
 
 interface AlumniProfile {
   fullName: string;
@@ -59,6 +60,24 @@ interface JobsPageProps {
 
 export default function JobsPage({ onSelectJob, onApplyJob }: JobsPageProps) {
   const queryClient = useQueryClient();
+  const { socket } = useSocket();
+
+  // Listen for real-time job posting events from Socket.IO
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleJobCreated = () => {
+      queryClient.invalidateQueries({ queryKey: ['jobsList'] });
+    };
+
+    socket.on('job_created', handleJobCreated);
+    socket.on('new_notification', handleJobCreated);
+
+    return () => {
+      socket.off('job_created', handleJobCreated);
+      socket.off('new_notification', handleJobCreated);
+    };
+  }, [socket, queryClient]);
 
   // Filters State
   const [searchTerm, setSearchTerm] = useState('');
