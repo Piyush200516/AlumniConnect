@@ -216,6 +216,8 @@ model MentorshipRequest {
   student   User             @relation("MentorshipStudent", fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, alumniId])
+  @@index([studentId])                    // Optimized: was missing — used by dashboard/getAlumniList queries
+  @@index([studentId, status])            // Optimized: covers studentId+status filter pattern
   @@index([alumniId])
   @@index([status])
   @@index([createdAt])
@@ -394,6 +396,7 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])  // Optimized: covers getUserNotifications sort pattern
   @@index([createdAt(sort: Desc)])
   @@map("notifications")
 }
@@ -604,6 +607,8 @@ model Connection {
   sender     User             @relation("ConnectionSender", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
+  @@index([senderId])           // Optimized: was missing — connectionsSent queries filter by senderId
+  @@index([senderId, status])   // Optimized: covers senderId+status filter pattern
   @@index([receiverId])
   @@index([status])
   @@map("connections")
@@ -635,6 +640,7 @@ model MentorshipConnection {
   resources    SharedResource[]
 
   @@unique([studentId, alumniId])
+  @@index([studentId])    // Optimized: was missing — getMyMentors/getDashboardMetrics filter by studentId
   @@index([alumniId])
   @@map("mentorship_connections")
 }

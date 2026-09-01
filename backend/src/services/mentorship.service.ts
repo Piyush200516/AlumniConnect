@@ -269,56 +269,61 @@ export class MentorshipService {
 
   /**
    * Get Mentorship Dashboard metrics
+   * Optimized: all independent queries run in a single Promise.all per role branch,
+   * eliminating the sequential staircase of DB roundtrips.
    */
   async getDashboardMetrics(userId: string, role: Role) {
     if (role === Role.STUDENT) {
-      const connections = await prisma.mentorshipConnection.findMany({
-        where: { studentId: userId },
-        select: { id: true, alumniId: true }
-      });
+      // All independent queries run in parallel — single DB roundtrip batch
+      const [
+        connections,
+        pendingCount,
+        rejectedCount,
+        conversationsCount,
+        resourcesCount,
+        upcomingMeetings,
+        sharedResources,
+      ] = await Promise.all([
+        prisma.mentorshipConnection.findMany({
+          where: { studentId: userId },
+          select: { id: true, alumniId: true },
+        }),
+        prisma.mentorshipRequest.count({
+          where: { studentId: userId, status: MentorshipStatus.PENDING },
+        }),
+        prisma.mentorshipRequest.count({
+          where: { studentId: userId, status: MentorshipStatus.REJECTED },
+        }),
+        prisma.conversation.count({
+          where: { connection: { studentId: userId } },
+        }),
+        prisma.sharedResource.count({
+          where: { connection: { studentId: userId } },
+        }),
+        prisma.meeting.findMany({
+          where: {
+            connection: { studentId: userId },
+            scheduledAt: { gte: new Date() },
+            status: 'SCHEDULED',
+          },
+          orderBy: { scheduledAt: 'asc' },
+          include: {
+            connection: {
+              include: {
+                alumni: {
+                  select: { alumniProfile: { select: { fullName: true } } },
+                },
+              },
+            },
+          },
+        }),
+        prisma.sharedResource.findMany({
+          where: { connection: { studentId: userId } },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]);
+
       const activeMentors = connections.length;
-      
-      const pendingCount = await prisma.mentorshipRequest.count({
-        where: { studentId: userId, status: MentorshipStatus.PENDING }
-      });
-      const rejectedCount = await prisma.mentorshipRequest.count({
-        where: { studentId: userId, status: MentorshipStatus.REJECTED }
-      });
-
-      const conversationsCount = await prisma.conversation.count({
-        where: {
-          connection: {
-            studentId: userId
-          }
-        }
-      });
-
-      const resourcesCount = await prisma.sharedResource.count({
-        where: { connection: { studentId: userId } }
-      });
-
-      const upcomingMeetings = await prisma.meeting.findMany({
-        where: {
-          connection: { studentId: userId },
-          scheduledAt: { gte: new Date() },
-          status: 'SCHEDULED'
-        },
-        orderBy: { scheduledAt: 'asc' },
-        include: {
-          connection: {
-            include: {
-              alumni: {
-                select: { alumniProfile: { select: { fullName: true } } }
-              }
-            }
-          }
-        }
-      });
-
-      const sharedResources = await prisma.sharedResource.findMany({
-        where: { connection: { studentId: userId } },
-        orderBy: { createdAt: 'desc' }
-      });
 
       return {
         stats: {
@@ -326,94 +331,96 @@ export class MentorshipService {
           pendingRequests: pendingCount,
           rejectedRequests: rejectedCount,
           conversations: conversationsCount,
-          resourcesShared: resourcesCount
+          resourcesShared: resourcesCount,
         },
-        upcomingMeetings: upcomingMeetings.map(m => ({
+        upcomingMeetings: upcomingMeetings.map((m) => ({
           id: m.id,
           title: m.title,
           scheduledAt: m.scheduledAt,
           duration: m.duration,
           meetingLink: m.meetingLink,
-          partnerName: m.connection.alumni.alumniProfile?.fullName || 'Mentor'
+          partnerName: m.connection.alumni.alumniProfile?.fullName || 'Mentor',
         })),
-        sharedResources
+        sharedResources,
       };
     } else if (role === Role.ALUMNI) {
-      const connections = await prisma.mentorshipConnection.findMany({
-        where: { alumniId: userId },
-        select: { id: true, studentId: true }
-      });
+      // All independent queries run in parallel — single DB roundtrip batch
+      const [
+        connections,
+        pendingCount,
+        conversationsCount,
+        resourcesCount,
+        upcomingMeetings,
+        sharedResources,
+        pendingRequests,
+      ] = await Promise.all([
+        prisma.mentorshipConnection.findMany({
+          where: { alumniId: userId },
+          select: { id: true, studentId: true },
+        }),
+        prisma.mentorshipRequest.count({
+          where: { alumniId: userId, status: MentorshipStatus.PENDING },
+        }),
+        prisma.conversation.count({
+          where: { connection: { alumniId: userId } },
+        }),
+        prisma.sharedResource.count({
+          where: { connection: { alumniId: userId } },
+        }),
+        prisma.meeting.findMany({
+          where: {
+            connection: { alumniId: userId },
+            scheduledAt: { gte: new Date() },
+            status: 'SCHEDULED',
+          },
+          orderBy: { scheduledAt: 'asc' },
+          include: {
+            connection: {
+              include: {
+                student: {
+                  select: { studentProfile: { select: { fullName: true } } },
+                },
+              },
+            },
+          },
+        }),
+        prisma.sharedResource.findMany({
+          where: { connection: { alumniId: userId } },
+          orderBy: { createdAt: 'desc' },
+        }),
+        prisma.mentorshipRequest.findMany({
+          where: { alumniId: userId, status: MentorshipStatus.PENDING },
+          include: {
+            student: {
+              select: {
+                id: true,
+                studentProfile: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]);
+
       const totalMentees = connections.length;
-
-      const pendingCount = await prisma.mentorshipRequest.count({
-        where: { alumniId: userId, status: MentorshipStatus.PENDING }
-      });
-
-      const conversationsCount = await prisma.conversation.count({
-        where: {
-          connection: {
-            alumniId: userId
-          }
-        }
-      });
-
-      const resourcesCount = await prisma.sharedResource.count({
-        where: { connection: { alumniId: userId } }
-      });
-
-      const upcomingMeetings = await prisma.meeting.findMany({
-        where: {
-          connection: { alumniId: userId },
-          scheduledAt: { gte: new Date() },
-          status: 'SCHEDULED'
-        },
-        orderBy: { scheduledAt: 'asc' },
-        include: {
-          connection: {
-            include: {
-              student: {
-                select: { studentProfile: { select: { fullName: true } } }
-              }
-            }
-          }
-        }
-      });
-
-      const sharedResources = await prisma.sharedResource.findMany({
-        where: { connection: { alumniId: userId } },
-        orderBy: { createdAt: 'desc' }
-      });
-
-      const pendingRequests = await prisma.mentorshipRequest.findMany({
-        where: { alumniId: userId, status: MentorshipStatus.PENDING },
-        include: {
-          student: {
-            select: {
-              id: true,
-              studentProfile: true
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
 
       return {
         stats: {
           totalMentees,
           pendingRequests: pendingCount,
           activeConversations: conversationsCount,
-          resourcesShared: resourcesCount
+          resourcesShared: resourcesCount,
         },
-        upcomingMeetings: upcomingMeetings.map(m => ({
+        upcomingMeetings: upcomingMeetings.map((m) => ({
           id: m.id,
           title: m.title,
           scheduledAt: m.scheduledAt,
           duration: m.duration,
           meetingLink: m.meetingLink,
-          partnerName: m.connection.student.studentProfile?.fullName || 'Student'
+          partnerName: m.connection.student.studentProfile?.fullName || 'Student',
         })),
         sharedResources,
-        requestsList: pendingRequests.map(r => ({
+        requestsList: pendingRequests.map((r) => ({
           id: r.id,
           studentName: r.student.studentProfile?.fullName || 'Student',
           studentBranch: r.student.studentProfile?.branch || 'CSIT',
@@ -421,11 +428,11 @@ export class MentorshipService {
           studentYear: r.student.studentProfile?.graduationYear || 2026,
           studentImageUrl: r.student.studentProfile?.profileImage || null,
           message: r.message,
-          createdAt: r.createdAt
-        }))
+          createdAt: r.createdAt,
+        })),
       };
     }
-    
+
     throw new ApiError(400, 'Invalid user role for mentorship dashboard');
   }
 

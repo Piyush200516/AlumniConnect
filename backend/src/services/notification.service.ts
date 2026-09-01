@@ -131,6 +131,8 @@ export class NotificationService {
 
   /**
    * Send bulk notifications to multiple users concurrently.
+   * Optimized: batch-fetches all FCM tokens and user emails upfront (2 queries)
+   * instead of N+1 per-user queries inside the loop.
    */
   async sendBulkNotifications(
     userIds: string[],
@@ -145,19 +147,47 @@ export class NotificationService {
   ): Promise<Notification[]> {
     if (!userIds || userIds.length === 0) return [];
 
-    // 1. Bulk save to database
-    await prisma.notification.createMany({
-      data: userIds.map((userId) => ({
-        userId,
-        title,
-        message,
-        type,
-        linkUrl: options?.linkUrl || null,
-        isRead: false,
-      })),
-    });
+    const isImportant =
+      type === NotificationType.MENTORSHIP_REQUEST ||
+      type === NotificationType.MENTORSHIP_ACCEPTED ||
+      type === NotificationType.MENTORSHIP_REJECTED ||
+      type === NotificationType.APPLICATION_UPDATE;
 
-    // Fetch newly created records to return them properly with IDs
+    // 1. Bulk save to database + batch-fetch FCM tokens + batch-fetch user emails — all in parallel
+    const [, allFcmTokens, allUsers] = await Promise.all([
+      prisma.notification.createMany({
+        data: userIds.map((userId) => ({
+          userId,
+          title,
+          message,
+          type,
+          linkUrl: options?.linkUrl || null,
+          isRead: false,
+        })),
+      }),
+      // Batch-fetch all FCM tokens in one query (eliminates N per-user FCM queries)
+      prisma.fcmToken.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, token: true },
+      }),
+      // Batch-fetch user emails only when needed for email sending
+      (options?.sendEmail || isImportant)
+        ? prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, email: true },
+          })
+        : Promise.resolve([] as { id: string; email: string }[]),
+    ]);
+
+    // Build lookup Maps for O(1) access inside the loop
+    const fcmByUser = new Map<string, string[]>();
+    for (const t of allFcmTokens) {
+      if (!fcmByUser.has(t.userId)) fcmByUser.set(t.userId, []);
+      fcmByUser.get(t.userId)!.push(t.token);
+    }
+    const emailByUser = new Map(allUsers.map((u) => [u.id, u.email]));
+
+    // Fetch newly created records to return them with proper IDs
     const notifications = await prisma.notification.findMany({
       where: {
         userId: { in: userIds },
@@ -169,7 +199,7 @@ export class NotificationService {
       take: userIds.length,
     });
 
-    // 2. Send via socket and push concurrently
+    // 2. Send via socket and push concurrently — zero DB calls inside this loop
     const promises = userIds.map(async (userId) => {
       const record = notifications.find((n) => n.userId === userId) || {
         id: 'bulk',
@@ -182,21 +212,17 @@ export class NotificationService {
         createdAt: new Date(),
       };
 
-      // Emit Socket
+      // Emit Socket (no DB call)
       try {
         emitToUser(userId, 'new_notification', record);
       } catch (err) {
         logger.error(`[NotificationService] Bulk socket emit failed for user ${userId}:`, err);
       }
 
-      // Send FCM Push
+      // Send FCM Push using pre-fetched tokens (no DB call)
       try {
-        const fcmTokens = await prisma.fcmToken.findMany({
-          where: { userId },
-          select: { token: true },
-        });
-        if (fcmTokens.length > 0) {
-          const tokens = fcmTokens.map((t) => t.token);
+        const tokens = fcmByUser.get(userId) ?? [];
+        if (tokens.length > 0) {
           await sendFcmNotification(userId, tokens, {
             title,
             body: message,
@@ -207,21 +233,11 @@ export class NotificationService {
         logger.error(`[NotificationService] Bulk FCM push failed for user ${userId}:`, err);
       }
 
-      // Send Email
-      const isImportant =
-        type === NotificationType.MENTORSHIP_REQUEST ||
-        type === NotificationType.MENTORSHIP_ACCEPTED ||
-        type === NotificationType.MENTORSHIP_REJECTED ||
-        type === NotificationType.APPLICATION_UPDATE;
-
+      // Send Email using pre-fetched user email (no DB call)
       if (options?.sendEmail || isImportant) {
         try {
-          const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { email: true },
-          });
-
-          if (user?.email) {
+          const email = emailByUser.get(userId);
+          if (email) {
             const subject = options?.emailSubject || `${title} - AlumniConnect`;
             const htmlContent = `
               <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px;">
@@ -242,10 +258,9 @@ export class NotificationService {
                 <p style="font-size: 12px; color: #9CA3AF; text-align: center;">This is an automated notification from AlumniConnect. Please do not reply to this email.</p>
               </div>
             `;
-
             await transporter.sendMail({
               from: process.env.EMAIL_FROM || '"AlumniConnect Portal" <no-reply@alumniconnect.com>',
-              to: user.email,
+              to: email,
               subject,
               html: htmlContent,
             });
@@ -312,11 +327,15 @@ export class NotificationService {
 
   /**
    * Fetch paginated notifications for a user.
+   * Optimized: added pagination to prevent unbounded fetches for long-time users.
    */
-  async getUserNotifications(userId: string) {
+  async getUserNotifications(userId: string, page = 1, limit = 20) {
+    const skip = Math.max(0, (page - 1) * limit);
     return prisma.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
     });
   }
 

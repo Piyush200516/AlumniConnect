@@ -178,8 +178,15 @@ export class AlumniService {
       orderBy = { fullName: 'asc' };
     }
 
-    // 4. Fetch Alumni Records and count in parallel
-    const [alumniCount, alumniList, mentorshipRequests] = await Promise.all([
+    // 4. Fetch Alumni Records, count, mentorship requests, and sidebar data all in parallel
+    const [
+      alumniCount,
+      alumniList,
+      mentorshipRequests,
+      sidebarMetrics,
+      topCompanies,
+      recentlyJoined,
+    ] = await Promise.all([
       prisma.alumniProfile.count({ where: whereClause }),
       prisma.alumniProfile.findMany({
         where: whereClause,
@@ -214,10 +221,17 @@ export class AlumniService {
       }),
       prisma.mentorshipRequest.findMany({
         where: { studentId: currentUserId }
-      })
+      }),
+      // Sidebar queries run in parallel with the main alumni fetch
+      this.getSidebarMetrics(),
+      this.getTopCompanies(),
+      this.getRecentlyJoined(),
     ]);
 
-    // 5. Transform results to include networking states
+    // 5. Build a Map for O(1) mentorship status lookup (vs O(N) .find() per alumni)
+    const mentorshipMap = new Map(mentorshipRequests.map(r => [r.alumniId, r.status]));
+
+    // 6. Transform results to include networking states
     const alumniTransformed = alumniList.map(alumni => {
       const followers = alumni.user.followers || [];
       const savedBy = alumni.user.savedByUsers || [];
@@ -243,9 +257,8 @@ export class AlumniService {
         }
       }
 
-      // Mentorship Request Status
-      const mentorshipReq = mentorshipRequests.find(r => r.alumniId === alumni.userId);
-      const mentorshipStatus = mentorshipReq ? mentorshipReq.status : null;
+      // O(1) mentorship status lookup via Map
+      const mentorshipStatus = mentorshipMap.get(alumni.userId) ?? null;
 
       return {
         id: alumni.id,
@@ -271,11 +284,6 @@ export class AlumniService {
         mentorshipStatus,
       };
     });
-
-    // 6. Fetch Sidebar Metrics & Top Companies
-    const sidebarMetrics = await this.getSidebarMetrics();
-    const topCompanies = await this.getTopCompanies();
-    const recentlyJoined = await this.getRecentlyJoined();
 
     return {
       alumni: alumniTransformed,
@@ -336,9 +344,15 @@ export class AlumniService {
       throw new ApiError(404, 'Alumni profile not found');
     }
 
-    const mentorshipReq = await prisma.mentorshipRequest.findFirst({
-      where: { studentId: currentUserId, alumniId: alumni.userId }
-    });
+    // Fetch mentorship request status and mentorship count in parallel
+    const [mentorshipReq, mentorshipCount] = await Promise.all([
+      prisma.mentorshipRequest.findFirst({
+        where: { studentId: currentUserId, alumniId: alumni.userId }
+      }),
+      prisma.mentorshipRequest.count({
+        where: { alumniId: alumni.userId, status: 'ACCEPTED' }
+      }),
+    ]);
     const mentorshipStatus = mentorshipReq ? mentorshipReq.status : null;
 
     const followers = alumni.user.followers || [];
@@ -364,11 +378,7 @@ export class AlumniService {
       }
     }
 
-    // Check if they are available for mentorship
-    // If they have any active posted jobs or active requests accepted, they are active mentors
-    const mentorshipCount = await prisma.mentorshipRequest.count({
-      where: { alumniId: alumni.userId, status: 'ACCEPTED' }
-    });
+    // mentorshipCount is already fetched in the parallel Promise.all above
 
     return {
       id: alumni.id,

@@ -140,47 +140,51 @@ export class JobService {
 
   /**
    * Fetch single job by ID with applicant details
+   * Optimized: job and user role check fetched in parallel.
    */
   async getJobById(jobId: string, userId?: string) {
-    const job = await prisma.job.findUnique({
-      where: { id: jobId },
-      include: {
-        postedBy: {
-          select: {
-            role: true,
-            email: true,
-            alumniProfile: {
-              select: {
-                fullName: true,
-                profileImageUrl: true,
-                designation: true,
-                currentCompany: true,
-                bio: true,
-                linkedinUrl: true,
-              }
-            },
-            cdcProfile: {
-              select: {
-                collegeName: true,
-                department: true,
+    // Fetch job and user role in parallel instead of sequentially
+    const [job, user] = await Promise.all([
+      prisma.job.findUnique({
+        where: { id: jobId },
+        include: {
+          postedBy: {
+            select: {
+              role: true,
+              email: true,
+              alumniProfile: {
+                select: {
+                  fullName: true,
+                  profileImageUrl: true,
+                  designation: true,
+                  currentCompany: true,
+                  bio: true,
+                  linkedinUrl: true,
+                }
+              },
+              cdcProfile: {
+                select: {
+                  collegeName: true,
+                  department: true,
+                }
               }
             }
-          }
-        },
-        savedBy: userId ? {
-          where: { userId }
-        } : false,
-        applications: userId ? {
-          where: { applicantId: userId }
-        } : false
-      }
-    });
+          },
+          savedBy: userId ? {
+            where: { userId }
+          } : false,
+          applications: userId ? {
+            where: { applicantId: userId }
+          } : false
+        }
+      }),
+      userId ? prisma.user.findUnique({ where: { id: userId } }) : Promise.resolve(null),
+    ]);
 
     if (!job) {
       throw new ApiError(404, 'Job opportunity not found');
     }
 
-    const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
     const isVisibleToStudents = job.isActive && studentVisibleJobStatusSet.has(job.approvalStatus);
 
     if (!user || user.role === Role.STUDENT) {
@@ -243,15 +247,20 @@ export class JobService {
 
   /**
    * Edit Job Opportunity
+   * Optimized: job and user fetched in parallel, reducing 2 sequential roundtrips to 1.
    */
   async editJob(jobId: string, userId: string, payload: any) {
-    const job = await prisma.job.findUnique({ where: { id: jobId } });
+    // Fetch job and user in parallel instead of sequentially
+    const [job, user] = await Promise.all([
+      prisma.job.findUnique({ where: { id: jobId } }),
+      prisma.user.findUnique({ where: { id: userId } }),
+    ]);
+
     if (!job) {
       throw new ApiError(404, 'Job not found');
     }
 
     // Verify ownership or CDC role
-    const user = await prisma.user.findUnique({ where: { id: userId } });
     if (job.postedById !== userId && user?.role !== Role.CDC) {
       throw new ApiError(403, 'Not authorized to modify this job posting');
     }
@@ -284,16 +293,18 @@ export class JobService {
 
   /**
    * Student: Apply for Job
+   * Optimized: studentProfile, studentApplication, and job fetched in parallel
+   * instead of 3 sequential roundtrips.
    */
   async applyForJob(studentId: string, jobId: string, payload: any) {
-    // 1. Verify eligibility criteria
-    const studentProfile = await prisma.studentProfile.findUnique({
-      where: { userId: studentId }
-    });
-    const studentApp = await prisma.studentApplication.findUnique({
-      where: { userId: studentId }
-    });
+    // 1. Fetch student eligibility data and job details in parallel
+    const [studentProfile, studentApp, job] = await Promise.all([
+      prisma.studentProfile.findUnique({ where: { userId: studentId } }),
+      prisma.studentApplication.findUnique({ where: { userId: studentId } }),
+      prisma.job.findUnique({ where: { id: jobId } }),
+    ]);
 
+    // 2. Verify student eligibility
     const isProfileComplete = !!(studentProfile && studentProfile.phone && studentProfile.profileImage);
     const isAppSubmitted = !!(studentApp && studentApp.status === PortalApplicationStatus.APPROVED);
     
@@ -304,11 +315,7 @@ export class JobService {
       throw new ApiError(400, missingMsg);
     }
 
-    // 2. Query job details
-    const job = await prisma.job.findUnique({
-      where: { id: jobId }
-    });
-
+    // 3. Validate job availability
     if (!job) {
       throw new ApiError(404, 'Job not found');
     }
@@ -334,7 +341,7 @@ export class JobService {
       throw new ApiError(400, 'You have already applied for this job');
     }
 
-    // 3. Create application
+    // 4. Create application
     const application = await prisma.jobApplication.create({
       data: {
         jobId,
@@ -358,7 +365,7 @@ export class JobService {
       }
     });
 
-    // 4. Send Notification to Job Poster
+    // 5. Send Notification to Job Poster
     try {
       await notificationService.sendNotification(
         job.postedById,
@@ -453,14 +460,19 @@ export class JobService {
 
   /**
    * Alumni / CDC: List Applicants for a specific job
+   * Optimized: job and user role check fetched in parallel.
    */
   async getJobApplicants(userId: string, jobId: string) {
-    const job = await prisma.job.findUnique({ where: { id: jobId } });
+    // Fetch job and user in parallel instead of sequentially
+    const [job, user] = await Promise.all([
+      prisma.job.findUnique({ where: { id: jobId } }),
+      prisma.user.findUnique({ where: { id: userId } }),
+    ]);
+
     if (!job) {
       throw new ApiError(404, 'Job not found');
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
     if (job.postedById !== userId && user?.role !== Role.CDC) {
       throw new ApiError(403, 'Not authorized to view applicants for this job');
     }
