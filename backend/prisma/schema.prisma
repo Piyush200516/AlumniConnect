@@ -6,6 +6,7 @@ datasource db {
   provider = "postgresql"
 }
 
+
 /// Core user model — single table for all roles with role-based auth
 model User {
   id                         String                 @id @default(uuid())
