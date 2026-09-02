@@ -141,12 +141,12 @@ export const CommonLogin = () => {
             Don't have an account?
           </p>
           <div className="flex justify-center gap-4 text-xs">
-            <Link
-              to="/auth/student/signup"
+            <a
+              href="https://alumniconnect-7ag.pages.dev/auth/student/signup"
               className="text-blue-400 hover:underline font-semibold"
             >
               Register as Student
-            </Link>
+            </a>
             <span className="text-gray-600">|</span>
             <Link
               to="/auth/alumni/signup"

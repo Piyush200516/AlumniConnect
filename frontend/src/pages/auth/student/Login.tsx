@@ -123,12 +123,12 @@ export const StudentLogin = () => {
 
         <p className="mt-6 text-center text-gray-300">
           New student?{' '}
-          <Link
-            to="/auth/student/signup"
+          <a
+            href="https://alumniconnect-7ag.pages.dev/auth/student/signup"
             className="text-primary-light hover:underline"
           >
             Sign up here
-          </Link>
+          </a>
         </p>
       </motion.div>
     </div>

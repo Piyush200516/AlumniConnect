@@ -418,7 +418,7 @@ flowchart TB
 | --- | --- |
 | `/auth` | Role selection |
 | `/auth/student/login` | Student login |
-| `/auth/student/signup` | Student registration |
+| `https://alumniconnect-7ag.pages.dev/auth/student/signup` | Student registration |
 | `/auth/alumni/login` | Alumni login |
 | `/auth/alumni/signup` | Alumni registration |
 | `/auth/cdc/login` | CDC login |
