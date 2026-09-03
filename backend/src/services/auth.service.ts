@@ -97,36 +97,46 @@ class AuthService {
 
   /** Alumni signup */
   async alumniSignup(payload: any) {
-    const data = alumniSignupSchema.parse(payload);
-    const email = normalizeEmail(data.email);
-    const existing = await prisma.user.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' } },
-    });
-    if (existing) throw new ApiError(409, 'Email already in use');
+    try {
+      const data = alumniSignupSchema.parse(payload);
+      const email = normalizeEmail(data.email);
+      const existing = await prisma.user.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' } },
+      });
+      if (existing) throw new ApiError(409, 'Email already in use');
 
-    const hashed = await bcrypt.hash(data.password, 12);
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashed,
-        role: Role.ALUMNI,
-        isEmailVerified: true,
-        alumniProfile: {
-          create: {
-            fullName: data.name,
-            passingYear: data.passingYear,
-            currentCompany: data.currentCompany,
-            designation: data.designation,
+      const hashed = await bcrypt.hash(data.password, 12);
+      const user = await prisma.user.create({
+        data: {
+          email,
+          password: hashed,
+          role: Role.ALUMNI,
+          isEmailVerified: true,
+          alumniProfile: {
+            create: {
+              fullName: data.name,
+              passingYear: data.passingYear,
+              currentCompany: data.currentCompany,
+              designation: data.designation,
+            },
           },
         },
-      },
-    });
+      });
 
-    const verificationToken = await createEmailVerificationToken(user.id);
-    await sendVerificationEmail(user.email, verificationToken);
-    const accessToken = generateAccessToken({ userId: user.id, email: user.email, role: user.role });
-    const refreshToken = await generateRefreshToken({ userId: user.id, email: user.email, role: user.role });
-    return { accessToken, refreshToken, user: { id: user.id, email: user.email, role: user.role } };
+      const verificationToken = await createEmailVerificationToken(user.id);
+      await sendVerificationEmail(user.email, verificationToken);
+      const accessToken = generateAccessToken({ userId: user.id, email: user.email, role: user.role });
+      const refreshToken = await generateRefreshToken({ userId: user.id, email: user.email, role: user.role });
+      logger.info(`Alumni signup successful: ${user.email}`);
+      return { accessToken, refreshToken, user: { id: user.id, email: user.email, role: user.role } };
+    } catch (err: any) {
+      logger.error(`Alumni signup failed: ${err instanceof Error ? err.message : err}`);
+      if (err instanceof ApiError) throw err;
+      if (err && typeof err === 'object' && 'issues' in err) {
+        throw new ApiError(400, 'Invalid signup data', err);
+      }
+      throw new ApiError(500, err instanceof Error ? err.message : 'Internal server error');
+    }
   }
 
   /** Login (generic) */

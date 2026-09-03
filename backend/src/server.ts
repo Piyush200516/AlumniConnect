@@ -9,7 +9,6 @@ import { transporter } from "./config/mail";
 import path from "path";
 import authRoutes from "./routes/auth.routes";
 import passport from "./config/passport";
-import session from "express-session";
 import studentRoutes from "./routes/student.routes";
 import applicationRoutes from "./routes/application.routes";
 import eventRoutes from "./routes/event.routes";
@@ -31,8 +30,30 @@ const httpServer = createServer(app);
 // Initialize Socket.io
 setupSocket(httpServer);
 
-// CORS – allow frontend dev origin
-app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173", credentials: true }));
+// CORS – allow frontend dev and Cloudflare Pages production origins
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://alumniconnect-7ag.pages.dev',
+  process.env.FRONTEND_URL,
+].filter(Boolean) as string[];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.pages.dev') ||
+        origin.includes('localhost')
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // Initialize Passport
@@ -69,36 +90,6 @@ app.use(errorHandler);
 
 const PORT = Number(process.env.PORT) || 5002;
 
-// Helper: print every registered Express route at startup
-function printRoutes(app: express.Express) {
-  const routes: string[] = [];
-  app._router?.stack?.forEach((middleware: any) => {
-    if (middleware.route) {
-      // Direct route
-      const methods = Object.keys(middleware.route.methods).join(',').toUpperCase();
-      routes.push(`  ${methods} ${middleware.route.path}`);
-    } else if (middleware.name === 'router' && middleware.handle?.stack) {
-      // Router middleware
-      const prefix = middleware.regexp?.source
-        ?.replace('\\/?', '')
-        ?.replace('(?=\\/|$)', '')
-        ?.replace(/\\\//g, '/')
-        ?.replace(/^\^/, '') || '';
-      middleware.handle.stack.forEach((handler: any) => {
-        if (handler.route) {
-          const methods = Object.keys(handler.route.methods).join(',').toUpperCase();
-          routes.push(`  ${methods} ${prefix}${handler.route.path}`);
-        }
-      });
-    }
-  });
-  if (routes.length > 0) {
-    console.log(`\n📋 Registered routes (${routes.length}):`);
-    routes.forEach((r) => console.log(r));
-    console.log('');
-  }
-}
-
 const startServer = async () => {
   try {
     if (!process.env.DATABASE_URL) {
@@ -108,12 +99,10 @@ const startServer = async () => {
     await prisma.$connect();
     console.log("Database Connected Successfully");
 
-    // Initialize Firebase Admin SDK
     initializeFirebase();
 
     httpServer.listen(PORT, "0.0.0.0", () => {
       logger.info(`🚀 Server running on http://localhost:${PORT}`);
-      printRoutes(app);
 
       if (process.env.NODE_ENV !== "test") {
         transporter.verify()
@@ -124,7 +113,7 @@ const startServer = async () => {
       }
     });
   } catch (error) {
-    logger.error(`Failed to start server due to connection or configuration error: ${error instanceof Error ? error.message : error}`);
+    logger.error(`Failed to start server due to connection error: ${error instanceof Error ? error.message : error}`);
     process.exit(1);
   }
 };
@@ -132,4 +121,3 @@ const startServer = async () => {
 if (process.env.NODE_ENV !== "test") {
   startServer();
 }
-
