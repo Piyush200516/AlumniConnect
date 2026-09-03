@@ -78,20 +78,23 @@ class AuthService {
         },
       });
 
-      const verificationToken = await createEmailVerificationToken(user.id);
-      await sendVerificationEmail(user.email, verificationToken);
+      // Send verification email in background without blocking response
+      createEmailVerificationToken(user.id)
+        .then((token) => sendVerificationEmail(user.email, token))
+        .catch((e) => logger.warn(`Verification email send failed for ${user.email}: ${e}`));
+
       const accessToken = generateAccessToken({ userId: user.id, email: user.email, role: user.role });
       const refreshToken = await generateRefreshToken({ userId: user.id, email: user.email, role: user.role });
       logger.info(`Student signup successful: ${user.email}`);
       return { accessToken, refreshToken, user: { id: user.id, email: user.email, role: user.role } };
     } catch (err: any) {
-      logger.error(`Student signup failed: ${err instanceof Error ? err.message : err}`);
+      logger.error(`Student signup failed: ${err instanceof Error ? err.stack || err.message : err}`);
       if (err instanceof ApiError) throw err;
       // Zod validation errors
       if (err && typeof err === 'object' && 'issues' in err) {
         throw new ApiError(400, 'Invalid signup data', err);
       }
-      throw new ApiError(500, 'Internal server error');
+      throw new ApiError(500, err instanceof Error ? err.message : 'Internal server error');
     }
   }
 
@@ -123,14 +126,17 @@ class AuthService {
         },
       });
 
-      const verificationToken = await createEmailVerificationToken(user.id);
-      await sendVerificationEmail(user.email, verificationToken);
+      // Send verification email in background without blocking response
+      createEmailVerificationToken(user.id)
+        .then((token) => sendVerificationEmail(user.email, token))
+        .catch((e) => logger.warn(`Verification email send failed for ${user.email}: ${e}`));
+
       const accessToken = generateAccessToken({ userId: user.id, email: user.email, role: user.role });
       const refreshToken = await generateRefreshToken({ userId: user.id, email: user.email, role: user.role });
       logger.info(`Alumni signup successful: ${user.email}`);
       return { accessToken, refreshToken, user: { id: user.id, email: user.email, role: user.role } };
     } catch (err: any) {
-      logger.error(`Alumni signup failed: ${err instanceof Error ? err.message : err}`);
+      logger.error(`Alumni signup failed: ${err instanceof Error ? err.stack || err.message : err}`);
       if (err instanceof ApiError) throw err;
       if (err && typeof err === 'object' && 'issues' in err) {
         throw new ApiError(400, 'Invalid signup data', err);
