@@ -31,11 +31,10 @@ export const useAuth = () => {
     try {
       const finalEndpoint = endpoint || '/auth/login';
       const res = await api.post(finalEndpoint, payload);
-      const response = res;
-      console.log("API Response", response);
-      const token = res.data.token || res.data.data?.token || res.data.data?.accessToken;
+      console.log("API Response", res);
+      const token = res.data?.token || res.data?.data?.token || res.data?.data?.accessToken || res.data?.accessToken;
       
-      const rawRole = role || res.data.data?.user?.role || res.data.user?.role;
+      const rawRole = role || res.data?.data?.user?.role || res.data?.user?.role;
       if (!rawRole) {
         throw new Error('Role not specified in login response');
       }
@@ -47,24 +46,41 @@ export const useAuth = () => {
       const finalRedirectPath = redirectPath || `/${finalRole}/dashboard`;
       navigate(finalRedirectPath);
     } catch (err: any) {
-      const response = err.response;
-      console.log("API Response", response);
+      console.error("Login API Error", err.response);
       toastError(err.response?.data?.message || 'Login failed');
     }
   };
 
   const signup = async (role: Role, data: any, endpoint: string, redirectPath: string) => {
-    // Strip fields the backend doesn't expect
-    const { confirmPassword, ...payload } = data;
+    // Strip confirmPassword and map frontend fields to backend validation schema
+    const { confirmPassword, fullName, company, linkedinUrl, enrollmentNumber, ...rest } = data;
+    
+    const payload: any = {
+      ...rest,
+      name: data.name || fullName,
+    };
+
+    if (role === 'alumni') {
+      if (company) payload.currentCompany = company;
+      if (data.passingYear) payload.passingYear = Number(data.passingYear);
+      if (data.designation) payload.designation = data.designation;
+    } else if (role === 'student') {
+      if (enrollmentNumber) payload.enrollmentNumber = enrollmentNumber;
+      if (data.graduationYear) payload.graduationYear = Number(data.graduationYear);
+    }
+
     const normalizedPayload = normalizeEmail(payload);
     console.log('Signup Payload:', normalizedPayload);
     try {
       const res = await api.post(endpoint, normalizedPayload);
-      const token = res.data.token || res.data.data?.token || res.data.data?.accessToken;
-      storeUser(role, token);
-      toastSuccess('Account created');
+      const token = res.data?.token || res.data?.data?.token || res.data?.data?.accessToken || res.data?.accessToken;
+      if (token) {
+        storeUser(role, token);
+      }
+      toastSuccess('Account created successfully');
       navigate(redirectPath);
     } catch (err: any) {
+      console.error('Signup API Error:', err.response?.data || err);
       toastError(err.response?.data?.message || 'Signup failed');
     }
   };

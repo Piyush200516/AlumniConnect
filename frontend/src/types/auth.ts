@@ -9,8 +9,8 @@ export const studentSignupSchema = z.object({
   course: z.string().min(1, 'Course is required'),
   graduationYear: z.number({ message: 'Enter a valid year' })
     .int('Enter a valid year')
-    .gte(2025, 'Enter a valid year')
-    .lte(2029, 'Enter a valid year'),
+    .gte(1950, 'Enter a valid year')
+    .lte(2035, 'Enter a valid year'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -26,14 +26,14 @@ export const studentLoginSchema = z.object({
 export const alumniSignupSchema = z.object({
   fullName: z.string().min(2, 'Full Name is required'),
   email: z.string().email('Invalid email address'),
-  enrollmentNumber: z.string().min(1, 'Enrollment Number required'),
+  enrollmentNumber: z.string().optional(),
   passingYear: z.number({ message: 'Enter a valid year' })
     .int('Enter a valid year')
-    .gte(2025, 'Enter a valid year')
-    .lte(2029, 'Enter a valid year'),
-  company: z.string().min(1, 'Company required'),
-  designation: z.string().min(1, 'Designation required'),
-  linkedinUrl: z.string().url('Invalid LinkedIn URL'),
+    .gte(1950, 'Enter a valid year')
+    .lte(2035, 'Enter a valid year'),
+  company: z.string().optional(),
+  designation: z.string().optional(),
+  linkedinUrl: z.string().optional().or(z.literal('')),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
