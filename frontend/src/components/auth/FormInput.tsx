@@ -1,6 +1,6 @@
-import type { FieldError, FieldValues, RegisterOptions, UseFormRegister } from 'react-hook-form';
-import type { Path } from 'react-hook-form';
+import type { FieldError, FieldValues, RegisterOptions, UseFormRegister, Path } from 'react-hook-form';
 import { motion } from 'framer-motion';
+import type { ComponentType } from 'react';
 
 interface FormInputProps<T extends FieldValues> {
   label: string;
@@ -10,6 +10,7 @@ interface FormInputProps<T extends FieldValues> {
   register: UseFormRegister<T>;
   validation?: RegisterOptions<T, Path<T>>;
   error?: FieldError;
+  icon?: ComponentType<{ className?: string }>;
 }
 
 export const FormInput = <T extends FieldValues>({
@@ -20,27 +21,44 @@ export const FormInput = <T extends FieldValues>({
   register,
   validation,
   error,
+  icon: Icon,
 }: FormInputProps<T>) => {
   return (
     <div className="mb-4">
-      <label htmlFor={name} className="block text-gray-300 mb-1">{label}</label>
-      <motion.input
-        id={name}
-        type={type}
-        placeholder={placeholder}
-        className={`w-full px-4 py-2 bg-gray-800 text-white rounded focus:outline-none focus:ring-2 focus:ring-primary-light ${error ? 'border border-red-500' : ''}`}
-        whileFocus={{ scale: 1.02 }}
-        {...register(name, validation)}
-      />
+      <label htmlFor={name} className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+        {label}
+      </label>
+      <div className="relative flex items-center">
+        {Icon && (
+          <div className="absolute left-3.5 text-slate-400 pointer-events-none flex items-center justify-center">
+            <Icon className="w-5 h-5" />
+          </div>
+        )}
+        <motion.input
+          id={name}
+          type={type}
+          placeholder={placeholder}
+          className={`w-full py-2.5 bg-white/5 border ${
+            Icon ? 'pl-11 pr-4' : 'px-4'
+          } rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none transition-all duration-200 ${
+            error
+              ? 'border-red-500/80 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
+              : 'border-white/10 focus:border-blue-500/80 focus:ring-2 focus:ring-blue-500/20 hover:border-white/20'
+          }`}
+          whileFocus={{ scale: 1.01 }}
+          {...register(name, validation)}
+        />
+      </div>
       {error && (
         <motion.p
-          className="text-red-400 text-sm mt-1"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          className="text-red-400 text-xs mt-1.5 font-medium flex items-center gap-1"
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
         >
-          {error.message}
+          <span>•</span> {error.message}
         </motion.p>
       )}
     </div>
   );
 };
+
