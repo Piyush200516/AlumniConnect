@@ -33,14 +33,18 @@ export const errorHandler = (err: any, req: Request, res: Response, _next: NextF
   // Prisma known request errors (e.g. column not found, unique constraint)
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     logger.error(`[Prisma KnownError] Code: ${err.code} | Meta: ${JSON.stringify(err.meta)} | Message: ${err.message}`);
+    if (err.code === 'P2002') {
+      // Unique constraint violation — map to 409 Conflict
+      const fields = (err.meta?.target as string[] | undefined)?.join(', ') || 'field';
+      const message = `An account with this ${fields.includes('enrollmentNo') ? 'enrollment number' : fields.includes('email') ? 'email' : fields} already exists.`;
+      return responseError(res, { success: false, message }, 409);
+    }
     const message =
-      err.code === 'P2002'
-        ? 'A record with this value already exists.'
-        : err.code === 'P2025'
-          ? 'Record not found.'
-          : err.code === 'P2022'
-            ? 'Database column mapping error — schema may be out of sync.'
-            : `Database error (${err.code})`;
+      err.code === 'P2025'
+        ? 'Record not found.'
+        : err.code === 'P2022'
+          ? 'Database column mapping error — schema may be out of sync.'
+          : `Database error (${err.code})`;
     const status = err.code === 'P2025' ? 404 : 500;
     return responseError(res, { success: false, message }, status);
   }

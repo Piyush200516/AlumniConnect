@@ -59,6 +59,12 @@ class AuthService {
       });
       if (existing) throw new ApiError(409, 'Email already in use');
 
+      // Check for duplicate enrollment number
+      const existingEnrollment = await prisma.studentProfile.findUnique({
+        where: { enrollmentNumber: data.enrollmentNumber },
+      });
+      if (existingEnrollment) throw new ApiError(409, 'An account with this enrollment number already exists. Please log in instead.');
+
       const hashed = await bcrypt.hash(data.password, 12);
       const user = await prisma.user.create({
         data: {
