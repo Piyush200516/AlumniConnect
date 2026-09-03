@@ -47,7 +47,6 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 | Backend Testing | Jest, Supertest |
 | E2E Testing | Cypress |
 | API Mocking | MSW (Mock Service Worker), `vi.fn` (Vitest mocks) |
-
 | Deployement | cloudflare.com(Frontend), render.com (Backend) |
 
 ## Architecture
