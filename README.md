@@ -8,6 +8,10 @@
 ![Database](https://img.shields.io/badge/Database-Neon%20PostgreSQL-blueviolet)
 ![Realtime](https://img.shields.io/badge/Realtime-Socket.IO-important)
 
+## Deployement
+
+https://alumniconnect-7ag.pages.dev/login
+
 ## Overview
 
 AlumniConnect brings students, alumni, and CDC together in one workspace for mentorship, jobs, events, announcements, and messaging.
