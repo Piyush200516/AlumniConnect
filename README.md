@@ -8,9 +8,13 @@
 ![Database](https://img.shields.io/badge/Database-Neon%20PostgreSQL-blueviolet)
 ![Realtime](https://img.shields.io/badge/Realtime-Socket.IO-important)
 
-## Deployement
+## Deployment
 
-https://alumniconnect-7ag.pages.dev/login
+The application is live and can be accessed here:
+
+🔗 **Live URL:** [https://alumniconnect-7ag.pages.dev/login](https://alumniconnect-7ag.pages.dev/login)
+
+
 
 ## Overview
 
