@@ -50,6 +50,8 @@ model User {
   followers                  User[]                 @relation("UserFollows")
   following                  User[]                 @relation("UserFollows")
 
+  @@index([email])
+  @@index([email, role])
   @@index([role])
   @@index([status])
   @@index([createdAt])
@@ -150,6 +152,7 @@ model CdcProfile {
   updatedAt     DateTime @updatedAt
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([officialEmail])
   @@map("cdc_profiles")
 }
 
@@ -488,6 +491,7 @@ model StudentApplication {
 
   @@index([status])
   @@index([createdAt])
+  @@index([email])
   @@map("student_applications")
 }
 

@@ -55,9 +55,12 @@ class AuthService {
     try {
       const data = studentSignupSchema.parse(payload);
       const email = normalizeEmail(data.email);
-      const existing = await prisma.user.findFirst({
-        where: { email: { equals: email, mode: 'insensitive' } },
-      });
+      let existing = await prisma.user.findFirst({ where: { email } });
+      if (!existing) {
+        existing = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: 'insensitive' } },
+        });
+      }
       if (existing) throw new ApiError(409, 'Email already in use');
 
       // Check for duplicate enrollment number
@@ -110,9 +113,12 @@ class AuthService {
     try {
       const data = alumniSignupSchema.parse(payload);
       const email = normalizeEmail(data.email);
-      const existing = await prisma.user.findFirst({
-        where: { email: { equals: email, mode: 'insensitive' } },
-      });
+      let existing = await prisma.user.findFirst({ where: { email } });
+      if (!existing) {
+        existing = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: 'insensitive' } },
+        });
+      }
       if (existing) throw new ApiError(409, 'Email already in use');
 
       const hashed = await bcrypt.hash(data.password, SALT_ROUNDS);
@@ -166,9 +172,12 @@ class AuthService {
 
       // Log User lookup
       logger.info(`Attempting user lookup for email: ${email}`);
-      const user = await prisma.user.findFirst({
-        where: { email: { equals: email, mode: 'insensitive' } },
-      });
+      let user = await prisma.user.findFirst({ where: { email } });
+      if (!user) {
+        user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: 'insensitive' } },
+        });
+      }
       if (!user) {
         logger.warn(`User lookup failed: no user found with email: ${email}`);
         throw new ApiError(401, 'Invalid email or password');
@@ -247,9 +256,12 @@ class AuthService {
     const parsed = forgotPasswordSchema.parse({ email: normalized });
     logger.info(`Querying database for user by email: "${normalized}" (case-insensitive)`);
     
-    const user = await prisma.user.findFirst({
-      where: { email: { equals: normalized, mode: 'insensitive' } },
-    });
+    let user = await prisma.user.findFirst({ where: { email: normalized } });
+    if (!user) {
+      user = await prisma.user.findFirst({
+        where: { email: { equals: normalized, mode: 'insensitive' } },
+      });
+    }
     
     // Always return success even if user not found to prevent email enumeration
     if (!user) {
