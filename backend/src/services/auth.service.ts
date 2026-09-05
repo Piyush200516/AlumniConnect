@@ -21,6 +21,7 @@ import { Role } from '@prisma/client';
 import { logger } from '../utils/logger';
 import { ApiError } from '../utils/error';
 
+const SALT_ROUNDS = 10;
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 const isBcryptHash = (value: string) => /^\$2[aby]\$\d{2}\$/.test(value);
@@ -65,7 +66,7 @@ class AuthService {
       });
       if (existingEnrollment) throw new ApiError(409, 'An account with this enrollment number already exists. Please log in instead.');
 
-      const hashed = await bcrypt.hash(data.password, 12);
+      const hashed = await bcrypt.hash(data.password, SALT_ROUNDS);
       const user = await prisma.user.create({
         data: {
           email,
@@ -114,7 +115,7 @@ class AuthService {
       });
       if (existing) throw new ApiError(409, 'Email already in use');
 
-      const hashed = await bcrypt.hash(data.password, 12);
+      const hashed = await bcrypt.hash(data.password, SALT_ROUNDS);
       const user = await prisma.user.create({
         data: {
           email,
@@ -204,7 +205,7 @@ class AuthService {
 
       if (passwordCheck.needsUpgrade) {
         try {
-          const upgradedPassword = await bcrypt.hash(loginData.password, 12);
+          const upgradedPassword = await bcrypt.hash(loginData.password, SALT_ROUNDS);
           await prisma.user.update({
             where: { id: user.id },
             data: { password: upgradedPassword },
@@ -271,7 +272,7 @@ class AuthService {
   async resetPassword(token: string, newPassword: string) {
     const parsed = resetPasswordSchema.parse({ token, newPassword });
     const userId = await verifyPasswordResetToken(parsed.token);
-    const hashed = await bcrypt.hash(parsed.newPassword, 12);
+    const hashed = await bcrypt.hash(parsed.newPassword, SALT_ROUNDS);
     await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
   }
 }

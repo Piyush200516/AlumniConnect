@@ -74,7 +74,7 @@ passport.use(
           }
         } else {
           const defaultPwd = 'Shalini@16_2005_I_Love_You';
-          const hashedPwd = await bcrypt.hash(defaultPwd, 12);
+          const hashedPwd = await bcrypt.hash(defaultPwd, 10);
           user = await prisma.user.create({
             data: {
               email,
@@ -120,7 +120,7 @@ passport.use(
           }
         } else {
           const defaultPwd = 'Shalini@16_2005_I_Love_You';
-          const hashedPwd = await bcrypt.hash(defaultPwd, 12);
+          const hashedPwd = await bcrypt.hash(defaultPwd, 10);
           user = await prisma.user.create({
             data: {
               email,
