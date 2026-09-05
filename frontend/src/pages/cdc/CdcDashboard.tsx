@@ -1364,31 +1364,98 @@ export default function CdcDashboard() {
 
               {peopleView === 'alumni' && (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {filteredAlumni.map((alumnus) => (
-                    <article
-                      key={alumnus.id}
-                      className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl"
-                    >
-                      <div className="flex items-start justify-between gap-3">
+                  {filteredAlumni.map((alumnus) => {
+                    const status = alumnus.verificationStatus || 'UNVERIFIED';
+                    return (
+                      <article
+                        key={alumnus.id}
+                        className="rounded-3xl border border-slate-900/80 bg-slate-950/50 p-5 shadow-xl shadow-black/10 backdrop-blur-xl flex flex-col justify-between"
+                      >
                         <div>
-                          <p className="text-lg font-bold text-white">{alumnus.fullName}</p>
-                          <p className="text-sm text-slate-400">{alumnus.designation || 'Alumni'}</p>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-lg font-bold text-white">{alumnus.fullName}</p>
+                              <p className="text-sm text-slate-400">{alumnus.designation || 'Alumni'}</p>
+                            </div>
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-300">
+                              <Users className="h-5 w-5" />
+                            </div>
+                          </div>
+                          <div className="mt-4 flex flex-wrap items-center gap-2">
+                            <StatusChip label="ALUMNI" tone="emerald" />
+                            <StatusChip label={`Batch ${alumnus.passingYear}`} tone="slate" />
+                            <StatusChip
+                              label={status}
+                              tone={
+                                status === 'VERIFIED'
+                                  ? 'emerald'
+                                  : status === 'REJECTED'
+                                    ? 'rose'
+                                    : status === 'PENDING'
+                                      ? 'amber'
+                                      : 'slate'
+                              }
+                            />
+                          </div>
+                          <div className="mt-4 space-y-2 text-sm text-slate-400">
+                            <p>{alumnus.currentCompany || 'Company not added'}</p>
+                            <p>{alumnus.email}</p>
+                            <p>{alumnus.location || 'Location not added'}</p>
+                            {alumnus.alumniIdNumber && <p className="text-xs font-semibold text-slate-300">ID: {alumnus.alumniIdNumber}</p>}
+                          </div>
+
+                          {/* Verification Documents */}
+                          {(alumnus.idCardUrl || alumnus.degreeCertUrl) && (
+                            <div className="mt-4 rounded-2xl border border-slate-900 bg-slate-900/30 p-3 space-y-1 text-xs">
+                              <p className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Uploaded Documents</p>
+                              {alumnus.idCardUrl && (
+                                <a href={alumnus.idCardUrl} target="_blank" rel="noreferrer" className="block text-blue-400 hover:underline font-medium">
+                                  📄 ID Card Image
+                                </a>
+                              )}
+                              {alumnus.degreeCertUrl && (
+                                <a href={alumnus.degreeCertUrl} target="_blank" rel="noreferrer" className="block text-blue-400 hover:underline font-medium">
+                                  📜 Degree Certificate
+                                </a>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-300">
-                          <Users className="h-5 w-5" />
+
+                        {/* Admin Action Buttons */}
+                        <div className="mt-5 border-t border-slate-900 pt-3 flex gap-2">
+                          <button
+                            onClick={async () => {
+                              try {
+                                await api.patch(`/cdc/alumni/${alumnus.id}/verification`, { verificationStatus: 'VERIFIED' });
+                                toastSuccess(`Alumni ${alumnus.fullName} verified!`);
+                                await loadDashboard(true);
+                              } catch (err) {
+                                toastError('Failed to verify alumni');
+                              }
+                            }}
+                            className="flex-1 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 px-3 py-2 text-xs font-bold transition-all cursor-pointer text-center"
+                          >
+                            Approve Verification
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await api.patch(`/cdc/alumni/${alumnus.id}/verification`, { verificationStatus: 'REJECTED' });
+                                toastSuccess(`Alumni ${alumnus.fullName} verification rejected`);
+                                await loadDashboard(true);
+                              } catch (err) {
+                                toastError('Failed to reject verification');
+                              }
+                            }}
+                            className="rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 px-3 py-2 text-xs font-bold transition-all cursor-pointer"
+                          >
+                            Reject
+                          </button>
                         </div>
-                      </div>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <StatusChip label="ALUMNI" tone="emerald" />
-                        <StatusChip label={`Batch ${alumnus.passingYear}`} tone="slate" />
-                      </div>
-                      <div className="mt-4 space-y-2 text-sm text-slate-400">
-                        <p>{alumnus.currentCompany || 'Company not added'}</p>
-                        <p>{alumnus.email}</p>
-                        <p>{alumnus.location || 'Location not added'}</p>
-                      </div>
-                    </article>
-                  ))}
+                      </article>
+                    );
+                  })}
                   {filteredAlumni.length === 0 && (
                     <div className="rounded-3xl border border-dashed border-slate-900 p-12 text-center text-sm text-slate-500 md:col-span-2 xl:col-span-3">
                       No alumni match your search.
