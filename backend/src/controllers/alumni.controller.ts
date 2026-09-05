@@ -6,12 +6,59 @@ import { responseSuccess } from '../utils/response';
 import { 
   sendConnectionSchema, 
   acceptConnectionSchema, 
-  sendMessageSchema 
+  sendMessageSchema,
+  updateAlumniProfileSchema,
+  addWorkExperienceSchema,
+  addDonationSchema
 } from '../validators/alumni.validator';
 
 const alumniService = new AlumniService();
 const connectionService = new ConnectionService();
 const messageService = new MessageService();
+
+export const updateMyProfile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user.id;
+    const validated = updateAlumniProfileSchema.parse(req.body);
+    const updatedProfile = await alumniService.updateMyProfile(userId, validated);
+    responseSuccess(res, 'Alumni profile updated successfully', updatedProfile);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const addWorkExperience = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user.id;
+    const validated = addWorkExperienceSchema.parse(req.body);
+    const workExp = await alumniService.addWorkExperience(userId, validated);
+    responseSuccess(res, 'Work experience added successfully', workExp);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteWorkExperience = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user.id;
+    const expId = req.params.expId as string;
+    const result = await alumniService.deleteWorkExperience(userId, expId);
+    responseSuccess(res, result.message, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const addDonation = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user.id;
+    const validated = addDonationSchema.parse(req.body);
+    const donation = await alumniService.addDonation(userId, validated);
+    responseSuccess(res, 'Donation recorded successfully', donation);
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const getAlumni = async (req: Request, res: Response, next: NextFunction) => {
   try {

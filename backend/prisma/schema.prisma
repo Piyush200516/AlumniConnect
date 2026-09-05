@@ -118,12 +118,37 @@ model AlumniProfile {
   phone           String?
   portfolioUrl    String?
   privacySetting  PrivacySetting   @default(PUBLIC)
-  shortBio        String?          @db.VarChar(500)
+  shortBio        String?                  @db.VarChar(500)
+  
+  // Extended Profile Fields
+  rollNumber                String?
+  enrollmentNumber          String?
+  graduationYear            Int?
+  dateOfBirth               DateTime?
+  gender                    String?
+  personalEmail             String?
+  collegeEmail              String?
+  alternatePhone            String?
+  address                   String?
+  city                      String?
+  state                     String?
+  country                   String?
+  otherSocialLinks          Json?
+  cgpa                      Float?
+  scholarshipsAndAwards     String[]                 @default([])
+  extracurricularActivities String[]                 @default([])
+  alumniIdNumber            String?
+  idCardUrl                 String?
+  degreeCertUrl             String?
+  verificationStatus        AlumniVerificationStatus @default(UNVERIFIED)
+  mentorshipAvailability    Boolean                  @default(true)
+
   company         Company?         @relation(fields: [companyId], references: [id])
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   education       Education[]
   workExperiences WorkExperience[]
   skillsList      Skill[]          @relation("AlumniSkills")
+  donations       Donation[]
 
   @@index([passingYear])
   @@index([industry])
@@ -137,6 +162,7 @@ model AlumniProfile {
   @@index([designation])
   @@index([location])
   @@index([companyId])
+  @@index([verificationStatus])
   @@map("alumni_profiles")
 }
 
@@ -560,6 +586,7 @@ model WorkExperience {
   companyName     String
   companyId       String?
   role            String
+  industry        String?
   startDate       DateTime
   endDate         DateTime?
   description     String?
@@ -572,6 +599,21 @@ model WorkExperience {
   @@index([alumniProfileId])
   @@index([companyId])
   @@map("work_experiences")
+}
+
+model Donation {
+  id              String        @id @default(uuid())
+  alumniProfileId String
+  amount          Float
+  purpose         String
+  date            DateTime      @default(now())
+  transactionId   String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  alumniProfile   AlumniProfile @relation(fields: [alumniProfileId], references: [id], onDelete: Cascade)
+
+  @@index([alumniProfileId])
+  @@map("donations")
 }
 
 model Education {
@@ -759,6 +801,14 @@ enum NotificationType {
 
 /// Verification status for students
 enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+/// Verification status for alumni
+enum AlumniVerificationStatus {
+  UNVERIFIED
   PENDING
   VERIFIED
   REJECTED

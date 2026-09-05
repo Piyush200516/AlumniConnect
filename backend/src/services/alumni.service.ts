@@ -24,6 +24,9 @@ export class AlumniService {
         },
         education: {
           orderBy: { startDate: 'desc' }
+        },
+        donations: {
+          orderBy: { date: 'desc' }
         }
       }
     });
@@ -32,12 +35,71 @@ export class AlumniService {
       throw new ApiError(404, 'Alumni profile not found');
     }
 
-    return {
+    const eventsAttended = await prisma.eventRegistration.findMany({
+      where: { userId, status: 'ATTENDED' },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            category: true,
+            eventDate: true,
+            venue: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const workHistory = alumni.workExperiences.map(w => ({
+      id: w.id,
+      companyName: w.companyName,
+      logoUrl: w.company?.logoUrl || null,
+      role: w.role,
+      industry: w.industry,
+      startDate: w.startDate,
+      endDate: w.endDate,
+      description: w.description,
+      location: w.location,
+    }));
+
+    const donations = alumni.donations.map(d => ({
+      id: d.id,
+      amount: d.amount,
+      purpose: d.purpose,
+      date: d.date,
+      transactionId: d.transactionId,
+    }));
+
+    const eventsAttendedList = eventsAttended.map(ea => ({
+      id: ea.id,
+      eventId: ea.event.id,
+      title: ea.event.title,
+      category: ea.event.category,
+      eventDate: ea.event.eventDate,
+      venue: ea.event.venue,
+    }));
+
+    const profileData = {
       id: alumni.id,
       userId: alumni.userId,
       email: alumni.user.email,
       fullName: alumni.fullName,
       passingYear: alumni.passingYear,
+      graduationYear: alumni.graduationYear || alumni.passingYear,
+      rollNumber: alumni.rollNumber,
+      enrollmentNumber: alumni.enrollmentNumber,
+      dateOfBirth: alumni.dateOfBirth ? alumni.dateOfBirth.toISOString().split('T')[0] : null,
+      gender: alumni.gender,
+      personalEmail: alumni.personalEmail,
+      collegeEmail: alumni.collegeEmail,
+      phone: alumni.phone,
+      alternatePhone: alumni.alternatePhone,
+      address: alumni.address,
+      city: alumni.city,
+      state: alumni.state,
+      country: alumni.country,
+      otherSocialLinks: alumni.otherSocialLinks || {},
       branch: alumni.branch || 'CSIT',
       course: alumni.course || 'B.Tech',
       currentCompany: alumni.currentCompany,
@@ -48,28 +110,27 @@ export class AlumniService {
       bio: alumni.bio,
       profileImageUrl: alumni.profileImageUrl,
       linkedinUrl: alumni.linkedinUrl,
-      location: alumni.location,
-      phone: alumni.phone,
+      githubUrl: alumni.githubUrl,
       portfolioUrl: alumni.portfolioUrl,
+      location: alumni.location,
       currentCtc: alumni.currentCtc,
       privacySetting: alumni.privacySetting,
       achievements: alumni.achievements,
+      cgpa: alumni.cgpa,
+      scholarshipsAndAwards: alumni.scholarshipsAndAwards,
+      extracurricularActivities: alumni.extracurricularActivities,
+      alumniIdNumber: alumni.alumniIdNumber,
+      idCardUrl: alumni.idCardUrl,
+      degreeCertUrl: alumni.degreeCertUrl,
+      verificationStatus: alumni.verificationStatus,
+      mentorshipAvailability: alumni.mentorshipAvailability,
       company: alumni.company ? {
         id: alumni.company.id,
         name: alumni.company.name,
         logoUrl: alumni.company.logoUrl,
         location: alumni.company.location,
       } : null,
-      workHistory: alumni.workExperiences.map(w => ({
-        id: w.id,
-        companyName: w.companyName,
-        logoUrl: w.company?.logoUrl || null,
-        role: w.role,
-        startDate: w.startDate,
-        endDate: w.endDate,
-        description: w.description,
-        location: w.location,
-      })),
+      workHistory,
       education: alumni.education.map(e => ({
         id: e.id,
         institution: e.institution,
@@ -79,8 +140,202 @@ export class AlumniService {
         endDate: e.endDate,
         description: e.description,
       })),
+      donations,
+      eventsAttended: eventsAttendedList,
+    };
+
+    const completionPercentage = this.calculateProfileCompleteness(profileData);
+
+    return {
+      ...profileData,
+      completionPercentage,
     };
   }
+
+  /**
+   * Update Alumni Profile fields
+   */
+  async updateMyProfile(userId: string, data: any) {
+    const alumni = await prisma.alumniProfile.findUnique({ where: { userId } });
+    if (!alumni) {
+      throw new ApiError(404, 'Alumni profile not found');
+    }
+
+    const updateData: any = {};
+
+    const fieldsToCopy = [
+      'fullName', 'rollNumber', 'enrollmentNumber', 'course', 'gender',
+      'personalEmail', 'collegeEmail', 'phone', 'alternatePhone',
+      'address', 'city', 'state', 'country', 'otherSocialLinks',
+      'bio', 'currentCompany', 'designation', 'industry', 'linkedinUrl',
+      'githubUrl', 'portfolioUrl', 'location', 'currentCtc',
+      'alumniIdNumber', 'idCardUrl', 'degreeCertUrl', 'mentorshipAvailability'
+    ];
+
+    for (const field of fieldsToCopy) {
+      if (data[field] !== undefined) {
+        updateData[field] = data[field];
+      }
+    }
+
+    if (data.graduationYear !== undefined) {
+      updateData.graduationYear = data.graduationYear ? Number(data.graduationYear) : null;
+      if (data.graduationYear) {
+        updateData.passingYear = Number(data.graduationYear);
+      }
+    }
+
+    if (data.dateOfBirth !== undefined) {
+      updateData.dateOfBirth = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+    }
+
+    if (data.cgpa !== undefined) {
+      updateData.cgpa = data.cgpa !== null && data.cgpa !== '' ? Number(data.cgpa) : null;
+    }
+
+    if (data.experience !== undefined) {
+      updateData.experience = data.experience !== null && data.experience !== '' ? Number(data.experience) : null;
+    }
+
+    if (data.scholarshipsAndAwards !== undefined) {
+      updateData.scholarshipsAndAwards = Array.isArray(data.scholarshipsAndAwards)
+        ? data.scholarshipsAndAwards
+        : (typeof data.scholarshipsAndAwards === 'string' ? data.scholarshipsAndAwards.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+    }
+
+    if (data.extracurricularActivities !== undefined) {
+      updateData.extracurricularActivities = Array.isArray(data.extracurricularActivities)
+        ? data.extracurricularActivities
+        : (typeof data.extracurricularActivities === 'string' ? data.extracurricularActivities.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+    }
+
+    if (data.skills !== undefined) {
+      updateData.skills = Array.isArray(data.skills)
+        ? data.skills
+        : (typeof data.skills === 'string' ? data.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+    }
+
+    // Auto set verificationStatus to PENDING if documents are uploaded and current status is UNVERIFIED
+    if ((updateData.idCardUrl || updateData.degreeCertUrl) && alumni.verificationStatus === 'UNVERIFIED') {
+      updateData.verificationStatus = 'PENDING';
+    }
+
+    await prisma.alumniProfile.update({
+      where: { userId },
+      data: updateData,
+    });
+
+    return this.getMyProfile(userId);
+  }
+
+  /**
+   * Add Work Experience entry
+   */
+  async addWorkExperience(userId: string, data: any) {
+    const alumni = await prisma.alumniProfile.findUnique({ where: { userId } });
+    if (!alumni) {
+      throw new ApiError(404, 'Alumni profile not found');
+    }
+
+    const newExp = await prisma.workExperience.create({
+      data: {
+        alumniProfileId: alumni.id,
+        companyName: data.companyName,
+        role: data.role,
+        industry: data.industry || null,
+        startDate: new Date(data.startDate),
+        endDate: data.endDate ? new Date(data.endDate) : null,
+        location: data.location || null,
+        description: data.description || null,
+      }
+    });
+
+    return newExp;
+  }
+
+  /**
+   * Delete Work Experience entry
+   */
+  async deleteWorkExperience(userId: string, expId: string) {
+    const alumni = await prisma.alumniProfile.findUnique({ where: { userId } });
+    if (!alumni) {
+      throw new ApiError(404, 'Alumni profile not found');
+    }
+
+    const exp = await prisma.workExperience.findFirst({
+      where: { id: expId, alumniProfileId: alumni.id }
+    });
+
+    if (!exp) {
+      throw new ApiError(404, 'Work experience entry not found');
+    }
+
+    await prisma.workExperience.delete({ where: { id: expId } });
+    return { success: true, message: 'Work experience deleted successfully' };
+  }
+
+  /**
+   * Add Donation entry
+   */
+  async addDonation(userId: string, data: any) {
+    const alumni = await prisma.alumniProfile.findUnique({ where: { userId } });
+    if (!alumni) {
+      throw new ApiError(404, 'Alumni profile not found');
+    }
+
+    const donation = await prisma.donation.create({
+      data: {
+        alumniProfileId: alumni.id,
+        amount: Number(data.amount),
+        purpose: data.purpose,
+        transactionId: data.transactionId || null,
+      }
+    });
+
+    return donation;
+  }
+
+  /**
+   * Calculate Profile Completeness Percentage
+   */
+  public calculateProfileCompleteness(profile: any) {
+    let score = 0;
+
+    // Personal (20%)
+    if (profile.fullName) score += 5;
+    if (profile.rollNumber || profile.enrollmentNumber) score += 5;
+    if (profile.graduationYear || profile.passingYear) score += 5;
+    if (profile.course) score += 3;
+    if (profile.dateOfBirth || profile.gender) score += 2;
+
+    // Contact (20%)
+    if (profile.email || profile.personalEmail) score += 5;
+    if (profile.phone || profile.alternatePhone) score += 5;
+    if (profile.location || profile.address || profile.city) score += 5;
+    if (profile.linkedinUrl) score += 5;
+
+    // Academic (15%)
+    if (profile.cgpa !== null && profile.cgpa !== undefined) score += 5;
+    if (profile.scholarshipsAndAwards && profile.scholarshipsAndAwards.length > 0) score += 5;
+    if (profile.extracurricularActivities && profile.extracurricularActivities.length > 0) score += 5;
+
+    // Career (20%)
+    if (profile.currentCompany || profile.designation) score += 5;
+    if (profile.industry) score += 5;
+    if (profile.workHistory && profile.workHistory.length > 0) score += 10;
+
+    // Verification (15%)
+    if (profile.alumniIdNumber) score += 5;
+    if (profile.idCardUrl) score += 5;
+    if (profile.degreeCertUrl) score += 5;
+
+    // Engagement (10%)
+    if (profile.mentorshipAvailability !== undefined) score += 5;
+    if ((profile.eventsAttended && profile.eventsAttended.length > 0) || (profile.donations && profile.donations.length > 0)) score += 5;
+
+    return Math.min(score, 100);
+  }
+
 
   /**
    * Fetch Alumni List with search, filters, pagination, and sorting

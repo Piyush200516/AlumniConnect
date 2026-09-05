@@ -41,6 +41,19 @@ export type AlumniProfile = {
   email: string;
   fullName: string;
   passingYear: number;
+  graduationYear?: number | null;
+  rollNumber?: string | null;
+  enrollmentNumber?: string | null;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  personalEmail?: string | null;
+  collegeEmail?: string | null;
+  alternatePhone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  otherSocialLinks?: Record<string, string> | null;
   branch: string;
   course: string;
   currentCompany: string | null;
@@ -51,12 +64,37 @@ export type AlumniProfile = {
   bio: string | null;
   profileImageUrl: string | null;
   linkedinUrl: string | null;
+  githubUrl?: string | null;
   location: string | null;
   phone: string | null;
   portfolioUrl: string | null;
   currentCtc: string | null;
   privacySetting: 'PUBLIC' | 'PRIVATE' | 'HIDDEN';
   achievements: string[];
+  cgpa?: number | null;
+  scholarshipsAndAwards?: string[];
+  extracurricularActivities?: string[];
+  alumniIdNumber?: string | null;
+  idCardUrl?: string | null;
+  degreeCertUrl?: string | null;
+  verificationStatus?: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+  mentorshipAvailability?: boolean;
+  donations?: Array<{
+    id: string;
+    amount: number;
+    purpose: string;
+    date: string;
+    transactionId?: string | null;
+  }>;
+  eventsAttended?: Array<{
+    id: string;
+    eventId: string;
+    title: string;
+    category: string;
+    eventDate: string;
+    venue: string;
+  }>;
+  completionPercentage?: number;
   company: {
     id: string;
     name: string;
@@ -68,6 +106,7 @@ export type AlumniProfile = {
     companyName: string;
     logoUrl: string | null;
     role: string;
+    industry?: string | null;
     startDate: string;
     endDate: string | null;
     description: string | null;
@@ -232,19 +271,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const completionPercentage = profile ? calculateCompletionPercentage(profile) : 0;
   const alumniCompletionPercentage = alumniProfile
-    ? (() => {
+    ? alumniProfile.completionPercentage ?? (() => {
         let score = 0;
-        if (alumniProfile.fullName) score += 10;
-        if (alumniProfile.designation) score += 10;
-        if (alumniProfile.currentCompany) score += 10;
-        if (alumniProfile.experience !== undefined && alumniProfile.experience !== null) score += 10;
-        if (alumniProfile.bio) score += 15;
-        if (alumniProfile.profileImageUrl) score += 15;
-        if (alumniProfile.linkedinUrl) score += 10;
-        if (alumniProfile.location) score += 5;
-        if (alumniProfile.skills && alumniProfile.skills.length > 0) score += 10;
-        if (alumniProfile.portfolioUrl) score += 5;
-        if (alumniProfile.achievements && alumniProfile.achievements.length > 0) score += 10;
+        // Personal (20%)
+        if (alumniProfile.fullName) score += 5;
+        if (alumniProfile.rollNumber || alumniProfile.enrollmentNumber) score += 5;
+        if (alumniProfile.graduationYear || alumniProfile.passingYear) score += 5;
+        if (alumniProfile.course) score += 3;
+        if (alumniProfile.dateOfBirth || alumniProfile.gender) score += 2;
+
+        // Contact (20%)
+        if (alumniProfile.email || alumniProfile.personalEmail) score += 5;
+        if (alumniProfile.phone || alumniProfile.alternatePhone) score += 5;
+        if (alumniProfile.location || alumniProfile.address || alumniProfile.city) score += 5;
+        if (alumniProfile.linkedinUrl) score += 5;
+
+        // Academic (15%)
+        if (alumniProfile.cgpa !== null && alumniProfile.cgpa !== undefined) score += 5;
+        if (alumniProfile.scholarshipsAndAwards && alumniProfile.scholarshipsAndAwards.length > 0) score += 5;
+        if (alumniProfile.extracurricularActivities && alumniProfile.extracurricularActivities.length > 0) score += 5;
+
+        // Career (20%)
+        if (alumniProfile.currentCompany || alumniProfile.designation) score += 5;
+        if (alumniProfile.industry) score += 5;
+        if (alumniProfile.workHistory && alumniProfile.workHistory.length > 0) score += 10;
+
+        // Verification (15%)
+        if (alumniProfile.alumniIdNumber) score += 5;
+        if (alumniProfile.idCardUrl) score += 5;
+        if (alumniProfile.degreeCertUrl) score += 5;
+
+        // Engagement (10%)
+        if (alumniProfile.mentorshipAvailability !== undefined) score += 5;
+        if ((alumniProfile.eventsAttended && alumniProfile.eventsAttended.length > 0) || (alumniProfile.donations && alumniProfile.donations.length > 0)) score += 5;
+
         return Math.min(score, 100);
       })()
     : 0;

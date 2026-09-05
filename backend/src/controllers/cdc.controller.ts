@@ -16,3 +16,18 @@ export const getCdcDashboard = async (
     next(err);
   }
 };
+
+export const verifyAlumni = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const alumniId = req.params.id as string;
+    const { verificationStatus } = req.body;
+    const updated = await cdcService.verifyAlumni(alumniId, verificationStatus);
+    responseSuccess(res, `Alumni verification status updated to ${verificationStatus}`, updated);
+  } catch (err) {
+    next(err);
+  }
+};

@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma';
+import { ApiError } from '../utils/error';
 import {
   Role,
   ApplicationStatus,
@@ -200,6 +201,23 @@ export class CdcService {
       events,
       jobs,
     };
+  }
+
+  async verifyAlumni(alumniId: string, verificationStatus: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED') {
+    const alumni = await prisma.alumniProfile.findFirst({
+      where: { OR: [{ id: alumniId }, { userId: alumniId }] }
+    });
+
+    if (!alumni) {
+      throw new ApiError(404, 'Alumni profile not found');
+    }
+
+    const updated = await prisma.alumniProfile.update({
+      where: { id: alumni.id },
+      data: { verificationStatus: verificationStatus as any },
+    });
+
+    return updated;
   }
 }
 

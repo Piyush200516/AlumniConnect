@@ -4,6 +4,7 @@ import { authorizeRoles } from '../middleware/role.middleware';
 import {
   getAlumni,
   getMyProfile,
+  updateMyProfile,
   getAlumniDetails,
   searchAlumni,
   sendConnection,
@@ -12,7 +13,10 @@ import {
   getIncomingConnections,
   postMessage,
   toggleFollow,
-  toggleSave
+  toggleSave,
+  addWorkExperience,
+  deleteWorkExperience,
+  addDonation
 } from '../controllers/alumni.controller';
 
 const router = Router();
@@ -21,6 +25,13 @@ const router = Router();
 router.get('/', authenticateUser as any, getAlumni as any);
 router.get('/search', authenticateUser as any, searchAlumni as any);
 router.get('/me', authenticateUser as any, getMyProfile as any);
+router.put('/me', authenticateUser as any, authorizeRoles('ALUMNI') as any, updateMyProfile as any);
+router.put('/profile', authenticateUser as any, authorizeRoles('ALUMNI') as any, updateMyProfile as any);
+
+router.post('/me/work-experience', authenticateUser as any, authorizeRoles('ALUMNI') as any, addWorkExperience as any);
+router.delete('/me/work-experience/:expId', authenticateUser as any, authorizeRoles('ALUMNI') as any, deleteWorkExperience as any);
+router.post('/me/donations', authenticateUser as any, authorizeRoles('ALUMNI') as any, addDonation as any);
+
 router.get('/:id', authenticateUser as any, getAlumniDetails as any);
 
 router.post('/connections/send', authenticateUser as any, sendConnection as any);
