@@ -445,6 +445,7 @@ export default function AlumniProfile() {
             {activeEditSection === 'personal' ? (
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <FormInput label="Roll Number" value={personalForm.rollNumber} onChange={(v) => setPersonalForm(p => ({ ...p, rollNumber: v }))} placeholder="e.g. 2101001" />
+                <FormInput label="Enrollment Number" value={personalForm.enrollmentNumber} onChange={(v) => setPersonalForm(p => ({ ...p, enrollmentNumber: v }))} placeholder="e.g. ENR2021001" />
                 <FormInput label="Course" value={personalForm.course} onChange={(v) => setPersonalForm(p => ({ ...p, course: v }))} placeholder="e.g. B.Tech CS" />
                 <FormInput label="Date of Birth" type="date" value={personalForm.dateOfBirth} onChange={(v) => setPersonalForm(p => ({ ...p, dateOfBirth: v }))} />
                 <div>
@@ -624,6 +625,7 @@ export default function AlumniProfile() {
                   <FormInput label="State" value={contactForm.state} onChange={(v) => setContactForm(c => ({ ...c, state: v }))} />
                   <FormInput label="Country" value={contactForm.country} onChange={(v) => setContactForm(c => ({ ...c, country: v }))} />
                 </div>
+                <FormInput label="LinkedIn URL" value={contactForm.linkedinUrl} onChange={(v) => setContactForm(c => ({ ...c, linkedinUrl: v }))} placeholder="https://linkedin.com/in/username" />
                 <FormInput label="GitHub URL" value={contactForm.githubUrl} onChange={(v) => setContactForm(c => ({ ...c, githubUrl: v }))} placeholder="https://github.com/username" />
                 <FormInput label="Portfolio Website" value={contactForm.portfolioUrl} onChange={(v) => setContactForm(c => ({ ...c, portfolioUrl: v }))} placeholder="https://mywebsite.com" />
               </div>
