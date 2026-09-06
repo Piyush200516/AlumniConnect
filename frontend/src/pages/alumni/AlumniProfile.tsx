@@ -44,10 +44,9 @@ export default function AlumniProfile() {
   const [uploadingDegree, setUploadingDegree] = useState(false);
 
   // Section Form Data
+  // Section Form Data
   const [personalForm, setPersonalForm] = useState({
     rollNumber: profile?.rollNumber || '',
-    enrollmentNumber: profile?.enrollmentNumber || '',
-    graduationYear: profile?.graduationYear || profile?.passingYear || '',
     course: profile?.course || '',
     dateOfBirth: profile?.dateOfBirth || '',
     gender: profile?.gender || '',
@@ -62,7 +61,6 @@ export default function AlumniProfile() {
     city: profile?.city || '',
     state: profile?.state || '',
     country: profile?.country || '',
-    linkedinUrl: profile?.linkedinUrl || '',
     githubUrl: profile?.githubUrl || '',
     portfolioUrl: profile?.portfolioUrl || '',
   });
@@ -123,8 +121,6 @@ export default function AlumniProfile() {
     if (section === 'personal') {
       setPersonalForm({
         rollNumber: profile.rollNumber || '',
-        enrollmentNumber: profile.enrollmentNumber || '',
-        graduationYear: profile.graduationYear || profile.passingYear || '',
         course: profile.course || '',
         dateOfBirth: profile.dateOfBirth || '',
         gender: profile.gender || '',
@@ -139,7 +135,6 @@ export default function AlumniProfile() {
         city: profile.city || '',
         state: profile.state || '',
         country: profile.country || '',
-        linkedinUrl: profile.linkedinUrl || '',
         githubUrl: profile.githubUrl || '',
         portfolioUrl: profile.portfolioUrl || '',
       });
@@ -165,10 +160,7 @@ export default function AlumniProfile() {
     try {
       let payload: any = {};
       if (section === 'personal') {
-        payload = {
-          ...personalForm,
-          graduationYear: personalForm.graduationYear ? Number(personalForm.graduationYear) : null,
-        };
+        payload = { ...personalForm };
       } else if (section === 'contact') {
         payload = { ...contactForm };
       } else if (section === 'academic') {
@@ -386,8 +378,44 @@ export default function AlumniProfile() {
 
       {/* Main Cards Grid */}
       <div className="grid gap-8 grid-cols-1 xl:grid-cols-12 items-start">
-        {/* Left Column: Personal, Academic, Career */}
+        {/* Left Column: Registered Info, Personal, Academic, Career */}
         <div className="xl:col-span-7 space-y-8">
+          {/* REGISTERED ACCOUNT INFORMATION (READ-ONLY) */}
+          <div className="rounded-3xl border border-blue-500/20 bg-slate-950/60 p-7 backdrop-blur-xl shadow-xl space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-3">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                  <ShieldCheck className="h-5 w-5 text-emerald-400" /> Registered Account Information
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Collected during account signup. These 7 core fields are verified and read-only.
+                </p>
+              </div>
+              <a
+                href="/settings"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toastSuccess('To edit basic account credentials, please use the Account Settings page.');
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-blue-400 text-xs font-semibold transition-colors cursor-pointer shrink-0"
+              >
+                <Edit className="h-3.5 w-3.5" /> Edit Basic Info
+              </a>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <InfoRow label="Full Name" value={profile.fullName} />
+              <InfoRow label="Email Address" value={profile.email || profile.personalEmail} />
+              <InfoRow label="Enrollment Number" value={profile.enrollmentNumber} />
+              <InfoRow label="Passing Year" value={profile.passingYear || profile.graduationYear} />
+              <InfoRow label="Current Company" value={profile.currentCompany} />
+              <InfoRow label="Current Designation" value={profile.designation} />
+              <div className="sm:col-span-2">
+                <InfoRow label="LinkedIn Profile" value={profile.linkedinUrl} isLink />
+              </div>
+            </div>
+          </div>
+
           {/* PERSONAL INFO CARD */}
           <div className="rounded-3xl border border-slate-800/60 bg-slate-950/45 p-7 backdrop-blur-xl">
             <div className="flex items-center justify-between border-b border-slate-850 pb-4">
@@ -413,8 +441,6 @@ export default function AlumniProfile() {
             {activeEditSection === 'personal' ? (
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <FormInput label="Roll Number" value={personalForm.rollNumber} onChange={(v) => setPersonalForm(p => ({ ...p, rollNumber: v }))} placeholder="e.g. 2101001" />
-                <FormInput label="Enrollment Number" value={personalForm.enrollmentNumber} onChange={(v) => setPersonalForm(p => ({ ...p, enrollmentNumber: v }))} placeholder="e.g. ENR2021001" />
-                <FormInput label="Graduation Year" type="number" value={personalForm.graduationYear} onChange={(v) => setPersonalForm(p => ({ ...p, graduationYear: v }))} placeholder="e.g. 2024" />
                 <FormInput label="Course" value={personalForm.course} onChange={(v) => setPersonalForm(p => ({ ...p, course: v }))} placeholder="e.g. B.Tech CS" />
                 <FormInput label="Date of Birth" type="date" value={personalForm.dateOfBirth} onChange={(v) => setPersonalForm(p => ({ ...p, dateOfBirth: v }))} />
                 <div>
@@ -434,8 +460,6 @@ export default function AlumniProfile() {
             ) : (
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <InfoRow label="Roll Number" value={profile.rollNumber} />
-                <InfoRow label="Enrollment Number" value={profile.enrollmentNumber} />
-                <InfoRow label="Graduation Year" value={profile.graduationYear || profile.passingYear} />
                 <InfoRow label="Course" value={profile.course} />
                 <InfoRow label="Date of Birth" value={profile.dateOfBirth} />
                 <InfoRow label="Gender" value={profile.gender} />
@@ -510,12 +534,17 @@ export default function AlumniProfile() {
           {/* CAREER HISTORY CARD (+ Add Job Button) */}
           <div className="rounded-3xl border border-slate-800/60 bg-slate-950/45 p-7 backdrop-blur-xl">
             <div className="flex items-center justify-between border-b border-slate-850 pb-4">
-              <h2 className="text-xl font-bold text-white flex items-center gap-3">
-                <Briefcase className="h-5 w-5 text-blue-400" /> Career History
-              </h2>
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                  <Briefcase className="h-5 w-5 text-blue-400" /> Career History
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Current company ({profile.currentCompany || 'N/A'}) & designation are pre-filled. Add past work experience below.
+                </p>
+              </div>
               <button
                 onClick={() => setShowAddJobModal(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors cursor-pointer shadow-md shadow-blue-500/20"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors cursor-pointer shadow-md shadow-blue-500/20 shrink-0"
               >
                 <Plus className="h-3.5 w-3.5" /> Add Job
               </button>
@@ -549,7 +578,7 @@ export default function AlumniProfile() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-slate-500 italic">No work experience entries added yet. Click "+ Add Job" to add past experience.</p>
+                <p className="text-sm text-slate-500 italic">No past work experience entries added yet. Click "+ Add Job" to add past experience.</p>
               )}
             </div>
           </div>
@@ -591,7 +620,6 @@ export default function AlumniProfile() {
                   <FormInput label="State" value={contactForm.state} onChange={(v) => setContactForm(c => ({ ...c, state: v }))} />
                   <FormInput label="Country" value={contactForm.country} onChange={(v) => setContactForm(c => ({ ...c, country: v }))} />
                 </div>
-                <FormInput label="LinkedIn URL" value={contactForm.linkedinUrl} onChange={(v) => setContactForm(c => ({ ...c, linkedinUrl: v }))} placeholder="https://linkedin.com/in/username" />
                 <FormInput label="GitHub URL" value={contactForm.githubUrl} onChange={(v) => setContactForm(c => ({ ...c, githubUrl: v }))} placeholder="https://github.com/username" />
                 <FormInput label="Portfolio Website" value={contactForm.portfolioUrl} onChange={(v) => setContactForm(c => ({ ...c, portfolioUrl: v }))} placeholder="https://mywebsite.com" />
               </div>
@@ -602,7 +630,6 @@ export default function AlumniProfile() {
                 <InfoRow label="Primary Phone" value={profile.phone} />
                 <InfoRow label="Alternate Phone" value={profile.alternatePhone} />
                 <InfoRow label="Location / Address" value={profile.address ? `${profile.address}, ${profile.city || ''} ${profile.state || ''} ${profile.country || ''}` : profile.location} />
-                <InfoRow label="LinkedIn URL" value={profile.linkedinUrl} isLink />
                 <InfoRow label="GitHub URL" value={profile.githubUrl} isLink />
                 <InfoRow label="Portfolio Website" value={profile.portfolioUrl} isLink />
               </div>

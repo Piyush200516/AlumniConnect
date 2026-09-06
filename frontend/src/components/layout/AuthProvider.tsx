@@ -273,37 +273,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const alumniCompletionPercentage = alumniProfile
     ? alumniProfile.completionPercentage ?? (() => {
         let score = 0;
-        // Personal (20%)
-        if (alumniProfile.fullName) score += 5;
-        if (alumniProfile.rollNumber || alumniProfile.enrollmentNumber) score += 5;
-        if (alumniProfile.graduationYear || alumniProfile.passingYear) score += 5;
-        if (alumniProfile.course) score += 3;
-        if (alumniProfile.dateOfBirth || alumniProfile.gender) score += 2;
 
-        // Contact (20%)
+        // 1. Baseline Registration Fields (35%)
+        if (alumniProfile.fullName) score += 5;
         if (alumniProfile.email || alumniProfile.personalEmail) score += 5;
-        if (alumniProfile.phone || alumniProfile.alternatePhone) score += 5;
-        if (alumniProfile.location || alumniProfile.address || alumniProfile.city) score += 5;
+        if (alumniProfile.enrollmentNumber || alumniProfile.rollNumber) score += 5;
+        if (alumniProfile.graduationYear || alumniProfile.passingYear) score += 5;
+        if (alumniProfile.currentCompany) score += 5;
+        if (alumniProfile.designation) score += 5;
         if (alumniProfile.linkedinUrl) score += 5;
 
-        // Academic (15%)
-        if (alumniProfile.cgpa !== null && alumniProfile.cgpa !== undefined) score += 5;
-        if (alumniProfile.scholarshipsAndAwards && alumniProfile.scholarshipsAndAwards.length > 0) score += 5;
-        if (alumniProfile.extracurricularActivities && alumniProfile.extracurricularActivities.length > 0) score += 5;
+        // 2. Personal Profile Details (10%)
+        if (alumniProfile.rollNumber) score += 4;
+        if (alumniProfile.course) score += 3;
+        if (alumniProfile.dateOfBirth || alumniProfile.gender) score += 3;
 
-        // Career (20%)
-        if (alumniProfile.currentCompany || alumniProfile.designation) score += 5;
-        if (alumniProfile.industry) score += 5;
-        if (alumniProfile.workHistory && alumniProfile.workHistory.length > 0) score += 10;
+        // 3. Contact & Social Details (15%)
+        if (alumniProfile.phone || alumniProfile.alternatePhone) score += 5;
+        if (alumniProfile.address || alumniProfile.city || alumniProfile.state || alumniProfile.country || alumniProfile.location) score += 5;
+        if (alumniProfile.githubUrl || alumniProfile.portfolioUrl || alumniProfile.collegeEmail) score += 5;
 
-        // Verification (15%)
-        if (alumniProfile.alumniIdNumber) score += 5;
-        if (alumniProfile.idCardUrl) score += 5;
-        if (alumniProfile.degreeCertUrl) score += 5;
+        // 4. Academic Details (10%)
+        if (alumniProfile.cgpa !== null && alumniProfile.cgpa !== undefined) score += 4;
+        if (alumniProfile.scholarshipsAndAwards && alumniProfile.scholarshipsAndAwards.length > 0) score += 3;
+        if (alumniProfile.extracurricularActivities && alumniProfile.extracurricularActivities.length > 0) score += 3;
 
-        // Engagement (10%)
-        if (alumniProfile.mentorshipAvailability !== undefined) score += 5;
-        if ((alumniProfile.eventsAttended && alumniProfile.eventsAttended.length > 0) || (alumniProfile.donations && alumniProfile.donations.length > 0)) score += 5;
+        // 5. Additional Career History (10%)
+        if (alumniProfile.industry) score += 4;
+        if (alumniProfile.workHistory && alumniProfile.workHistory.length > 0) score += 6;
+
+        // 6. Verification & Identity (10%)
+        if (alumniProfile.alumniIdNumber) score += 3;
+        if (alumniProfile.idCardUrl) score += 4;
+        if (alumniProfile.degreeCertUrl) score += 3;
+
+        // 7. Community Engagement (10%)
+        if (alumniProfile.mentorshipAvailability !== undefined) score += 4;
+        if ((alumniProfile.eventsAttended && alumniProfile.eventsAttended.length > 0) || (alumniProfile.donations && alumniProfile.donations.length > 0)) score += 6;
 
         return Math.min(score, 100);
       })()
