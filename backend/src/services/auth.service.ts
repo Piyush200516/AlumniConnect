@@ -134,6 +134,8 @@ class AuthService {
               passingYear: data.passingYear,
               currentCompany: data.currentCompany,
               designation: data.designation,
+              enrollmentNumber: data.enrollmentNumber || null,
+              linkedinUrl: data.linkedinUrl || null,
             },
           },
         },
