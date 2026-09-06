@@ -11,8 +11,8 @@ export const authorizeRoles = (...roles: string[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new ApiError(401, 'Unauthenticated');
-      const userRole = String(req.user.role || '').toUpperCase();
-      const allowedRoles = roles.map((r) => r.toUpperCase());
+      const userRole = String(req.user.role || '').trim().toUpperCase();
+      const allowedRoles = roles.map((r) => String(r || '').trim().toUpperCase());
       if (!allowedRoles.includes(userRole)) {
         throw new ApiError(403, 'Forbidden: insufficient role');
       }
