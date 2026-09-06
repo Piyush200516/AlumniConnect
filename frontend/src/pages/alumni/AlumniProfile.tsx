@@ -47,6 +47,7 @@ export default function AlumniProfile() {
   // Section Form Data
   const [personalForm, setPersonalForm] = useState({
     rollNumber: profile?.rollNumber || '',
+    enrollmentNumber: profile?.enrollmentNumber || '',
     course: profile?.course || '',
     dateOfBirth: profile?.dateOfBirth || '',
     gender: profile?.gender || '',
@@ -61,6 +62,7 @@ export default function AlumniProfile() {
     city: profile?.city || '',
     state: profile?.state || '',
     country: profile?.country || '',
+    linkedinUrl: profile?.linkedinUrl || '',
     githubUrl: profile?.githubUrl || '',
     portfolioUrl: profile?.portfolioUrl || '',
   });
@@ -121,6 +123,7 @@ export default function AlumniProfile() {
     if (section === 'personal') {
       setPersonalForm({
         rollNumber: profile.rollNumber || '',
+        enrollmentNumber: profile.enrollmentNumber || '',
         course: profile.course || '',
         dateOfBirth: profile.dateOfBirth || '',
         gender: profile.gender || '',
@@ -135,6 +138,7 @@ export default function AlumniProfile() {
         city: profile.city || '',
         state: profile.state || '',
         country: profile.country || '',
+        linkedinUrl: profile.linkedinUrl || '',
         githubUrl: profile.githubUrl || '',
         portfolioUrl: profile.portfolioUrl || '',
       });
