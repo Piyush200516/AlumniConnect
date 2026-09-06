@@ -180,12 +180,6 @@ class AuthService {
           where: { email: { equals: email, mode: 'insensitive' } },
         });
       }
-
-      console.log(`User found: ${user ? 'yes' : 'no'}`);
-      if (user) {
-        console.log(`User details -> ID: ${user.id}, DB Email: ${user.email}, Role: ${user.role}, Status: ${user.status}, forcedRole: ${forcedRole || 'none'}`);
-      }
-
       if (!user) {
         logger.warn(`User lookup failed: no user found with email: ${email}`);
         throw new ApiError(401, 'Invalid email or password');
@@ -193,7 +187,6 @@ class AuthService {
       logger.info(`User lookup successful: found user with ID: ${user.id}, role: ${user.role}`);
 
       if (forcedRole && user.role !== forcedRole) {
-        console.log(`Role mismatch! User role in DB is ${user.role}, but login endpoint expected ${forcedRole}`);
         logger.warn(`Role verification failed. Expected: ${forcedRole}, got: ${user.role}`);
         throw new ApiError(401, 'Invalid email or password');
       }
@@ -214,7 +207,7 @@ class AuthService {
         throw new ApiError(500, 'Internal server error');
       }
       const passwordCheck = await verifyStoredPassword(loginData.password, user.password);
-      console.log(`Password match: ${passwordCheck.matched}`);
+      logger.info(`Password comparison completed. Result match: ${passwordCheck.matched}`);
 
       if (!passwordCheck.matched) {
         logger.warn(`Invalid credentials provided for user: ${email}`);
