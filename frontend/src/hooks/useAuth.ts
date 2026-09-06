@@ -64,6 +64,8 @@ export const useAuth = () => {
       if (company) payload.currentCompany = company;
       if (data.passingYear) payload.passingYear = Number(data.passingYear);
       if (data.designation) payload.designation = data.designation;
+      if (enrollmentNumber) payload.enrollmentNumber = enrollmentNumber;
+      if (linkedinUrl) payload.linkedinUrl = linkedinUrl;
     } else if (role === 'student') {
       if (enrollmentNumber) payload.enrollmentNumber = enrollmentNumber;
       if (data.graduationYear) payload.graduationYear = Number(data.graduationYear);

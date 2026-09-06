@@ -24,6 +24,8 @@ export const alumniSignupSchema = z.object({
   passingYear: z.number().int().positive(),
   currentCompany: z.string().optional(),
   designation: z.string().optional(),
+  enrollmentNumber: z.string().optional(),
+  linkedinUrl: z.string().optional(),
 });
 
 export const loginSchema = z.object({
