@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { studentLoginSchema } from '../../types/auth';
+import { studentLoginSchema, alumniLoginSchema, cdcLoginSchema } from '../../types/auth';
 import type { StudentLogin as StudentLoginData } from '../../types/auth';
 import { FormInput, PasswordField, LoadingSpinner } from '../../components/auth';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,476 +10,461 @@ import { useState, useEffect } from 'react';
 import { FcGoogle } from 'react-icons/fc';
 import { FaGithub } from 'react-icons/fa';
 import { HiAcademicCap } from 'react-icons/hi2';
+import { GraduationCap, Award, Building2, Sparkles, ArrowRight, ShieldCheck, Mail, Lock } from 'lucide-react';
 import { getApiUrl } from '../../services/api';
+import type { Role } from '../../types/user';
 
-/* ------------------------------------------------------------------ */
-/*  Floating particle dots for atmosphere                              */
-/* ------------------------------------------------------------------ */
-const particles = Array.from({ length: 18 }, (_, i) => ({
+type RoleTab = 'student' | 'alumni' | 'cdc';
+
+const tabConfig: Record<
+  RoleTab,
+  {
+    label: string;
+    badge: string;
+    icon: any;
+    accent: string;
+    btnGradient: string;
+    glowOrb: string;
+    redirect: string;
+    googleEndpoint: string;
+    githubEndpoint: string;
+    forgotPassPath: string;
+    signupPath?: string;
+  }
+> = {
+  student: {
+    label: 'Student',
+    badge: 'Learner Portal',
+    icon: GraduationCap,
+    accent: '#3b82f6',
+    btnGradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #06b6d4 100%)',
+    glowOrb: 'rgba(59, 130, 246, 0.25)',
+    redirect: '/student/dashboard',
+    googleEndpoint: '/auth/student/google',
+    githubEndpoint: '/auth/student/github',
+    forgotPassPath: '/auth/student/forgot-password',
+    signupPath: '/auth/student/signup',
+  },
+  alumni: {
+    label: 'Alumni',
+    badge: 'Mentor Portal',
+    icon: Award,
+    accent: '#8b5cf6',
+    btnGradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #ec4899 100%)',
+    glowOrb: 'rgba(139, 92, 246, 0.25)',
+    redirect: '/alumni/dashboard',
+    googleEndpoint: '/auth/alumni/google',
+    githubEndpoint: '/auth/alumni/github',
+    forgotPassPath: '/auth/alumni/forgot-password',
+    signupPath: '/auth/alumni/signup',
+  },
+  cdc: {
+    label: 'CDC Official',
+    badge: 'Admin Portal',
+    icon: Building2,
+    accent: '#10b981',
+    btnGradient: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #14b8a6 100%)',
+    glowOrb: 'rgba(16, 185, 129, 0.25)',
+    redirect: '/cdc/dashboard',
+    googleEndpoint: '/auth/cdc/google',
+    githubEndpoint: '/auth/cdc/github',
+    forgotPassPath: '/auth/student/forgot-password',
+  },
+};
+
+const particles = Array.from({ length: 16 }, (_, i) => ({
   id: i,
   size: Math.random() * 3 + 1,
   x: Math.random() * 100,
   y: Math.random() * 100,
   duration: Math.random() * 12 + 8,
-  delay: Math.random() * 6,
+  delay: Math.random() * 5,
 }));
 
-/* ------------------------------------------------------------------ */
-/*  Component                                                           */
-/* ------------------------------------------------------------------ */
 export const CommonLogin = () => {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [activeField, setActiveField] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<RoleTab>('student');
 
   useEffect(() => {
-    document.title = 'Login | AlumniConnect';
+    document.title = 'Login Gateway | AlumniConnect';
   }, []);
+
+  const activeConfig = tabConfig[activeTab];
+
+  // Pick validation schema based on tab
+  const activeSchema =
+    activeTab === 'student'
+      ? studentLoginSchema
+      : activeTab === 'alumni'
+      ? alumniLoginSchema
+      : cdcLoginSchema;
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm<StudentLoginData>({
-    resolver: zodResolver(studentLoginSchema),
+    resolver: zodResolver(activeSchema),
   });
 
-  const onSubmit = async (data: StudentLoginData) => {
+  const handleTabSwitch = (tab: RoleTab) => {
+    setActiveTab(tab);
+    reset();
+  };
+
+  const onSubmit = async (data: any) => {
     setLoading(true);
-    await login(undefined, data);
+    const loginEndpoint = `/auth/${activeTab}/login`;
+    await login(activeTab as Role, data, loginEndpoint, activeConfig.redirect);
     setLoading(false);
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = getApiUrl('/auth/google');
+    window.location.href = getApiUrl(activeConfig.googleEndpoint);
   };
 
   const handleGithubLogin = () => {
-    window.location.href = getApiUrl('/auth/github');
+    window.location.href = getApiUrl(activeConfig.githubEndpoint);
   };
 
   return (
-    <div
-      className="common-login-root"
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'radial-gradient(ellipse at 20% 50%, #0d1b3e 0%, #060a12 40%, #0a0612 70%, #060a12 100%)',
-        padding: '1rem',
-        position: 'relative',
-        overflow: 'hidden',
-        fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-      }}
-    >
-      {/* ── Ambient Glow Orbs ── */}
-      <div style={{
-        position: 'absolute', top: '-15%', left: '-10%',
-        width: '55%', height: '55%', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)',
-        filter: 'blur(60px)', pointerEvents: 'none',
-        animation: 'orb-drift 14s ease-in-out infinite alternate',
-      }} />
-      <div style={{
-        position: 'absolute', bottom: '-15%', right: '-10%',
-        width: '55%', height: '55%', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)',
-        filter: 'blur(60px)', pointerEvents: 'none',
-        animation: 'orb-drift 18s ease-in-out infinite alternate-reverse',
-      }} />
-      <div style={{
-        position: 'absolute', top: '40%', left: '60%',
-        width: '30%', height: '30%', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%)',
-        filter: 'blur(50px)', pointerEvents: 'none',
-        animation: 'orb-drift 22s ease-in-out infinite alternate',
-      }} />
+    <div className="min-h-screen relative flex items-center justify-center bg-[#060a12] text-slate-100 p-4 sm:p-6 lg:p-8 overflow-hidden font-sans">
+      {/* ── Ambient Radial Lighting Orbs ── */}
+      <div
+        className="absolute -top-32 -left-32 w-[650px] h-[650px] rounded-full blur-[150px] pointer-events-none transition-all duration-700"
+        style={{ background: activeConfig.glowOrb }}
+      />
+      <div
+        className="absolute -bottom-32 -right-32 w-[650px] h-[650px] rounded-full blur-[150px] pointer-events-none transition-all duration-700"
+        style={{ background: 'rgba(99, 102, 241, 0.15)' }}
+      />
 
-      {/* ── Particle Dots ── */}
-      {particles.map(p => (
+      {/* ── Floating Atmosphere Particles ── */}
+      {particles.map((p) => (
         <div
           key={p.id}
+          className="absolute rounded-full bg-slate-400/20 pointer-events-none"
           style={{
-            position: 'absolute',
             left: `${p.x}%`,
             top: `${p.y}%`,
             width: `${p.size}px`,
             height: `${p.size}px`,
-            borderRadius: '50%',
-            background: 'rgba(148,163,184,0.25)',
-            pointerEvents: 'none',
             animation: `particle-float ${p.duration}s ${p.delay}s ease-in-out infinite alternate`,
           }}
         />
       ))}
 
-      {/* ── Grid Mesh overlay ── */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.03,
-        backgroundImage: 'linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)',
-        backgroundSize: '60px 60px',
-      }} />
-
-      {/* ── Glass Card ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 40, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+      {/* ── Grid Mesh Overlay ── */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.035]"
         style={{
-          position: 'relative', zIndex: 10,
-          width: '100%', maxWidth: '460px',
-          background: 'rgba(15, 23, 42, 0.7)',
-          backdropFilter: 'blur(24px) saturate(1.4)',
-          WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
-          border: '1px solid rgba(255,255,255,0.09)',
-          borderRadius: '24px',
-          padding: '0',
-          overflow: 'hidden',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.08)',
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
         }}
+      />
+
+      {/* ── Glass Card Container ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 30, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-5xl my-auto bg-slate-900/75 backdrop-blur-2xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl shadow-black/90 grid grid-cols-1 lg:grid-cols-12"
       >
-        {/* ── Top accent bar ── */}
-        <div style={{
-          height: '3px',
-          background: 'linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4)',
-          borderRadius: '24px 24px 0 0',
-        }} />
+        {/* Top Gradient Bar */}
+        <div
+          className="absolute top-0 left-0 right-0 h-1 z-30 transition-all duration-500"
+          style={{ background: activeConfig.btnGradient }}
+        />
 
-        <div style={{ padding: '2.25rem 2.5rem 2.5rem' }}>
+        {/* ── Left Side Hero Banner (Desktop Split Screen) ── */}
+        <div className="hidden lg:flex lg:col-span-5 flex-col justify-between p-8 xl:p-10 relative overflow-hidden bg-gradient-to-b from-slate-800/40 via-slate-900/80 to-slate-950 border-r border-white/5">
+          <div className="relative z-10">
+            {/* Platform Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 backdrop-blur-md text-xs font-semibold text-white mb-8">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>AlumniConnect Gateway</span>
+            </div>
 
-          {/* ── Brand Header ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.5 }}
-            style={{ textAlign: 'center', marginBottom: '2rem' }}
-          >
-            {/* Logo mark */}
-            <motion.div
-              whileHover={{ scale: 1.05, rotate: 5 }}
-              transition={{ type: 'spring', stiffness: 300 }}
-              style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: '60px', height: '60px', borderRadius: '16px',
-                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                marginBottom: '1rem',
-                boxShadow: '0 8px 32px rgba(59,130,246,0.35)',
-              }}
-            >
-              <HiAcademicCap size={30} color="#fff" />
-            </motion.div>
+            <div className="flex items-center gap-3 mb-6">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl text-white transition-all duration-500"
+                style={{ background: activeConfig.btnGradient }}
+              >
+                <HiAcademicCap size={34} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-extrabold text-white tracking-tight">
+                  AlumniConnect
+                </h2>
+                <p className="text-xs text-slate-400 font-medium">
+                  Institution Network Portal
+                </p>
+              </div>
+            </div>
 
-            <h1 style={{
-              fontSize: '1.75rem',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              background: 'linear-gradient(135deg, #ffffff 0%, #94a3b8 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              margin: '0 0 0.375rem',
-              lineHeight: 1.2,
-            }}>
-              AlumniConnect
-            </h1>
-            <p style={{
-              color: 'rgba(148,163,184,0.8)',
-              fontSize: '0.875rem',
-              margin: 0,
-              fontWeight: 400,
-            }}>
-              Welcome back — sign in to your portal
+            <h3 className="text-2xl xl:text-3xl font-bold tracking-tight text-white leading-tight mb-4">
+              Bridge the Gap Between Campus & Career
+            </h3>
+
+            <p className="text-slate-300/80 text-sm leading-relaxed mb-8">
+              Join thousands of students, alumni mentors, and CDC officials driving career growth, mentorship, and placements.
             </p>
-          </motion.div>
+          </div>
 
-          {/* ── Form ── */}
-          <form onSubmit={handleSubmit(onSubmit)}>
+          {/* Dynamic Platform Statistics */}
+          <div className="relative z-10 space-y-3 pt-6 border-t border-white/10">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Real-time Impact
+            </div>
+            <div className="grid grid-cols-1 gap-2.5">
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                <span className="text-xs font-medium text-slate-300">Verified Alumni Network</span>
+                <span className="text-sm font-extrabold text-blue-400">10,000+</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                <span className="text-xs font-medium text-slate-300">Mentorship Matches</span>
+                <span className="text-sm font-extrabold text-purple-400">5,400+</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                <span className="text-xs font-medium text-slate-300">Placement Record Rate</span>
+                <span className="text-sm font-extrabold text-emerald-400">98.4%</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            {/* OAuth Buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.22 }}
-              style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem' }}
-            >
-              <OAuthButton
-                icon={<FcGoogle size={19} />}
-                label="Google"
+        {/* ── Right Side Interactive Login Form Panel ── */}
+        <div className="lg:col-span-7 p-6 sm:p-8 xl:p-10 flex flex-col justify-between relative z-10">
+          <div>
+            {/* Mobile Header / Brand */}
+            <div className="lg:hidden text-center mb-6">
+              <div
+                className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center shadow-lg text-white mb-3"
+                style={{ background: activeConfig.btnGradient }}
+              >
+                <HiAcademicCap size={32} />
+              </div>
+              <h1 className="text-2xl font-extrabold text-white tracking-tight">
+                AlumniConnect
+              </h1>
+              <p className="text-slate-400 text-xs mt-1">
+                Sign in to your portal
+              </p>
+            </div>
+
+            {/* Role Switcher Tab Bar */}
+            <div className="mb-8">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">
+                Select Your Portal Role
+              </label>
+              <div className="grid grid-cols-3 gap-1.5 p-1.5 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md">
+                {(['student', 'alumni', 'cdc'] as RoleTab[]).map((tab) => {
+                  const cfg = tabConfig[tab];
+                  const IconComp = cfg.icon;
+                  const isActive = activeTab === tab;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => handleTabSwitch(tab)}
+                      className={`relative flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 cursor-pointer ${
+                        isActive
+                          ? 'text-white shadow-lg'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      }`}
+                    >
+                      {isActive && (
+                        <motion.div
+                          layoutId="active-tab-bg"
+                          className="absolute inset-0 rounded-xl z-0 shadow-lg"
+                          style={{ background: cfg.btnGradient }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        <IconComp className="w-4 h-4 shrink-0" />
+                        <span>{cfg.label}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Portal Title Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+                  {activeConfig.label} Sign In
+                </h2>
+                <p className="text-slate-400 text-xs sm:text-sm mt-0.5">
+                  Welcome back — enter your credentials to access your dashboard.
+                </p>
+              </div>
+              <span
+                className="hidden sm:inline-flex px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border backdrop-blur-md"
+                style={{
+                  color: activeConfig.accent,
+                  borderColor: `${activeConfig.accent}40`,
+                  backgroundColor: `${activeConfig.accent}15`,
+                }}
+              >
+                {activeConfig.badge}
+              </span>
+            </div>
+
+            {/* SSO OAuth Buttons */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <button
+                type="button"
                 onClick={handleGoogleLogin}
-              />
-              <OAuthButton
-                icon={<FaGithub size={17} color="#e2e8f0" />}
-                label="GitHub"
+                className="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-slate-200 font-semibold text-xs sm:text-sm transition-all duration-200 shadow-md cursor-pointer"
+              >
+                <FcGoogle size={18} />
+                <span>Google</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={handleGithubLogin}
-              />
-            </motion.div>
+                className="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-slate-200 font-semibold text-xs sm:text-sm transition-all duration-200 shadow-md cursor-pointer"
+              >
+                <FaGithub size={18} />
+                <span>GitHub</span>
+              </button>
+            </div>
 
             {/* Divider */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.28 }}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', marginBottom: '1.5rem' }}
-            >
-              <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
-              <span style={{
-                fontSize: '0.7rem', fontWeight: 700,
-                color: 'rgba(100,116,139,0.9)',
-                letterSpacing: '0.12em', textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-              }}>
-                or continue with email
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex-1 h-px bg-white/10" />
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                or sign in with email
               </span>
-              <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
-            </motion.div>
+              <div className="flex-1 h-px bg-white/10" />
+            </div>
 
-            {/* Email Field */}
-            <motion.div
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.32 }}
-              onFocus={() => setActiveField('email')}
-              onBlur={() => setActiveField(null)}
-              style={{ position: 'relative' }}
-            >
-              {activeField === 'email' && (
-                <motion.div
-                  layoutId="field-glow"
-                  style={{
-                    position: 'absolute', inset: '-2px', borderRadius: '14px',
-                    background: 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(139,92,246,0.15))',
-                    zIndex: 0, pointerEvents: 'none',
-                  }}
-                />
-              )}
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <FormInput
-                  label="Email Address"
-                  name="email"
-                  type="email"
-                  placeholder="you@college.edu"
-                  register={register}
-                  error={errors.email}
-                />
+            {/* Login Form */}
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <FormInput
+                label={
+                  activeTab === 'student'
+                    ? 'College Email'
+                    : activeTab === 'alumni'
+                    ? 'Email Address'
+                    : 'Official CDC Email'
+                }
+                name="email"
+                type="email"
+                placeholder={
+                  activeTab === 'student'
+                    ? 'student@college.edu'
+                    : activeTab === 'alumni'
+                    ? 'alumni@domain.com'
+                    : 'cdc@institution.gov'
+                }
+                icon={Mail}
+                register={register}
+                error={errors.email}
+              />
+
+              <PasswordField
+                label="Password"
+                name="password"
+                icon={Lock}
+                register={register}
+                error={errors.password}
+              />
+
+              {/* Forgot Password Link */}
+              <div className="flex justify-end mb-6">
+                <Link
+                  to={activeConfig.forgotPassPath}
+                  className="text-xs font-semibold hover:underline transition-colors"
+                  style={{ color: activeConfig.accent }}
+                >
+                  Forgot Password?
+                </Link>
               </div>
-            </motion.div>
 
-            {/* Password Field */}
-            <motion.div
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.37 }}
-              onFocus={() => setActiveField('password')}
-              onBlur={() => setActiveField(null)}
-              style={{ position: 'relative' }}
-            >
-              {activeField === 'password' && (
-                <motion.div
-                  layoutId="field-glow"
-                  style={{
-                    position: 'absolute', inset: '-2px', borderRadius: '14px',
-                    background: 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(139,92,246,0.15))',
-                    zIndex: 0, pointerEvents: 'none',
-                  }}
-                />
-              )}
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <PasswordField
-                  label="Password"
-                  name="password"
-                  register={register}
-                  error={errors.password}
-                />
-              </div>
-            </motion.div>
-
-            {/* Forgot Password */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-0.5rem', marginBottom: '1.5rem' }}
-            >
-              <Link
-                to="/auth/student/forgot-password"
-                style={{
-                  fontSize: '0.78rem', color: 'rgba(96,165,250,0.9)',
-                  textDecoration: 'none', fontWeight: 500,
-                  transition: 'color 0.2s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#93c5fd')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(96,165,250,0.9)')}
-              >
-                Forgot password?
-              </Link>
-            </motion.div>
-
-            {/* Sign In Button */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.44 }}
-            >
+              {/* Submit Button */}
               <motion.button
                 type="submit"
                 disabled={loading}
-                whileHover={!loading ? { scale: 1.015, boxShadow: '0 12px 40px rgba(59,130,246,0.45)' } : {}}
-                whileTap={!loading ? { scale: 0.985 } : {}}
+                whileHover={!loading ? { scale: 1.01 } : {}}
+                whileTap={!loading ? { scale: 0.99 } : {}}
+                className="w-full py-3.5 px-4 rounded-xl font-extrabold text-sm text-white border border-white/10 shadow-xl transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer relative overflow-hidden"
                 style={{
-                  width: '100%',
-                  padding: '0.875rem',
-                  background: loading
-                    ? 'rgba(59,130,246,0.5)'
-                    : 'linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)',
-                  backgroundSize: '200% 100%',
-                  color: '#fff',
-                  fontWeight: 700,
-                  fontSize: '0.9375rem',
-                  letterSpacing: '0.01em',
-                  border: 'none',
-                  borderRadius: '14px',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  boxShadow: '0 8px 24px rgba(59,130,246,0.3)',
-                  transition: 'background 0.3s, box-shadow 0.3s',
-                  outline: 'none',
-                  position: 'relative',
-                  overflow: 'hidden',
+                  background: loading ? 'rgba(255,255,255,0.1)' : activeConfig.btnGradient,
                 }}
               >
-                {/* Shimmer */}
                 {!loading && (
-                  <div style={{
-                    position: 'absolute', top: 0, left: '-100%', width: '100%', height: '100%',
-                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)',
-                    animation: 'btn-shimmer 3s infinite',
-                    borderRadius: '14px',
-                  }} />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full animate-[btn-shimmer_3s_infinite]" />
                 )}
                 <AnimatePresence mode="wait">
                   {loading ? (
-                    <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <motion.span
+                      key="loading"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
                       <LoadingSpinner />
                     </motion.span>
                   ) : (
-                    <motion.span key="text" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      Sign In
+                    <motion.span
+                      key="text"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex items-center gap-2"
+                    >
+                      <span>Sign In to {activeConfig.label} Portal</span>
+                      <ArrowRight className="w-4 h-4" />
                     </motion.span>
                   )}
                 </AnimatePresence>
               </motion.button>
-            </motion.div>
-          </form>
+            </form>
+          </div>
 
-          {/* ── Footer ── */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.52 }}
-            style={{
-              marginTop: '1.75rem',
-              paddingTop: '1.375rem',
-              borderTop: '1px solid rgba(255,255,255,0.06)',
-              textAlign: 'center',
-            }}
-          >
-            <p style={{ fontSize: '0.8rem', color: 'rgba(100,116,139,0.8)', marginBottom: '0.625rem' }}>
-              Don't have an account?
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem' }}>
-              <FooterLink to="/auth/student/signup" label="Register as Student" />
-              <div style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.12)' }} />
-              <FooterLink to="/auth/alumni/signup" label="Register as Alumni" />
-            </div>
-          </motion.div>
-
+          {/* Footer Area */}
+          <div className="mt-8 pt-6 border-t border-white/10 text-center">
+            {activeConfig.signupPath ? (
+              <p className="text-xs text-slate-400">
+                Don't have an account yet?{' '}
+                <Link
+                  to={activeConfig.signupPath}
+                  className="font-bold underline hover:text-white transition-colors"
+                  style={{ color: activeConfig.accent }}
+                >
+                  Register as {activeConfig.label}
+                </Link>
+              </p>
+            ) : (
+              <p className="text-xs text-slate-500">
+                <ShieldCheck className="w-3.5 h-3.5 inline mr-1 text-emerald-400" />
+                CDC Official accounts are provisioned by system administrators.
+              </p>
+            )}
+          </div>
         </div>
       </motion.div>
 
-      {/* ── Keyframe styles ── */}
+      {/* Shimmer animation keyframes */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-        @keyframes orb-drift {
-          0%   { transform: translate(0, 0) scale(1); }
-          100% { transform: translate(3%, 5%) scale(1.08); }
-        }
-
         @keyframes particle-float {
-          0%   { transform: translateY(0px) translateX(0px); opacity: 0.2; }
-          100% { transform: translateY(-18px) translateX(8px); opacity: 0.5; }
+          0%   { transform: translateY(0px) translateX(0px); opacity: 0.15; }
+          100% { transform: translateY(-20px) translateX(10px); opacity: 0.45; }
         }
-
         @keyframes btn-shimmer {
-          0%   { left: -100%; }
-          60%  { left: 150%; }
-          100% { left: 150%; }
+          0%   { transform: translateX(-100%); }
+          50%  { transform: translateX(100%); }
+          100% { transform: translateX(100%); }
         }
       `}</style>
     </div>
   );
 };
-
-/* ------------------------------------------------------------------ */
-/*  Helper sub-components                                               */
-/* ------------------------------------------------------------------ */
-
-interface OAuthBtnProps {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-}
-
-const OAuthButton = ({ icon, label, onClick }: OAuthBtnProps) => (
-  <motion.button
-    type="button"
-    onClick={onClick}
-    whileHover={{ scale: 1.03, background: 'rgba(255,255,255,0.1)' }}
-    whileTap={{ scale: 0.97 }}
-    style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      gap: '0.5rem',
-      padding: '0.7rem 1rem',
-      background: 'rgba(255,255,255,0.05)',
-      border: '1px solid rgba(255,255,255,0.1)',
-      borderRadius: '12px',
-      color: '#e2e8f0',
-      fontWeight: 600,
-      fontSize: '0.875rem',
-      cursor: 'pointer',
-      transition: 'border-color 0.2s, background 0.2s',
-      outline: 'none',
-    }}
-    onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.22)')}
-    onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
-  >
-    {icon}
-    {label}
-  </motion.button>
-);
-
-interface FooterLinkProps {
-  to: string;
-  label: string;
-}
-
-const FooterLink = ({ to, label }: FooterLinkProps) => (
-  <Link
-    to={to}
-    style={{
-      fontSize: '0.8rem',
-      color: '#60a5fa',
-      textDecoration: 'none',
-      fontWeight: 600,
-      transition: 'color 0.2s',
-    }}
-    onMouseEnter={e => (e.currentTarget.style.color = '#93c5fd')}
-    onMouseLeave={e => (e.currentTarget.style.color = '#60a5fa')}
-  >
-    {label}
-  </Link>
-);
