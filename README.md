@@ -29,6 +29,10 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 - Event creation, registration, attendance, and approvals
 - Mentorship requests and one-to-one messaging
 - Real-time online presence updates through Socket.IO
+- Real-time one-to-one chat between students and alumni using WebSockets (ws)
+- Live online/offline status indicator for users
+- Message read receipts and typing indicators
+- Toast notifications for new incoming chat messages
 - File uploads with Cloudinary, plus a local fallback
 - Optional email verification and password reset flows
 
@@ -38,7 +42,7 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 |------|--------|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, Redux Toolkit, React Toastify |
 | Backend | Node.js, Express 5,Passport.js, Google OAuth 2.0,JWT Authentication, bcryptjs, Multer, CORS, dotenv Prisma, PostgreSQL, FCM |
-| Realtime | Socket.IO |
+| Realtime | ws (native WebSocket library) — used for real-time one-to-one chat messaging and live online/offline status tracking |
 |Authentication | Google OAuth, GitHub OAuth, Email Verification, Forgot Password, Reset Password, JWT Refresh Token |
 |Notifications| Firebase Admin SDK, Firebase Cloud Messaging (FCM), Socket.IO Notifications, Nodemailer|
 |Email| Nodemailer, Ethereal Email |
@@ -58,6 +62,13 @@ AlumniConnect brings students, alumni, and CDC together in one workspace for men
 | Deployement | cloudflare.com(Frontend), render.com (Backend) |
 
 ## Architecture
+
+### Real-Time Communication
+
+- WebSocket server (`ws` library) runs on the same HTTP server instance as Express
+- Connections are authenticated using JWT during the upgrade handshake
+- Heartbeat/ping-pong mechanism detects and cleans up dead connections
+- Chat messages are persisted in PostgreSQL via Prisma and delivered in real-time to connected users
 
 ### Architectural & Flow Diagram
 
@@ -504,6 +515,7 @@ flowchart TB
 - JWT auth
 - bcryptjs
 - Socket.IO
+- ws (native WebSocket library)
 - multer
 
 ### Services
@@ -568,7 +580,10 @@ Create `frontend/.env`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:5002/api
+VITE_WS_URL=ws://localhost:5002
 ```
+
+Note: WebSocket server runs on the same HTTP server port as the Express backend (no separate port needed).
 
 ### 5. Run the app
 
