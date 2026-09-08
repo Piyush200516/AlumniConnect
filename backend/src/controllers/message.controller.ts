@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { MessageService } from '../services/message.service';
 import { responseSuccess } from '../utils/response';
 import { ApiError } from '../utils/error';
-import { io } from '../socket';
+import { sendWsToUser } from '../wsServer';
 
 const messageService = new MessageService();
 
@@ -47,10 +47,15 @@ export class MessageController {
       if (!req.user) throw new ApiError(401, 'Unauthenticated');
       const userId = req.user.id;
       const { conversationId } = req.params;
+      const { recipientId } = req.body || {};
       await messageService.markAsRead(userId, conversationId as string);
       
-      // Emit socket notification to notify sender that messages are read
-      io?.to(conversationId).emit('messages_read', { roomId: conversationId, userId });
+      if (recipientId) {
+        sendWsToUser(recipientId, {
+          type: 'messages_read',
+          payload: { conversationId, readerId: userId }
+        });
+      }
 
       return responseSuccess(res, 'Messages marked as read successfully', null);
     } catch (err) {

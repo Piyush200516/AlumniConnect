@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/error';
-import { emitToUser, io } from '../socket';
+import { sendWsToUser } from '../wsServer';
 import { NotificationService } from './notification.service';
 
 const notificationService = new NotificationService();
@@ -84,8 +84,11 @@ export class MessageService {
       data: { updatedAt: new Date() }
     });
 
-    // Emit live via Socket.io
-    io?.to(conversationId).emit('receive_message', message);
+    // Emit live message via WebSocket
+    sendWsToUser(receiverId, {
+      type: 'receive_message',
+      payload: { message, conversationId }
+    });
 
     const senderName = message.sender.studentProfile?.fullName || message.sender.alumniProfile?.fullName || 'A member';
     try {

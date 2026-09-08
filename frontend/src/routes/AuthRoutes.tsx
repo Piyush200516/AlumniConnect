@@ -19,6 +19,8 @@ const StudentDashboard = lazy(() => import('../pages/student/StudentDashboard'))
 const CdcDashboard = lazy(() => import('../pages/cdc/CdcDashboard'));
 const AlumniDashboard = lazy(() => import('../pages/alumni/AlumniDashboard'));
 
+const ChatWindow = lazy(() => import('../components/chat/ChatWindow'));
+
 const PageFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#060a12] via-[#09101f] to-[#04070e] text-slate-400">
     <div className="flex flex-col items-center gap-3">
@@ -46,11 +48,18 @@ export const AuthRoutes = () => (
       {/* Protected Student Routes */}
       <Route element={<ProtectedRoute allowedRoles={['student']} />}>
         <Route path="/student/dashboard" element={<StudentDashboard />} />
+        <Route path="/student/messages" element={<div className="p-6 max-w-7xl mx-auto"><ChatWindow /></div>} />
       </Route>
 
       {/* Protected Alumni Routes */}
       <Route element={<ProtectedRoute allowedRoles={['alumni']} />}>
         <Route path="/alumni/dashboard" element={<AlumniDashboard />} />
+        <Route path="/alumni/messages" element={<div className="p-6 max-w-7xl mx-auto"><ChatWindow /></div>} />
+      </Route>
+
+      {/* Shared Protected Route */}
+      <Route element={<ProtectedRoute allowedRoles={['student', 'alumni', 'cdc']} />}>
+        <Route path="/messages" element={<div className="p-6 max-w-7xl mx-auto"><ChatWindow /></div>} />
       </Route>
 
       {/* Protected CDC Routes */}

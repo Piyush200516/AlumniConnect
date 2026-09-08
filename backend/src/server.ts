@@ -23,12 +23,13 @@ import { requestLogger } from "./middleware/requestLogger";
 import { errorHandler } from "./middleware/errorHandler";
 import { initializeFirebase } from "./config/firebase";
 import notificationRoutes from "./routes/notification.routes";
+import { setupWebSocketServer } from "./wsServer";
 
 export const app = express();
 const httpServer = createServer(app);
 
-// Initialize Socket.io
-setupSocket(httpServer);
+// Initialize WebSocket server (using native ws library)
+setupWebSocketServer(httpServer);
 
 // CORS – allow frontend dev and Cloudflare Pages production origins
 const allowedOrigins = [
