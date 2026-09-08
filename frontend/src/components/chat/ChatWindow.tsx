@@ -5,22 +5,19 @@ import {
   Search,
   CheckCheck,
   Paperclip,
-  User,
   Circle,
   MessageSquare,
-  ShieldAlert,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuthContext } from '../layout/AuthProvider';
 import { useWebSocket } from '../../hooks/useWebSocket';
-import { RootState } from '../../store/store';
+import type { RootState } from '../../store/store';
 import {
   setConversations,
   setActiveConversation,
   setMessages,
   markConversationAsRead,
-  ConversationItem,
-  ChatMessage,
+  type ChatMessage,
 } from '../../store/chatSlice';
 
 export const ChatWindow: React.FC = () => {
@@ -40,7 +37,7 @@ export const ChatWindow: React.FC = () => {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
   const currentMessages: ChatMessage[] = activeConversationId
@@ -311,7 +308,7 @@ export const ChatWindow: React.FC = () => {
               </div>
             ) : (
               currentMessages.map((msg) => {
-                const isMe = msg.senderId === user?.id || (user as any)?.userId === msg.senderId;
+                const isMe = msg.senderId === (user as any)?.id || msg.senderId === (user as any)?.userId;
 
                 return (
                   <div

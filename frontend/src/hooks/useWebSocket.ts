@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { useAuthContext } from '../components/layout/AuthProvider';
-import { RootState } from '../store/store';
+import type { RootState } from '../store/store';
 import {
   addIncomingMessage,
   setUserOnline,
@@ -10,7 +10,6 @@ import {
   setInitialOnlineUsers,
   setTypingStatus,
   markConversationAsRead,
-  ChatMessage,
 } from '../store/chatSlice';
 
 export const useWebSocket = () => {
@@ -20,7 +19,7 @@ export const useWebSocket = () => {
   const [isConnected, setIsConnected] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectDelayRef = useRef<number>(1000);
   const activeConvIdRef = useRef<string | null>(activeConversationId);
 
@@ -94,8 +93,7 @@ export const useWebSocket = () => {
                   message.sender?.studentProfile?.fullName ||
                   message.sender?.alumniProfile?.fullName ||
                   'New Connection';
-                toast.info(`💬 ${senderName}: ${message.message || 'Sent an attachment'}`, {
-                  icon: '🔔',
+                toast.info(`🔔 ${senderName}: ${message.message || 'Sent an attachment'}`, {
                   toastId: `msg-${message.id}`,
                 });
               }
