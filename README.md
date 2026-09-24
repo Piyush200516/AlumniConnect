@@ -20,6 +20,47 @@ The application is live and can be accessed here:
 
 AlumniConnect brings students, alumni, and CDC together in one workspace for mentorship, jobs, events, announcements, and messaging.
 
+### High-Level Project Diagram
+
+```mermaid
+graph TD
+    %% Define styles
+    classDef user fill:#4f46e5,stroke:#312e81,stroke-width:2px,color:#fff
+    classDef frontend fill:#0ea5e9,stroke:#0284c7,stroke-width:2px,color:#fff
+    classDef backend fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+    classDef database fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+    classDef external fill:#8b5cf6,stroke:#5b21b6,stroke-width:2px,color:#fff
+
+    %% Nodes
+    U_Student([Student]):::user
+    U_Alumni([Alumni]):::user
+    U_CDC([CDC Admin]):::user
+
+    F_React[Frontend: React 19 + Vite]:::frontend
+    
+    B_Express[Backend: Node.js + Express]:::backend
+    B_Socket[Real-time: Socket.IO / ws]:::backend
+
+    D_Postgres[(Database: PostgreSQL + Prisma)]:::database
+    
+    E_Cloudinary[Cloudinary: Media]:::external
+    E_Resend[Resend: Emails]:::external
+
+    %% Connections
+    U_Student -->|Uses| F_React
+    U_Alumni -->|Uses| F_React
+    U_CDC -->|Uses| F_React
+
+    F_React <-->|REST API| B_Express
+    F_React <-->|WebSockets| B_Socket
+
+    B_Express <--> D_Postgres
+    B_Socket <--> D_Postgres
+
+    B_Express --> E_Cloudinary
+    B_Express --> E_Resend
+```
+
 ### What the platform supports
 
 - Student and alumni authentication
