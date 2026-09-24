@@ -76,13 +76,14 @@ graph TD
 - Toast notifications for new incoming chat messages
 - File uploads with Cloudinary, plus a local fallback
 - Optional email verification and password reset flows
+- **AI-Powered Resume Parsing**: "Magic Auto-Fill" for Alumni profiles using Google Gemini AI to extract and populate skills, education, and work experience from uploaded PDFs.
 
 ## 🚀 At a Glance (Updated with Testing)
 
 | Area | Details |
 |------|--------|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, Redux Toolkit, React Toastify |
-| Backend | Node.js, Express 5,Passport.js, Google OAuth 2.0,JWT Authentication, bcryptjs, Multer, CORS, dotenv Prisma, PostgreSQL, FCM |
+| Backend | Node.js, Express 5, Passport.js, Google OAuth 2.0, JWT Authentication, bcryptjs, Multer, CORS, dotenv Prisma, PostgreSQL, FCM, **Google GenAI** (`@google/genai`), **pdf-parse** |
 | Realtime | ws (native WebSocket library) — used for real-time one-to-one chat messaging and live online/offline status tracking |
 |Authentication | Google OAuth, GitHub OAuth, Email Verification, Forgot Password, Reset Password, JWT Refresh Token |
 |Notifications| Firebase Admin SDK, Firebase Cloud Messaging (FCM), Socket.IO Notifications, Nodemailer|
@@ -558,6 +559,8 @@ flowchart TB
 - Socket.IO
 - ws (native WebSocket library)
 - multer
+- **@google/genai** (Google Gemini AI integration)
+- **pdf-parse** (Extracting text from PDF resumes)
 
 ### Services
 
