@@ -11,6 +11,9 @@ import {
   addWorkExperienceSchema,
   addDonationSchema
 } from '../validators/alumni.validator';
+import { parseResumeText } from '../services/ai.service';
+import { ApiError } from '../utils/error';
+const pdfParse = require('pdf-parse');
 
 const alumniService = new AlumniService();
 const connectionService = new ConnectionService();
@@ -55,6 +58,30 @@ export const addDonation = async (req: Request, res: Response, next: NextFunctio
     const validated = addDonationSchema.parse(req.body);
     const donation = await alumniService.addDonation(userId, validated);
     responseSuccess(res, 'Donation recorded successfully', donation);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const parseResume = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.file) {
+      throw new ApiError(400, 'No resume file uploaded');
+    }
+    
+    // Extract text from PDF
+    const pdfData = await pdfParse(req.file.buffer);
+    const text = pdfData.text;
+
+    if (!text || text.trim().length === 0) {
+      throw new ApiError(400, 'Could not extract text from the provided PDF');
+    }
+
+    // Call AI Service to parse
+    const parsedData = await parseResumeText(text);
+
+    // Return for user confirmation
+    responseSuccess(res, 'Resume parsed successfully', parsedData);
   } catch (err) {
     next(err);
   }

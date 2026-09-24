@@ -16,8 +16,15 @@ import {
   toggleSave,
   addWorkExperience,
   deleteWorkExperience,
-  addDonation
+  addDonation,
+  parseResume
 } from '../controllers/alumni.controller';
+import multer from 'multer';
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
 
 const router = Router();
 
@@ -31,6 +38,8 @@ router.put('/profile', authenticateUser as any, authorizeRoles('ALUMNI') as any,
 router.post('/me/work-experience', authenticateUser as any, authorizeRoles('ALUMNI') as any, addWorkExperience as any);
 router.delete('/me/work-experience/:expId', authenticateUser as any, authorizeRoles('ALUMNI') as any, deleteWorkExperience as any);
 router.post('/me/donations', authenticateUser as any, authorizeRoles('ALUMNI') as any, addDonation as any);
+
+router.post('/me/parse-resume', authenticateUser as any, authorizeRoles('ALUMNI') as any, upload.single('file') as any, parseResume as any);
 
 router.post('/connections/send', authenticateUser as any, sendConnection as any);
 router.patch('/connections/accept', authenticateUser as any, authorizeRoles('ALUMNI') as any, acceptConnection as any);

@@ -22,7 +22,8 @@ import {
   FileText, 
   ToggleLeft, 
   ToggleRight,
-  ExternalLink
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
 import { FaLinkedin, FaGithub } from 'react-icons/fa';
 import { useAuthContext } from '../../components/layout/AuthProvider';
@@ -42,6 +43,7 @@ export default function AlumniProfile() {
   const [showAddDonationModal, setShowAddDonationModal] = useState(false);
   const [uploadingIdCard, setUploadingIdCard] = useState(false);
   const [uploadingDegree, setUploadingDegree] = useState(false);
+  const [parsingResume, setParsingResume] = useState(false);
 
   // Section Form Data
   // Section Form Data
@@ -280,6 +282,46 @@ export default function AlumniProfile() {
     }
   };
 
+  const handleParseResume = async (file: File) => {
+    setParsingResume(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/alumni/me/parse-resume', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const data = res.data.data;
+      
+      // Auto-fill academic & contact where possible
+      setAcademicForm(prev => ({
+        ...prev,
+        scholarshipsAndAwards: data.skills ? data.skills.join(', ') : prev.scholarshipsAndAwards,
+      }));
+      if (data.workExperiences && data.workExperiences.length > 0) {
+         // Auto-fill the add job form with the first experience for review
+         const latestExp = data.workExperiences[0];
+         setJobForm(prev => ({
+           ...prev,
+           companyName: latestExp.companyName || '',
+           role: latestExp.role || '',
+           industry: prev.industry,
+           startDate: latestExp.startDate || '',
+           endDate: latestExp.endDate || '',
+           description: latestExp.description || '',
+         }));
+         setShowAddJobModal(true);
+      }
+
+      toastSuccess('Resume parsed! We pre-filled your Academic Skills and Add Job form. Please review and save.');
+      setActiveEditSection('academic');
+    } catch (err: any) {
+      console.error(err);
+      toastError(err.response?.data?.message || 'Failed to parse resume');
+    } finally {
+      setParsingResume(false);
+    }
+  };
+
   const verificationStatus = profile.verificationStatus || 'UNVERIFIED';
 
   return (
@@ -361,21 +403,51 @@ export default function AlumniProfile() {
             </div>
           </div>
 
-          {/* Completeness Card */}
-          <div className="rounded-2xl border border-slate-800/60 bg-slate-900/30 p-5 w-full lg:w-72 space-y-3">
-            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
-              <span className="text-slate-400">Profile Completion</span>
-              <span className="text-blue-400">{alumniCompletionPercentage}%</span>
+          {/* Completeness Card & Auto-Fill */}
+          <div className="flex flex-col gap-4 w-full lg:w-72">
+            <div className="rounded-2xl border border-slate-800/60 bg-slate-900/30 p-5 space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+                <span className="text-slate-400">Profile Completion</span>
+                <span className="text-blue-400">{alumniCompletionPercentage}%</span>
+              </div>
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500"
+                  style={{ width: `${alumniCompletionPercentage}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 leading-snug">
+                Complete your personal, contact, academic, and verification info to reach 100%.
+              </p>
             </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500"
-                style={{ width: `${alumniCompletionPercentage}%` }}
-              />
+
+            {/* AI Auto-Fill Action */}
+            <div className="relative rounded-2xl border border-purple-500/30 bg-purple-500/10 p-5 space-y-3 overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/10 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-purple-400" /> Magic Auto-Fill
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Upload your Resume or LinkedIn PDF and let AI instantly fill out your profile!
+              </p>
+              <label className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-purple-500/25 transition-all cursor-pointer">
+                {parsingResume ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Analyzing PDF...</>
+                ) : (
+                  <><Upload className="h-4 w-4" /> Upload PDF</>
+                )}
+                <input
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  disabled={parsingResume}
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) handleParseResume(e.target.files[0]);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
             </div>
-            <p className="text-[11px] text-slate-500 leading-snug">
-              Complete your personal, contact, academic, and verification info to reach 100%.
-            </p>
           </div>
         </div>
       </motion.div>
