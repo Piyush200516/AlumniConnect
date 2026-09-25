@@ -3,6 +3,8 @@ import { AuthProvider } from "./components/layout/AuthProvider";
 import { SocketProvider } from "./components/layout/SocketProvider";
 import { AuthRoutes } from "./routes/AuthRoutes";
 import { Toaster } from "sonner";
+import { ErrorBoundary } from "./components/layout/ErrorBoundary";
+import { ServerStatusBanner } from "./components/layout/ServerStatusBanner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const queryClient = new QueryClient({
@@ -17,15 +19,18 @@ const queryClient = new QueryClient({
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthProvider>
-          <SocketProvider>
-            <AuthRoutes />
-            <Toaster position="top-right" />
-          </SocketProvider>
-        </AuthProvider>
-      </Router>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <AuthProvider>
+            <SocketProvider>
+              <ServerStatusBanner />
+              <AuthRoutes />
+              <Toaster position="top-right" />
+            </SocketProvider>
+          </AuthProvider>
+        </Router>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

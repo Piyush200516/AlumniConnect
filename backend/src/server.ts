@@ -66,8 +66,13 @@ app.use(requestLogger);
 // Static uploads serving fallback
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-// Health endpoint
-app.get("/health", (_req, res) => res.status(200).json({ status: "OK" }));
+// Health endpoints – also exposed under /api so the frontend can warm up a
+// suspended instance using its configured API base URL.
+const health = (_req: express.Request, res: express.Response) =>
+  res.status(200).json({ status: "OK", uptime: process.uptime() });
+
+app.get("/health", health);
+app.get("/api/health", health);
 
 app.get("/", (_req, res) => {
   res.send("AlumniConnect Backend Running");
@@ -85,6 +90,11 @@ app.use("/api/mentorship", mentorshipRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/notifications", notificationRoutes);
+
+// Unknown API routes should answer with JSON, not the default HTML error page.
+app.use("/api", (req, res) => {
+  res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.originalUrl}` });
+});
 
 // Global error handler
 app.use(errorHandler);
