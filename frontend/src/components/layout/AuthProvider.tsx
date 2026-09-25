@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '../../types/auth';
-import api from '../../services/api';
+import api, { SESSION_EXPIRED_EVENT } from '../../services/api';
 
 const normalizeRole = (role: unknown): User['role'] | null => {
   if (typeof role !== 'string') {
@@ -140,6 +140,10 @@ interface AuthContextProps {
 
 export const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
+const navigateToLogin = () => {
+  window.location.href = '/login';
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUserState] = useState<User | null>(() => {
     // 1. Check if token is in URL (for OAuth callback redirect)
@@ -212,7 +216,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setProfile(null);
     localStorage.clear();
     sessionStorage.clear();
-    window.location.href = '/login';
+    navigateToLogin();
   };
 
   const refreshProfile = async () => {
@@ -314,6 +318,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return Math.min(score, 100);
       })()
     : 0;
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setUserState(null);
+      setProfile(null);
+      setAlumniProfile(null);
+      if (!window.location.pathname.startsWith('/login')) {
+        navigateToLogin();
+      }
+    };
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+  }, []);
 
   useEffect(() => {
     const loadProfile = async () => {

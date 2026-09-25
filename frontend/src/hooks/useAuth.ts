@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import api, { getErrorMessage } from '../services/api';
 import { toastSuccess, toastError } from '../utils/toast';
 import type { Role } from '../types/user';
 import type { User } from '../types/auth';
@@ -27,11 +27,9 @@ export const useAuth = () => {
 
   const login = async (role?: Role, data?: any, endpoint?: string, redirectPath?: string) => {
     const payload = normalizeEmail(data);
-    console.log("Login Request", payload);
     try {
       const finalEndpoint = endpoint || '/auth/login';
       const res = await api.post(finalEndpoint, payload);
-      console.log("API Response", res);
       const token = res.data?.token || res.data?.data?.token || res.data?.data?.accessToken || res.data?.accessToken;
       
       const rawRole = role || res.data?.data?.user?.role || res.data?.user?.role;
@@ -39,15 +37,18 @@ export const useAuth = () => {
         throw new Error('Role not specified in login response');
       }
       
+      if (typeof token !== 'string' || !token) {
+        throw new Error('Login response did not include an access token');
+      }
+
       const finalRole = rawRole.trim().toLowerCase() as Role;
       storeUser(finalRole, token);
       toastSuccess('Login successful');
       
       const finalRedirectPath = redirectPath || `/${finalRole}/dashboard`;
       navigate(finalRedirectPath);
-    } catch (err: any) {
-      console.error("Login API Error", err.response);
-      toastError(err.response?.data?.message || 'Login failed');
+    } catch (err) {
+      toastError(getErrorMessage(err, 'Login failed'));
     }
   };
 
@@ -72,7 +73,6 @@ export const useAuth = () => {
     }
 
     const normalizedPayload = normalizeEmail(payload);
-    console.log('Signup Payload:', normalizedPayload);
     try {
       const res = await api.post(endpoint, normalizedPayload);
       const token = res.data?.token || res.data?.data?.token || res.data?.data?.accessToken || res.data?.accessToken;
@@ -81,9 +81,8 @@ export const useAuth = () => {
       }
       toastSuccess('Account created successfully');
       navigate(redirectPath);
-    } catch (err: any) {
-      console.error('Signup API Error:', err.response?.data || err);
-      toastError(err.response?.data?.message || 'Signup failed');
+    } catch (err) {
+      toastError(getErrorMessage(err, 'Signup failed'));
     }
   };
 
