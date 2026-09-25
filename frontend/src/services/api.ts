@@ -91,7 +91,12 @@ const isAuthRequest = (config?: AxiosRequestConfig) =>
 
 const isRetryable = (error: AxiosError) => {
   const method = (error.config?.method ?? 'get').toLowerCase();
-  const status = error.response?.status;
+
+  // Only safe methods may be replayed: a lost response does not prove the
+  // server rejected the request, so retrying a mutation can duplicate it.
+  if (!['get', 'head', 'options'].includes(method)) {
+    return false;
+  }
 
   // Timeouts and network failures happen while a suspended server boots up.
   if (!error.response) {
@@ -99,18 +104,20 @@ const isRetryable = (error: AxiosError) => {
   }
 
   // 502/503/504 are emitted by the platform proxy while the instance restarts.
-  const retryableStatuses = [502, 503, 504];
-  if (!retryableStatuses.includes(status ?? 0)) {
-    return false;
-  }
-
-  return ['get', 'head', 'options', 'post'].includes(method);
+  return [502, 503, 504].includes(error.response.status);
 };
 
-const clearSession = () => {
+export const SESSION_EXPIRED_EVENT = 'alumniconnect:session-expired';
+
+const clearSession = (staleToken?: string) => {
+  // A pending request from a previous session must not sign out a newer login.
+  if (staleToken && localStorage.getItem('token') !== staleToken) {
+    return;
+  }
   localStorage.removeItem('user');
   localStorage.removeItem('token');
   localStorage.removeItem('role');
+  window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
 };
 
 api.interceptors.response.use(
@@ -135,10 +142,8 @@ api.interceptors.response.use(
     untrackSlowRequest(config);
 
     if (error.response?.status === 401 && !isAuthRequest(error.config)) {
-      clearSession();
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login';
-      }
+      const sentToken = String(error.config?.headers?.Authorization ?? '').replace(/^Bearer\s+/i, '');
+      clearSession(sentToken || undefined);
     }
 
     return Promise.reject(error);
