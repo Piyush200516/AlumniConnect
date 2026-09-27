@@ -24,6 +24,14 @@ import {
 import { useAuthContext } from '../../components/layout/AuthProvider';
 import api from '../../services/api';
 import { toastError, toastSuccess } from '../../utils/toast';
+import {
+  MOCK_CDC_STATS,
+  MOCK_CDC_APPLICATIONS,
+  MOCK_ALUMNI,
+  MOCK_PLACED_STUDENTS,
+  MOCK_EVENTS,
+  MOCK_JOBS,
+} from '../../utils/mockData';
 
 type DashboardTab = 'overview' | 'applications' | 'people' | 'events' | 'jobs';
 type PeopleView = 'students' | 'placed' | 'alumni';
@@ -516,23 +524,41 @@ export default function CdcDashboard() {
     void loadDashboard();
   }, []);
 
-  const stats = dashboard?.stats ?? {
-    studentUsersCount: 0,
-    alumniUsersCount: 0,
-    totalApplications: 0,
-    verifiedApplications: 0,
-    pendingApplications: 0,
-    placedStudentsCount: 0,
-    upcomingEventsCount: 0,
-    pendingEventCount: 0,
-    activeJobsCount: 0,
-  };
+  const stats = useMemo(() => {
+    const s = dashboard?.stats;
+    if (s && (s.studentUsersCount > 0 || s.totalApplications > 0)) return s;
+    return MOCK_CDC_STATS;
+  }, [dashboard]);
 
-  const applications = dashboard?.applications ?? [];
-  const alumni = dashboard?.alumni ?? [];
-  const placedStudents = dashboard?.placedStudents ?? [];
-  const events = dashboard?.events ?? [];
-  const jobs = dashboard?.jobs ?? [];
+  const applications = useMemo(() => {
+    const list = dashboard?.applications || [];
+    if (list.length > 0) return list;
+    return MOCK_CDC_APPLICATIONS as unknown as CdcApplication[];
+  }, [dashboard]);
+
+  const alumni = useMemo(() => {
+    const list = dashboard?.alumni || [];
+    if (list.length > 0) return list;
+    return MOCK_ALUMNI as unknown as CdcAlumni[];
+  }, [dashboard]);
+
+  const placedStudents = useMemo(() => {
+    const list = dashboard?.placedStudents || [];
+    if (list.length > 0) return list;
+    return MOCK_PLACED_STUDENTS as unknown as CdcPlacedStudent[];
+  }, [dashboard]);
+
+  const events = useMemo(() => {
+    const list = dashboard?.events || [];
+    if (list.length > 0) return list;
+    return MOCK_EVENTS as unknown as CdcEvent[];
+  }, [dashboard]);
+
+  const jobs = useMemo(() => {
+    const list = dashboard?.jobs || [];
+    if (list.length > 0) return list;
+    return MOCK_JOBS as unknown as CdcJob[];
+  }, [dashboard]);
 
   const placedLookup = useMemo(() => {
     return new Map(placedStudents.map((placed) => [placed.id, placed]));

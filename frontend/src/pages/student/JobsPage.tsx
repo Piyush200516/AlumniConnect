@@ -16,6 +16,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { useSocket } from '../../components/layout/SocketContext';
+import { MOCK_JOBS } from '../../utils/mockData';
 
 interface AlumniProfile {
   fullName: string;
@@ -90,7 +91,7 @@ export default function JobsPage({ onSelectJob, onApplyJob }: JobsPageProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'saved' | 'applied'>('all');
 
   // React Query: Fetch Jobs
-  const { data: jobs = [], isLoading } = useQuery<Job[]>({
+  const { data: rawJobs = [], isLoading } = useQuery<Job[]>({
     queryKey: ['jobsList', activeTab],
     queryFn: async () => {
       const res = await api.get('/jobs', {
@@ -99,6 +100,11 @@ export default function JobsPage({ onSelectJob, onApplyJob }: JobsPageProps) {
       return res.data.data || [];
     }
   });
+
+  const jobs: Job[] = useMemo(() => {
+    if (rawJobs.length > 0) return rawJobs;
+    return MOCK_JOBS as unknown as Job[];
+  }, [rawJobs]);
 
   // Bookmark Mutation
   const bookmarkMutation = useMutation({

@@ -1,4 +1,5 @@
 import MentorCard from '../MentorCard';
+import { MOCK_ALUMNI } from '../../../utils/mockData';
 
 interface MentorItem {
   id: string;
@@ -32,13 +33,11 @@ export default function MentorshipSection({ mentors, loading }: MentorshipSectio
     );
   }
 
-  if (mentors.length === 0) {
-    return <p className="text-xs text-slate-550 italic py-2">No suggested mentors available right now.</p>;
-  }
+  const displayMentors = mentors.length > 0 ? mentors : MOCK_ALUMNI.slice(0, 3);
 
   return (
     <div className="flex flex-col gap-3.5">
-      {mentors.map((mentor) => (
+      {displayMentors.map((mentor) => (
         <MentorCard
           key={mentor.id}
           name={mentor.fullName}

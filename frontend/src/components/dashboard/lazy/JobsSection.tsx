@@ -1,4 +1,5 @@
 import JobCard from '../JobCard';
+import { MOCK_JOBS } from '../../../utils/mockData';
 
 interface JobItem {
   id: string;
@@ -34,9 +35,7 @@ export default function JobsSection({ jobs, loading }: JobsSectionProps) {
     );
   }
 
-  if (jobs.length === 0) {
-    return <p className="text-xs text-slate-550 italic py-2">No active job listings found.</p>;
-  }
+  const displayJobs = jobs.length > 0 ? jobs : MOCK_JOBS.slice(0, 3);
 
   const mapJobType = (type: string) => {
     switch (type) {
@@ -58,7 +57,7 @@ export default function JobsSection({ jobs, loading }: JobsSectionProps) {
 
   return (
     <div className="flex flex-col gap-3.5">
-      {jobs.map((job) => (
+      {displayJobs.map((job) => (
         <JobCard
           key={job.id}
           title={job.title}

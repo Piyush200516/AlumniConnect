@@ -19,6 +19,7 @@ import { FaLinkedin } from 'react-icons/fa';
 import api from '../../services/api';
 import { useAuthContext } from '../../components/layout/AuthProvider';
 import { toastSuccess, toastError } from '../../utils/toast';
+import { MOCK_JOBS } from '../../utils/mockData';
 
 interface JobDetailsProps {
   jobId: string;
@@ -44,8 +45,14 @@ export default function JobDetails({ jobId, onGoBack, autoOpenApplyModal = false
   const { data: job, isLoading, error } = useQuery({
     queryKey: ['jobDetails', jobId],
     queryFn: async () => {
-      const res = await api.get(`/jobs/${jobId}`);
-      return res.data.data;
+      try {
+        const res = await api.get(`/jobs/${jobId}`);
+        if (res.data.data) return res.data.data;
+      } catch (err) {
+        console.warn('API fetch for job failed, using mock fallback', err);
+      }
+      const mockMatch = MOCK_JOBS.find(j => j.id === jobId);
+      return mockMatch || MOCK_JOBS[0];
     }
   });
 

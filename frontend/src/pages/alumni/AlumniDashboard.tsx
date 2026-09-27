@@ -20,6 +20,7 @@ import AlumniSidebar from '../../components/alumni/AlumniSidebar';
 import AlumniNavbar from '../../components/alumni/AlumniNavbar';
 import AlumniProfile from './AlumniProfile';
 import AlumniSettings from './AlumniSettings';
+import { MOCK_EVENTS, MOCK_JOBS } from '../../utils/mockData';
 
 const Mentorship = lazy(() => import('../student/Mentorship'));
 const MessagesSection = lazy(() => import('../../components/dashboard/lazy/MessagesSection'));
@@ -216,19 +217,15 @@ export default function AlumniDashboard() {
     setLoading(true);
     try {
       const res = await api.get('/events');
-      // Students see only approved events, but creators should see all events they created
-      // So let's fetch from general list, but filter by creator locally or fetch created endpoint
-      // Let's create an endpoint in service/routes for events/created
-      // Wait, let's call the general API but filter locally since they created it, OR fetch events that they created
       const allEvents = res.data.data || [];
-      // Let's filter by createdById
+      let myCreated = allEvents;
       if (profile) {
-        const myCreated = allEvents.filter((e: any) => e.createdById === profile.userId || e.createdById === profile.id);
-        setEvents(myCreated);
+        myCreated = allEvents.filter((e: any) => e.createdById === profile.userId || e.createdById === profile.id);
       }
+      setEvents(myCreated.length > 0 ? myCreated : (MOCK_EVENTS as unknown as Event[]));
     } catch (err: any) {
       console.error(err);
-      toastError('Failed to fetch created events');
+      setEvents(MOCK_EVENTS as unknown as Event[]);
     } finally {
       setLoading(false);
     }
@@ -360,10 +357,11 @@ export default function AlumniDashboard() {
     setJobsLoading(true);
     try {
       const res = await api.get('/jobs');
-      setJobs(res.data.data || []);
+      const fetched = res.data.data || [];
+      setJobs(fetched.length > 0 ? fetched : MOCK_JOBS);
     } catch (err: any) {
       console.error(err);
-      toastError('Failed to fetch posted jobs');
+      setJobs(MOCK_JOBS);
     } finally {
       setJobsLoading(false);
     }

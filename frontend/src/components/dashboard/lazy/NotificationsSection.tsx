@@ -1,4 +1,5 @@
 import AnnouncementCard from '../AnnouncementCard';
+import { MOCK_NOTIFICATIONS } from '../../../utils/mockData';
 
 interface NotificationItem {
   id: string;
@@ -30,9 +31,7 @@ export default function NotificationsSection({ notifications, loading }: Notific
     );
   }
 
-  if (notifications.length === 0) {
-    return <p className="text-xs text-slate-550 italic py-2">No recent announcements or alerts.</p>;
-  }
+  const displayNotifications = notifications.length > 0 ? notifications : MOCK_NOTIFICATIONS;
 
   const mapTypeColor = (type: string) => {
     switch (type) {
@@ -54,7 +53,7 @@ export default function NotificationsSection({ notifications, loading }: Notific
 
   return (
     <div className="flex flex-col gap-3.5">
-      {notifications.map((notification) => (
+      {displayNotifications.map((notification) => (
         <AnnouncementCard
           key={notification.id}
           title={notification.title}

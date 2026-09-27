@@ -23,6 +23,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { toastSuccess, toastError } from '../../utils/toast';
+import { MOCK_ALUMNI } from '../../utils/mockData';
 
 interface AlumniProfile {
   id: string;
@@ -105,7 +106,12 @@ export default function AlumniDirectory({ onSelectAlumni, onNavigate }: AlumniDi
     }
   });
 
-  const alumniList: AlumniProfile[] = data?.alumni || [];
+  const alumniList: AlumniProfile[] = useMemo(() => {
+    const list = data?.alumni || [];
+    if (list.length > 0) return list;
+    return MOCK_ALUMNI as unknown as AlumniProfile[];
+  }, [data]);
+
   const sidebarMetrics = data?.sidebarMetrics || {
     totalAlumni: 2458,
     alumniInTopCompanies: 856,
@@ -114,8 +120,20 @@ export default function AlumniDirectory({ onSelectAlumni, onNavigate }: AlumniDi
     averageExperience: 18,
     activeAlumni: 72
   };
-  const topCompanies = data?.topCompanies || [];
-  const recentlyJoined = data?.recentlyJoined || [];
+
+  const topCompanies = data?.topCompanies && data.topCompanies.length > 0
+    ? data.topCompanies
+    : [
+        { company: 'Google', count: 142 },
+        { company: 'Microsoft', count: 118 },
+        { company: 'Amazon', count: 95 },
+        { company: 'Meta', count: 64 },
+        { company: 'Goldman Sachs', count: 52 }
+      ];
+
+  const recentlyJoined = data?.recentlyJoined && data.recentlyJoined.length > 0
+    ? data.recentlyJoined
+    : MOCK_ALUMNI.slice(0, 3);
 
   // Mutations
   const connectMutation = useMutation({

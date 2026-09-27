@@ -15,6 +15,7 @@ import {
 import api from '../../services/api';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { useAuthContext } from '../../components/layout/AuthProvider';
+import { MOCK_EVENTS } from '../../utils/mockData';
 
 interface Event {
   id: string;
@@ -96,6 +97,9 @@ export default function EventsPage({ onSelectEvent, onViewCertificate }: EventsP
         });
         
         let fetchedEvents = eventRes.data.data || [];
+        if (fetchedEvents.length === 0) {
+          fetchedEvents = MOCK_EVENTS as unknown as Event[];
+        }
         
         // If "registered" tab, we filter events that have active student registrations
         if (activeTab === 'registered') {

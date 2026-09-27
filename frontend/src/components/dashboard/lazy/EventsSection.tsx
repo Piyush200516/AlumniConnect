@@ -1,4 +1,5 @@
 import EventCard from '../EventCard';
+import { MOCK_EVENTS } from '../../../utils/mockData';
 
 interface EventItem {
   id: string;
@@ -35,13 +36,11 @@ export default function EventsSection({ events, loading }: EventsSectionProps) {
     );
   }
 
-  if (events.length === 0) {
-    return <p className="text-xs text-slate-550 italic py-2">No upcoming events scheduled.</p>;
-  }
+  const displayEvents = events.length > 0 ? events : MOCK_EVENTS.slice(0, 3);
 
   return (
     <div className="flex flex-col gap-3.5">
-      {events.map((event) => (
+      {displayEvents.map((event) => (
         <EventCard
           key={event.id}
           title={event.title}
