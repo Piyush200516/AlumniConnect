@@ -202,7 +202,7 @@ export default function EventsPage({ onSelectEvent, onViewCertificate }: EventsP
   ];
 
   // Active registrations list for sidebar widget (exclude cancelled)
-  const activeRegistrations = registrations.filter(r => r.status === 'REGISTERED' || r.status === 'ATTENDED');
+  const activeRegistrations = registrations.filter(r => r && r.event && (r.status === 'REGISTERED' || r.status === 'ATTENDED'));
 
   return (
     <div className="space-y-8">
@@ -473,16 +473,16 @@ export default function EventsPage({ onSelectEvent, onViewCertificate }: EventsP
                 {activeRegistrations.slice(0, 3).map((reg) => (
                   <div key={reg.id} className="flex items-center gap-3 p-2 bg-slate-900/30 border border-slate-900 rounded-xl">
                     <div className="h-9 w-9 rounded-lg bg-slate-900 overflow-hidden shrink-0">
-                      {reg.event.bannerUrl ? (
+                      {reg.event?.bannerUrl ? (
                         <img src={reg.event.bannerUrl} alt="" className="h-full w-full object-cover" />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center text-xs font-bold text-slate-700">E</div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-[11px] font-bold text-white truncate leading-snug">{reg.event.title}</h4>
+                      <h4 className="text-[11px] font-bold text-white truncate leading-snug">{reg.event?.title || 'Event'}</h4>
                       <p className="text-[10px] text-slate-500 mt-0.5">
-                        {new Date(reg.event.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        {reg.event?.eventDate ? new Date(reg.event.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
                       </p>
                     </div>
                     <button 
