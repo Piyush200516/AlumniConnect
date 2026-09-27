@@ -32,8 +32,13 @@ export const useAuth = () => {
       const finalEndpoint = endpoint || '/auth/login';
       const res = await api.post(finalEndpoint, payload);
       console.log("API Response", res);
-      const token = res.data?.token || res.data?.data?.token || res.data?.data?.accessToken || res.data?.accessToken;
+      // Backend wraps response: { success, message, data: { accessToken, refreshToken, user } }
+      const token = res.data?.data?.accessToken || res.data?.data?.token || res.data?.accessToken || res.data?.token;
       
+      if (!token) {
+        throw new Error('No access token received from server');
+      }
+
       const rawRole = role || res.data?.data?.user?.role || res.data?.user?.role;
       if (!rawRole) {
         throw new Error('Role not specified in login response');
@@ -46,8 +51,14 @@ export const useAuth = () => {
       const finalRedirectPath = redirectPath || `/${finalRole}/dashboard`;
       navigate(finalRedirectPath);
     } catch (err: any) {
-      console.error("Login API Error", err.response);
-      toastError(err.response?.data?.message || 'Login failed');
+      console.error("Login API Error", err.response || err);
+      // Extract message from backend response structure
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Login failed';
+      toastError(message);
     }
   };
 

@@ -97,7 +97,7 @@ export const verifyEmail = async (
   next: NextFunction,
 ) => {
   try {
-    await authService.verifyEmail(req.query.token as string);
+    await authService.verifyEmail(req.params.token as string);
     responseSuccess(res, 'Email verified successfully');
   } catch (err) {
     next(err);
