@@ -10,11 +10,13 @@
 
 ## Deployment
 
-The application is live and can be accessed here:
+The application is deployed and live:
 
-🔗 **Live URL:** [https://alumniconnect-7ag.pages.dev/login](https://alumniconnect-7ag.pages.dev/login)
+- 🎨 **Frontend Web App:** [https://alumniconnect-7ag.pages.dev](https://alumniconnect-7ag.pages.dev)
+- ⚡ **Backend API Service:** [https://alumniconnect-backend.onrender.com](https://alumniconnect-backend.onrender.com)
+- 🐘 **Database Service:** Managed Neon PostgreSQL
 
-
+---
 
 ## Overview
 
@@ -478,7 +480,7 @@ flowchart TB
 | --- | --- |
 | `/auth` | Role selection |
 | `/auth/student/login` | Student login |
-| `https://alumniconnect-7ag.pages.dev/auth/student/signup` | Student registration |
+| `/auth/student/signup` | Student registration |
 | `/auth/alumni/login` | Alumni login |
 | `/auth/alumni/signup` | Alumni registration |
 | `/auth/cdc/login` | CDC login |
