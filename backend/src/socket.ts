@@ -20,7 +20,18 @@ export const getSocketIdsForUser = (userId: string): string[] => {
 export const setupSocket = (server: HttpServer) => {
   io = new Server(server, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+      origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, curl)
+        if (!origin) return callback(null, true);
+        if (
+          origin.endsWith('.pages.dev') ||
+          origin.includes('localhost') ||
+          origin === (process.env.FRONTEND_URL || '')
+        ) {
+          return callback(null, true);
+        }
+        return callback(null, true); // permissive fallback — restrict if needed
+      },
       credentials: true,
     },
   });

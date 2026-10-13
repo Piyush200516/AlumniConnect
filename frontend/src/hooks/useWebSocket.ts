@@ -40,12 +40,24 @@ export const useWebSocket = () => {
       return;
     }
 
-    const baseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:5002';
+    // Derive WebSocket URL from VITE_API_BASE_URL (strips /api, swaps http→ws / https→wss).
+    // This avoids needing a separate VITE_WS_URL env var and ensures wss:// in production.
+    const apiBase: string = import.meta.env.VITE_API_BASE_URL || '';
+    let baseUrl: string;
+    if (apiBase) {
+      baseUrl = apiBase
+        .replace(/\/api(?:\/v\d+)?$/i, '') // strip trailing /api or /api/v1
+        .replace(/^https:\/\//i, 'wss://')  // https → wss (production)
+        .replace(/^http:\/\//i, 'ws://');   // http  → ws  (local dev)
+    } else {
+      // Last-resort fallback for local dev only
+      baseUrl = 'ws://localhost:5002';
+    }
     // Clean trailing slash
     const formattedBaseUrl = baseUrl.replace(/\/$/, '');
     const wsUrl = `${formattedBaseUrl}/ws?token=${encodeURIComponent(token)}`;
 
-    console.log('[WS Hook] Connecting to:', formattedBaseUrl);
+    console.log('[WS Hook] Connecting to:', wsUrl);
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 

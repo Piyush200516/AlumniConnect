@@ -26,6 +26,9 @@ import notificationRoutes from "./routes/notification.routes";
 import { setupWebSocketServer } from "./wsServer";
 
 export const app = express();
+// Trust Render's proxy / Cloudflare so req.ip, req.protocol, and cookie
+// "secure" flags work correctly behind the reverse proxy.
+app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
 // Initialize WebSocket server (using native ws library)
