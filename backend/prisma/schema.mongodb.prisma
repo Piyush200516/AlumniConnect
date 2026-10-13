@@ -1,0 +1,352 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/mongodb"
+}
+
+datasource db {
+  provider = "mongodb"
+}
+
+enum Role {
+  STUDENT
+  ALUMNI
+  CDC
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum MentorshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  INTERNSHIP
+  CONTRACT
+  FREELANCE
+  REMOTE
+}
+
+enum ApplicationStatus {
+  APPLIED
+  UNDER_REVIEW
+  SHORTLISTED
+  INTERVIEW
+  OFFERED
+  REJECTED
+  WITHDRAWN
+}
+
+enum NotificationType {
+  MENTORSHIP_REQUEST
+  MENTORSHIP_ACCEPTED
+  MENTORSHIP_REJECTED
+  MENTORSHIP_COMPLETED
+  JOB_POSTED
+  JOB_APPLICATION
+  APPLICATION_UPDATE
+  EVENT_CREATED
+  EVENT_REMINDER
+  POST_LIKE
+  POST_COMMENT
+  NEW_MESSAGE
+  SYSTEM
+}
+
+model User {
+  id                         String                 @id @default(auto()) @map("_id") @db.ObjectId
+  email                      String                 @unique
+  password                   String
+  role                       Role
+  status                     AccountStatus          @default(ACTIVE)
+  isEmailVerified            Boolean                @default(false)
+  emailVerifyToken           String?                @unique
+  emailVerifyExpiry          DateTime?
+  resetToken                 String?                @unique
+  resetTokenExpiry           DateTime?
+  lastLoginAt                DateTime?
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  studentProfile             StudentProfile?
+  alumniProfile              AlumniProfile?
+  cdcProfile                 CdcProfile?
+  posts                      Post[]
+  comments                   Comment[]
+  likes                      Like[]
+  sentMentorshipRequests     MentorshipRequest[]    @relation("MentorshipStudent")
+  receivedMentorshipRequests MentorshipRequest[]    @relation("MentorshipAlumni")
+  postedJobs                 Job[]
+  jobApplications            JobApplication[]
+  createdEvents              Event[]
+  eventRegistrations         EventRegistration[]
+  conversationsAsUser1       Conversation[]         @relation("ConversationUser1")
+  conversationsAsUser2       Conversation[]         @relation("ConversationUser2")
+  sentMessages               Message[]              @relation("MessageSender")
+  notifications              Notification[]
+
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+model StudentProfile {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String   @unique @db.ObjectId
+  fullName         String
+  enrollmentNo     String   @unique
+  branch           String
+  course           String
+  graduationYear   Int
+  skills           String[] @default([])
+  bio              String?
+  profileImageUrl  String?
+  linkedinUrl      String?
+  githubUrl        String?
+  resumeUrl        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([branch])
+  @@index([graduationYear])
+  @@index([course])
+  @@map("student_profiles")
+}
+
+model AlumniProfile {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @unique @db.ObjectId
+  fullName        String
+  passingYear     Int
+  currentCompany  String?
+  designation     String?
+  industry        String?
+  experience      Int?
+  skills          String[] @default([])
+  bio             String?
+  profileImageUrl String?
+  linkedinUrl     String?
+  location        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([passingYear])
+  @@index([industry])
+  @@index([currentCompany])
+  @@map("alumni_profiles")
+}
+
+model CdcProfile {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @unique @db.ObjectId
+  collegeName   String
+  department    String
+  officialEmail String
+  contactNumber String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("cdc_profiles")
+}
+
+model Post {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  authorId  String    @db.ObjectId
+  content   String
+  imageUrl  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments  Comment[]
+  likes     Like[]
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("posts")
+}
+
+model Comment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  postId    String   @db.ObjectId
+  userId    String   @db.ObjectId
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+  @@map("comments")
+}
+
+model Like {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  postId    String   @db.ObjectId
+  userId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("likes")
+}
+
+model MentorshipRequest {
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  studentId String           @db.ObjectId
+  alumniId  String           @db.ObjectId
+  status    MentorshipStatus @default(PENDING)
+  message   String?
+  note      String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  student   User             @relation("MentorshipStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  alumni    User             @relation("MentorshipAlumni", fields: [alumniId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, alumniId])
+  @@index([studentId])
+  @@index([alumniId])
+  @@index([status])
+  @@map("mentorship_requests")
+}
+
+model Job {
+  id             String            @id @default(auto()) @map("_id") @db.ObjectId
+  postedById     String            @db.ObjectId
+  title          String
+  description    String
+  company        String
+  location       String?
+  salary         String?
+  jobType        JobType           @default(FULL_TIME)
+  skillsRequired String[]          @default([])
+  deadline       DateTime?
+  isActive       Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  applications   JobApplication[]
+  postedBy       User              @relation(fields: [postedById], references: [id], onDelete: Cascade)
+
+  @@index([postedById])
+  @@index([jobType])
+  @@index([isActive])
+  @@index([deadline])
+  @@map("jobs")
+}
+
+model JobApplication {
+  id          String            @id @default(auto()) @map("_id") @db.ObjectId
+  jobId       String            @db.ObjectId
+  applicantId String            @db.ObjectId
+  resumeUrl   String
+  coverLetter String?
+  status      ApplicationStatus @default(APPLIED)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  applicant   User              @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, applicantId])
+  @@index([jobId])
+  @@index([applicantId])
+  @@index([status])
+  @@map("job_applications")
+}
+
+model Event {
+  id            String              @id @default(auto()) @map("_id") @db.ObjectId
+  createdById   String              @db.ObjectId
+  title         String
+  description   String
+  bannerUrl     String?
+  eventDate     DateTime
+  eventLocation String
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  registrations EventRegistration[]
+  createdBy     User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([createdById])
+  @@index([eventDate])
+  @@index([isActive])
+  @@map("events")
+}
+
+model EventRegistration {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  eventId   String   @db.ObjectId
+  userId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+  @@map("event_registrations")
+}
+
+model Conversation {
+  id      String    @id @default(auto()) @map("_id") @db.ObjectId
+  user1Id String    @db.ObjectId
+  user2Id String    @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user1   User      @relation("ConversationUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2   User      @relation("ConversationUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId String       @db.ObjectId
+  senderId       String       @db.ObjectId
+  content        String
+  imageUrl       String?
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model Notification {
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String           @db.ObjectId
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  linkUrl   String?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
