@@ -3,6 +3,7 @@ import { EventService } from '../services/event.service';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { updateEventApprovalSchema, markAttendanceSchema } from '../validators/event.validator';
 import { ApiError } from '../utils/error';
+import { uploadFile } from '../services/upload.service';
 
 const service = new EventService();
 
@@ -37,6 +38,14 @@ export const getEventDetails = async (req: AuthenticatedRequest, res: Response, 
 export const createEvent = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.user) throw new ApiError(401, 'Unauthenticated');
+
+    // If a banner image was uploaded via multipart, upload to Cloudinary and
+    // inject the resulting URL into the body so the service validator sees it.
+    if (req.file) {
+      const { url } = await uploadFile(req.file, 'events', 'image');
+      req.body.bannerUrl = url;
+    }
+
     const event = await service.createEvent(req.user.id, req.body);
     res.status(201).json({ success: true, data: event, message: 'Event created successfully' });
   } catch (err) {
@@ -48,6 +57,14 @@ export const editEvent = async (req: AuthenticatedRequest, res: Response, next: 
   try {
     if (!req.user) throw new ApiError(401, 'Unauthenticated');
     const id = req.params.id as string;
+
+    // If a new banner image was uploaded, replace bannerUrl in body.
+    // If no file was sent, existing bannerUrl string in body (or DB value) is preserved.
+    if (req.file) {
+      const { url } = await uploadFile(req.file, 'events', 'image');
+      req.body.bannerUrl = url;
+    }
+
     const event = await service.editEvent(id, req.user.id, req.body);
     res.status(200).json({ success: true, data: event, message: 'Event updated successfully' });
   } catch (err) {

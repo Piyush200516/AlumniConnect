@@ -1,26 +1,11 @@
 // src/services/student.service.ts
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../utils/error';
-import { v2 as cloudinary } from 'cloudinary';
-import { Readable } from 'stream';
-import fs from 'fs';
-import path from 'path';
 import { JobApprovalStatus, PortalApplicationStatus, VerificationStatus, Prisma } from '@prisma/client';
 import { logger } from '../utils/logger';
+import { uploadFile } from './upload.service';
 
-// Configure Cloudinary if environment variables exist
-const isCloudinaryConfigured =
-  process.env.CLOUDINARY_CLOUD_NAME &&
-  process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET;
 
-if (isCloudinaryConfigured) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
-}
 
 const resolveVerificationStatus = (
   profileStatus: VerificationStatus,
@@ -87,38 +72,7 @@ const mapProfileResponse = (
   };
 };
 
-export const uploadFile = async (file: Express.Multer.File, folder: string): Promise<string> => {
-  if (isCloudinaryConfigured) {
-    return new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: `alumniconnect/${folder}` },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result?.secure_url || '');
-        }
-      );
-      const readable = new Readable();
-      readable.push(file.buffer);
-      readable.push(null);
-      readable.pipe(uploadStream);
-    });
-  } else {
-    // Local fallback storage
-    const uploadsDir = path.join(process.cwd(), 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-    // Create unique filename
-    const ext = path.extname(file.originalname);
-    const filename = `${folder}_${Date.now()}_${Math.round(Math.random() * 1e9)}${ext}`;
-    const filePath = path.join(uploadsDir, filename);
-    await fs.promises.writeFile(filePath, file.buffer);
 
-    // Return backend server URL
-    const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5002}`;
-    return `${backendUrl}/uploads/${filename}`;
-  }
-};
 
 export class StudentService {
   async getProfileByUserId(userId: string) {
@@ -217,13 +171,15 @@ export class StudentService {
       }
     }
 
-    // Handle file uploads
+    // Handle file uploads — delegate to centralized upload.service
     if (files?.profileImage?.[0]) {
-      // Store the uploaded image URL in the profileImage field (maps to DB column profileImageUrl)
-      updateData.profileImage = await uploadFile(files.profileImage[0], 'profiles');
+      // profileImage field maps to DB column profileImageUrl
+      const { url } = await uploadFile(files.profileImage[0], 'avatars', 'image');
+      updateData.profileImage = url;
     }
     if (files?.resume?.[0]) {
-      updateData.resumeUrl = await uploadFile(files.resume[0], 'resumes');
+      const { url } = await uploadFile(files.resume[0], 'resumes', 'raw');
+      updateData.resumeUrl = url;
     }
 
     logger.debug(`[StudentService.updateProfile] Executing update with data: ${JSON.stringify(updateData)} for userId=${userId}`);

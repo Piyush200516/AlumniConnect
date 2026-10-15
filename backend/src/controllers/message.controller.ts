@@ -4,6 +4,8 @@ import { MessageService } from '../services/message.service';
 import { responseSuccess } from '../utils/response';
 import { ApiError } from '../utils/error';
 import { sendWsToUser } from '../wsServer';
+import { uploadFile } from '../services/upload.service';
+import { prisma } from '../lib/prisma';
 
 const messageService = new MessageService();
 
@@ -12,7 +14,34 @@ export class MessageController {
     try {
       if (!req.user) throw new ApiError(401, 'Unauthenticated');
       const senderId = req.user.id;
-      const message = await messageService.sendMessage(senderId, req.body);
+
+      // If a file attachment was uploaded, push it to Cloudinary first
+      let fileUrl: string | undefined;
+      let fileType: string | undefined;
+      if (req.file) {
+        const { url } = await uploadFile(req.file, 'attachments');
+        fileUrl  = url;
+        fileType = req.file.mimetype;
+      }
+
+      const message = await messageService.sendMessage(senderId, {
+        ...req.body,
+        fileUrl,
+        fileType,
+      });
+      // Persist attachment metadata in MessageAttachment table
+      if (req.file && fileUrl && message.id) {
+        await prisma.messageAttachment.create({
+          data: {
+            messageId:  message.id,
+            fileUrl,
+            fileName:  req.file.originalname,
+            fileType:  req.file.mimetype,
+            fileSize:  req.file.size,
+          },
+        });
+      }
+
       return responseSuccess(res, 'Message sent successfully', message);
     } catch (err) {
       next(err);

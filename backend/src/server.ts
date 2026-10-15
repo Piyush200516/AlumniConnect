@@ -21,6 +21,7 @@ import fileRoutes from "./routes/file.routes";
 import { logger } from "./utils/logger";
 import { requestLogger } from "./middleware/requestLogger";
 import { errorHandler } from "./middleware/errorHandler";
+import { handleUploadErrors } from "./middleware/upload";
 import { initializeFirebase } from "./config/firebase";
 import notificationRoutes from "./routes/notification.routes";
 import { setupWebSocketServer } from "./wsServer";
@@ -89,6 +90,8 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/notifications", notificationRoutes);
 
+// Upload-specific error handler (multer LIMIT_* + mimetype errors) — must precede global handler
+app.use(handleUploadErrors);
 // Global error handler
 app.use(errorHandler);
 

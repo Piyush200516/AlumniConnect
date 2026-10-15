@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticateUser } from '../middleware/auth.middleware';
 import { authorizeRoles } from '../middleware/role.middleware';
+import { uploadImage } from '../middleware/upload';
 import {
   getEventsList,
   getEventDetails,
@@ -57,6 +58,7 @@ router.post(
   '/create',
   authenticateUser as any,
   authorizeRoles('CDC') as any,
+  uploadImage.single('bannerImage') as any,
   createEvent as any
 );
 
@@ -64,6 +66,7 @@ router.put(
   '/:id',
   authenticateUser as any,
   authorizeRoles('CDC', 'ALUMNI') as any,
+  uploadImage.single('bannerImage') as any,
   editEvent as any
 );
 

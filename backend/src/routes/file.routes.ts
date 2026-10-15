@@ -1,17 +1,13 @@
 import { Router, Response, NextFunction } from 'express';
-import multer from 'multer';
+import { uploadAttachment } from '../middleware/upload';
 import { authenticateUser } from '../middleware/auth.middleware';
 import { uploadFile } from '../services/student.service';
 import { responseSuccess } from '../utils/response';
 import { ApiError } from '../utils/error';
 
 const router = Router();
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
-});
 
-router.post('/upload', authenticateUser as any, upload.single('file') as any, async (req: any, res: Response, next: NextFunction) => {
+router.post('/upload', authenticateUser as any, uploadAttachment.single('file') as any, async (req: any, res: Response, next: NextFunction) => {
   try {
     if (!req.file) {
       throw new ApiError(400, 'No file uploaded');
